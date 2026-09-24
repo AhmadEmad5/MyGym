@@ -1,0 +1,800 @@
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { 
+  Sparkles, X, Dumbbell, Calendar, CheckCircle2, RefreshCw, Clock
+} from 'lucide-react';
+import { GoogleGenAI } from '@google/genai';
+import { addDays, startOfWeek } from 'date-fns';
+import { useData } from '../hooks/useData';
+import { WorkoutSession, SessionExercise, Routine } from '../lib/api';
+import { useTranslation } from '../lib/i18n';
+
+interface AIWorkoutGeneratorModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onRoutineScheduled?: () => void;
+}
+
+type Goal = 'hypertrophy' | 'fat_loss' | 'strength' | 'endurance';
+type Level = 'beginner' | 'intermediate' | 'advanced';
+type Equipment = 'full_gym' | 'home_dumbbells' | 'bodyweight';
+
+const GOALS: { id: Goal; titleEn: string; titleAr: string; descEn: string; descAr: string; icon: string }[] = [
+  { id: 'hypertrophy', titleEn: 'Muscle Growth', titleAr: 'بناء العضلات والتضخيم', descEn: 'Maximize hypertrophy & size', descAr: 'أقصى زيادة في الحجم العضلي', icon: '🏋️' },
+  { id: 'fat_loss', titleEn: 'Fat Loss & Tone', titleAr: 'خسارة الدهون ونحت الجسم', descEn: 'High burn & calorie deficit support', descAr: 'حرق سعرات عالٍ ودعم التنشيف', icon: '⚡' },
+  { id: 'strength', titleEn: 'Raw Strength', titleAr: 'القوة البدنية الخالصة', descEn: 'Heavy compound progression', descAr: 'تركيز على الأوزان والحركات المركبة', icon: '💥' },
+  { id: 'endurance', titleEn: 'Endurance & Fitness', titleAr: 'التحمل واللياقة البدنية', descEn: 'Athletic stamina & functional power', descAr: 'لياقة رياضية وقوة وظيفية عالية', icon: '🏃' },
+];
+
+const LEVELS: { id: Level; titleEn: string; titleAr: string; descEn: string; descAr: string }[] = [
+  { id: 'beginner', titleEn: 'Beginner', titleAr: 'مبتدئ', descEn: '< 1 year training', descAr: 'أقل من سنة خبرة' },
+  { id: 'intermediate', titleEn: 'Intermediate', titleAr: 'متوسط', descEn: '1 - 3 years consistent', descAr: '1 - 3 سنوات التزام مستمر' },
+  { id: 'advanced', titleEn: 'Advanced', titleAr: 'متقدم', descEn: '3+ years intense lifting', descAr: 'أكثر من 3 سنوات تدريب مكثف' },
+];
+
+const EQUIPMENTS: { id: Equipment; titleEn: string; titleAr: string; descEn: string; descAr: string; icon: string }[] = [
+  { id: 'full_gym', titleEn: 'Commercial Gym', titleAr: 'نادي رياضي متكامل', descEn: 'Barbells, cables & machines', descAr: 'بارات، أجهزة وكابلات متنوعة', icon: '🏢' },
+  { id: 'home_dumbbells', titleEn: 'Home Dumbbells', titleAr: 'دامبلز منزلي', descEn: 'Dumbbells & adjustable bench', descAr: 'دامبلز ومقعد قابل للتعديل', icon: '🏠' },
+  { id: 'bodyweight', titleEn: 'Bodyweight', titleAr: 'وزن الجسم', descEn: 'Calisthenics & pull-up bar', descAr: 'تمارين وزن الجسم وعقلة', icon: '🧘' },
+];
+
+interface GeneratedSession {
+  title: string;
+  type: string;
+  estimatedMinutes: number;
+  exercises: {
+    name: string;
+    targetMuscle: string;
+    sets: number;
+    reps: string;
+    restSeconds: number;
+    coachingCue: string;
+  }[];
+}
+
+interface GeneratedPlan {
+  routineName: string;
+  tagline: string;
+  scientificRationale: string;
+  daysRequired: number;
+  sessions: GeneratedSession[];
+}
+
+export function AIWorkoutGeneratorModal({ isOpen, onClose, onRoutineScheduled }: AIWorkoutGeneratorModalProps) {
+  const { data, saveSessions, saveRoutine } = useData();
+  const { t, isRTL, tExercise, tMuscle, tTitle } = useTranslation();
+
+  const [goal, setGoal] = useState<Goal>('hypertrophy');
+  const [level, setLevel] = useState<Level>('intermediate');
+  const [daysCount, setDaysCount] = useState<number>(4);
+  const [equipment, setEquipment] = useState<Equipment>('full_gym');
+  const [customFocus, setCustomFocus] = useState<string>('');
+
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [generatedPlan, setGeneratedPlan] = useState<GeneratedPlan | null>(null);
+  const [selectedSessionTab, setSelectedSessionTab] = useState<number>(0);
+
+  const [isApplyingToCalendar, setIsApplyingToCalendar] = useState(false);
+  const [appliedSuccess, setAppliedSuccess] = useState(false);
+  const [savedSuccess, setSavedSuccess] = useState(false);
+
+  if (!isOpen) return null;
+
+  const handleGenerate = async () => {
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) {
+      setErrorMessage(isRTL ? 'مفتاح Gemini API غير مهيأ.' : 'Gemini API key is not configured in environment.');
+      return;
+    }
+
+    setIsGenerating(true);
+    setErrorMessage(null);
+    setGeneratedPlan(null);
+    setAppliedSuccess(false);
+    setSavedSuccess(false);
+
+    const goalObj = GOALS.find(g => g.id === goal);
+    const levelObj = LEVELS.find(l => l.id === level);
+    const eqObj = EQUIPMENTS.find(e => e.id === equipment);
+
+    const langInstruction = isRTL 
+      ? `CRITICAL REQUIREMENT: The user interface is in ARABIC. You MUST write all textual fields ("routineName", "tagline", "scientificRationale", session "title", exercise "name", "targetMuscle", and "coachingCue") in fluent, natural, professional ARABIC (e.g. "تمرين ضغط الصدر بالبار المستوي", "الصدر", "الظهر", etc.).` 
+      : `Output all fields in English.`;
+
+    const prompt = `You are a world-class certified strength & conditioning coach (CSCS) and exercise biomechanist.
+Design an optimal, science-backed workout program customized for the following athlete profile:
+
+- Primary Goal: ${goalObj?.titleEn} (${goalObj?.descEn})
+- Training Experience Level: ${levelObj?.titleEn} (${levelObj?.descEn})
+- Desired Frequency: ${daysCount} days per week
+- Available Equipment: ${eqObj?.titleEn} (${eqObj?.descEn})
+- Specific Focus & Constraints: "${customFocus.trim() || 'Balanced full development, optimal stimulus-to-fatigue ratio'}"
+
+Structure exactly ${daysCount} training sessions (e.g. Push, Pull, Legs, Upper, Lower, or Full Body depending on frequency).
+For each session, provide 4 to 6 biomechanically sound exercises with proper set volumes, target rep ranges, rest times, and coaching cues.
+
+${langInstruction}
+
+Output strictly valid JSON with NO markdown code fences, using this schema:
+{
+  "routineName": "Creative & motivating routine name",
+  "tagline": "Short punchy summary",
+  "scientificRationale": "2-3 sentences explaining why this split and movement selection fits the goal and equipment.",
+  "daysRequired": ${daysCount},
+  "sessions": [
+    {
+      "title": "Session Name",
+      "type": "Strength",
+      "estimatedMinutes": 55,
+      "exercises": [
+        {
+          "name": "Barbell Incline Bench Press",
+          "targetMuscle": "Chest",
+          "sets": 3,
+          "reps": "8-10",
+          "restSeconds": 90,
+          "coachingCue": "Control the eccentric phase for 2 seconds, pause on chest."
+        }
+      ]
+    }
+  ]
+}`;
+
+    try {
+      const aiClient = new GoogleGenAI({ apiKey });
+
+      let response;
+      try {
+        response = await aiClient.models.generateContent({
+          model: 'gemini-3.6-flash',
+          contents: prompt,
+        });
+      } catch (firstErr) {
+        console.warn('gemini-3.6-flash failed in generator, trying gemini-flash-latest:', firstErr);
+        response = await aiClient.models.generateContent({
+          model: 'gemini-flash-latest',
+          contents: prompt,
+        });
+      }
+
+      let text = response.text || '';
+      text = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+
+      const parsed: GeneratedPlan = JSON.parse(text);
+      if (!parsed.sessions || parsed.sessions.length === 0) {
+        throw new Error('AI returned an incomplete routine format.');
+      }
+
+      setGeneratedPlan(parsed);
+      setSelectedSessionTab(0);
+    } catch (err: any) {
+      console.error('AI Routine Generation Error:', err);
+      setErrorMessage(err.message || 'Failed to generate routine. Please check your internet connection or try again.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleApplyToCalendar = async () => {
+    if (!generatedPlan || !data) return;
+    setIsApplyingToCalendar(true);
+
+    try {
+      // Schedule sessions starting this week (excluding past days)
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      let weekStart = startOfWeek(today, { weekStartsOn: 0 }); // Sunday
+      const newSessions: WorkoutSession[] = [];
+
+      // Map sessions to appropriate days evenly spaced across the week
+      // NOTE: Friday (day 5) is strictly a rest day in MyGym!
+      const daySpacingMap: Record<number, number[]> = {
+        2: [1, 4], // Mon, Thu
+        3: [0, 2, 4], // Sun, Tue, Thu
+        4: [0, 1, 3, 4], // Sun, Mon, Wed, Thu
+        5: [0, 1, 2, 4, 6], // Sun, Mon, Tue, Thu, Sat (avoid Friday 5)
+        6: [0, 1, 2, 3, 4, 6], // Sun, Mon, Tue, Wed, Thu, Sat (avoid Friday 5)
+      };
+
+      const targetDays = daySpacingMap[generatedPlan.daysRequired] || [0, 1, 2, 3].slice(0, generatedPlan.daysRequired);
+
+      // If all target days for this week have already passed, start from next week
+      const remainingThisWeek = targetDays.filter(dayOffset => addDays(weekStart, dayOffset) >= today);
+      if (remainingThisWeek.length === 0) {
+        weekStart = addDays(weekStart, 7);
+      }
+
+      // Repeat for 4 weeks
+      for (let week = 0; week < 4; week++) {
+        generatedPlan.sessions.forEach((s, sIndex) => {
+          const dayOffset = targetDays[sIndex % targetDays.length];
+          const sessionDate = addDays(weekStart, week * 7 + dayOffset);
+          sessionDate.setHours(18, 0, 0, 0);
+
+          // CRITICAL: NEVER schedule workouts on past days!
+          if (sessionDate < today) {
+            return;
+          }
+
+          const formattedExercises: SessionExercise[] = s.exercises.map((ex, eIdx) => {
+            const parsedReps = parseInt(ex.reps.split('-')[0]) || 10;
+            const setsArr = Array.from({ length: ex.sets || 3 }).map((_, setIdx) => ({
+              id: `${Date.now()}-${sIndex}-${eIdx}-${setIdx}`,
+              weight: 0,
+              repsTarget: parsedReps,
+              repsActual: 0,
+              unit: data.settings?.weightUnit || 'lb',
+              isCompleted: false,
+            }));
+
+            return {
+              id: `${Date.now()}-${sIndex}-${eIdx}`,
+              name: ex.name,
+              targetMuscle: ex.targetMuscle,
+              restTime: ex.restSeconds || 90,
+              notes: ex.coachingCue || '',
+              sets: setsArr,
+            };
+          });
+
+          newSessions.push({
+            id: `ai-${Date.now()}-${week}-${sIndex}`,
+            title: s.title,
+            date: sessionDate.toISOString(),
+            duration: s.estimatedMinutes || 50,
+            type: s.type || 'Strength',
+            notes: `AI Generated: ${generatedPlan.routineName}`,
+            isCompleted: false,
+            exercises: formattedExercises,
+          });
+        });
+      }
+
+      await saveSessions(newSessions);
+      setAppliedSuccess(true);
+      if (onRoutineScheduled) onRoutineScheduled();
+    } catch (err: any) {
+      console.error('Failed to schedule AI routine:', err);
+      setErrorMessage(err.message || 'Failed to apply sessions to calendar.');
+    } finally {
+      setIsApplyingToCalendar(false);
+    }
+  };
+
+  const handleSaveToRoutines = async () => {
+    if (!generatedPlan || !data) return;
+
+    try {
+      const allExercisesTemplate: SessionExercise[] = generatedPlan.sessions.flatMap((s, sIdx) => 
+        s.exercises.map((ex, eIdx) => ({
+          id: `tpl-${Date.now()}-${sIdx}-${eIdx}`,
+          name: ex.name,
+          targetMuscle: ex.targetMuscle,
+          restTime: ex.restSeconds || 90,
+          notes: ex.coachingCue || '',
+          sets: Array.from({ length: ex.sets || 3 }).map((_, setIdx) => ({
+            id: `${setIdx + 1}`,
+            weight: 0,
+            repsTarget: parseInt(ex.reps.split('-')[0]) || 10,
+            repsActual: 0,
+            unit: data.settings?.weightUnit || 'lb',
+            isCompleted: false,
+          })),
+        }))
+      );
+
+      const newRoutine: Routine = {
+        id: `ai-routine-${Date.now()}`,
+        name: generatedPlan.routineName,
+        description: `${generatedPlan.tagline}. ${generatedPlan.scientificRationale}`,
+        exercises: allExercisesTemplate,
+      };
+
+      await saveRoutine(newRoutine);
+      setSavedSuccess(true);
+    } catch (err: any) {
+      console.error('Failed to save routine:', err);
+      setErrorMessage(err.message || 'Failed to save to routines.');
+    }
+  };
+
+  return (
+    <div 
+      style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.75)',
+        backdropFilter: 'blur(8px)',
+        zIndex: 1000,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1rem',
+      }}
+      dir={isRTL ? 'rtl' : 'ltr'}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 15 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 15 }}
+        className="card"
+        style={{
+          width: '100%',
+          maxWidth: '750px',
+          maxHeight: '90vh',
+          display: 'flex',
+          flexDirection: 'column',
+          padding: 0,
+          overflow: 'hidden',
+          backgroundColor: 'var(--bg-secondary)',
+          border: '1px solid var(--border-highlight)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+          textAlign: isRTL ? 'right' : 'left'
+        }}
+      >
+        {/* Header */}
+        <div style={{
+          padding: '1.25rem 1.5rem',
+          borderBottom: '1px solid var(--border-color)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          background: 'linear-gradient(135deg, rgba(70, 217, 255, 0.1), rgba(139, 92, 246, 0.08))',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{
+              width: '38px', height: '38px', borderRadius: '10px',
+              background: 'linear-gradient(135deg, #0ea5e9, #8b5cf6)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#fff', boxShadow: '0 4px 14px rgba(14, 165, 233, 0.4)'
+            }}>
+              <Sparkles size={20} />
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>
+                {isRTL ? 'صانع الجداول بالذكاء الاصطناعي' : 'AI Workout Generator'}
+              </h3>
+              <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                {isRTL ? 'خطط تدريب مخصصة ومبنية علمياً بواسطة ذكاء Gemini' : 'Scientifically customized training plans built by Gemini AI'}
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="btn-icon btn-ghost"
+            onClick={onClose}
+            style={{ padding: '0.35rem', color: 'var(--text-muted)' }}
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Modal Body */}
+        <div style={{ padding: '1.5rem', overflowY: 'auto', flex: 1 }} className="hide-scrollbar">
+          {errorMessage && (
+            <div style={{
+              padding: '0.75rem 1rem',
+              borderRadius: '8px',
+              backgroundColor: 'rgba(239, 68, 68, 0.15)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              color: '#ef4444',
+              fontSize: '0.875rem',
+              marginBottom: '1.25rem',
+            }}>
+              {errorMessage}
+            </div>
+          )}
+
+          {!generatedPlan ? (
+            /* Questionnaire View */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {/* Goal */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.6rem', color: 'var(--text-primary)' }}>
+                  {isRTL ? '1. الهدف التدريبي الأساسي' : '1. Primary Training Goal'}
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.6rem' }}>
+                  {GOALS.map((g) => {
+                    const isSelected = goal === g.id;
+                    return (
+                      <button
+                        key={g.id}
+                        type="button"
+                        onClick={() => setGoal(g.id)}
+                        style={{
+                          padding: '0.85rem',
+                          borderRadius: '10px',
+                          border: isSelected ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                          background: isSelected ? 'rgba(70, 217, 255, 0.12)' : 'var(--bg-tertiary)',
+                          textAlign: isRTL ? 'right' : 'left',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        <div style={{ fontSize: '1.25rem', marginBottom: '0.3rem' }}>{g.icon}</div>
+                        <div style={{ fontWeight: 700, fontSize: '0.9rem', color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)' }}>
+                          {isRTL ? g.titleAr : g.titleEn}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          {isRTL ? g.descAr : g.descEn}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Experience Level */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.6rem', color: 'var(--text-primary)' }}>
+                  {isRTL ? '2. مستوى الخبرة في رفع الأثقال' : '2. Lifting Experience Level'}
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.6rem' }}>
+                  {LEVELS.map((l) => {
+                    const isSelected = level === l.id;
+                    return (
+                      <button
+                        key={l.id}
+                        type="button"
+                        onClick={() => setLevel(l.id)}
+                        style={{
+                          padding: '0.75rem',
+                          borderRadius: '10px',
+                          border: isSelected ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                          background: isSelected ? 'rgba(70, 217, 255, 0.12)' : 'var(--bg-tertiary)',
+                          textAlign: 'center',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        <div style={{ fontWeight: 700, fontSize: '0.9rem', color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)' }}>
+                          {isRTL ? l.titleAr : l.titleEn}
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                          {isRTL ? l.descAr : l.descEn}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Frequency & Equipment Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
+                {/* Days Per Week */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.6rem', color: 'var(--text-primary)' }}>
+                    {isRTL ? '3. عدد أيام التمرين بالأسبوع' : '3. Frequency (Days/Week)'}
+                  </label>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    {[2, 3, 4, 5, 6].map((num) => {
+                      const isSelected = daysCount === num;
+                      return (
+                        <button
+                          key={num}
+                          type="button"
+                          onClick={() => setDaysCount(num)}
+                          style={{
+                            flex: 1,
+                            padding: '0.65rem 0.25rem',
+                            borderRadius: '8px',
+                            border: isSelected ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                            background: isSelected ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                            color: isSelected ? '#000' : 'var(--text-primary)',
+                            fontWeight: 800,
+                            fontSize: '1rem',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                          }}
+                        >
+                          {num}{isRTL ? ' أيام' : 'd'}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Equipment */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.6rem', color: 'var(--text-primary)' }}>
+                    {isRTL ? '4. المعدات المتاحة' : '4. Available Equipment'}
+                  </label>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    {EQUIPMENTS.map((eq) => {
+                      const isSelected = equipment === eq.id;
+                      return (
+                        <button
+                          key={eq.id}
+                          type="button"
+                          onClick={() => setEquipment(eq.id)}
+                          style={{
+                            flex: 1,
+                            padding: '0.65rem 0.35rem',
+                            borderRadius: '8px',
+                            border: isSelected ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                            background: isSelected ? 'rgba(70, 217, 255, 0.12)' : 'var(--bg-tertiary)',
+                            color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                            fontWeight: 700,
+                            fontSize: '0.8rem',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '0.2rem',
+                            transition: 'all 0.2s',
+                          }}
+                        >
+                          <span>{eq.icon}</span>
+                          <span>{isRTL ? eq.titleAr.split(' ')[0] : eq.titleEn.split(' ')[0]}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Custom Focus */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.4rem', color: 'var(--text-primary)' }}>
+                  {isRTL ? '5. تركيز خاص أو نقاط ضعف (اختياري)' : '5. Focus Areas & Special Requests (Optional)'}
+                </label>
+                <input
+                  type="text"
+                  className="input"
+                  placeholder={isRTL ? 'مثال: التركيز على الصدر والذراعين، تجنب إجهاد أسفل الظهر...' : 'e.g. Focus on chest and arms, avoid lower back strain, prioritize compound lifts...'}
+                  value={customFocus}
+                  onChange={(e) => setCustomFocus(e.target.value)}
+                  style={{ width: '100%', borderRadius: '10px', textAlign: isRTL ? 'right' : 'left' }}
+                />
+              </div>
+
+              {/* Submit Generator Button */}
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleGenerate}
+                disabled={isGenerating}
+                style={{
+                  padding: '0.9rem',
+                  fontSize: '1rem',
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.6rem',
+                  borderRadius: '12px',
+                  boxShadow: '0 8px 25px rgba(14, 165, 233, 0.35)',
+                }}
+              >
+                {isGenerating ? (
+                  <>
+                    <RefreshCw size={20} className="animate-spin" />
+                    {isRTL ? 'جاري تصميم برنامجك المخصص عبر ذكاء Gemini...' : 'Designing your custom program with Gemini CSCS AI...'}
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={20} />
+                    {isRTL ? 'توليد جدولي التدريبي بالذكاء الاصطناعي' : 'Generate My Routine with AI'}
+                  </>
+                )}
+              </button>
+            </div>
+          ) : (
+            /* Generated Routine View */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {/* Routine Header Card */}
+              <div style={{
+                padding: '1.25rem',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, rgba(70, 217, 255, 0.12), rgba(139, 92, 246, 0.12))',
+                border: '1px solid rgba(70, 217, 255, 0.25)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                  <span style={{
+                    fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase',
+                    color: 'var(--accent-primary)', letterSpacing: '0.05em'
+                  }}>
+                    {isRTL ? `البرنامج الذكي المُولَّد · تقسيم ${generatedPlan.daysRequired} أيام` : `Generated AI Program · ${generatedPlan.daysRequired} Days Split`}
+                  </span>
+                  <span style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: 700 }}>
+                    {isRTL ? '✓ جاهز للتمرين' : '✓ Ready to Train'}
+                  </span>
+                </div>
+                <h2 style={{ margin: '0 0 0.25rem 0', fontSize: '1.4rem', fontWeight: 800 }}>
+                  {tTitle(generatedPlan.routineName)}
+                </h2>
+                <p style={{ margin: '0 0 0.75rem 0', color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 600 }}>
+                  {generatedPlan.tagline}
+                </p>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+                  💡 <strong>{isRTL ? 'التفسير التدريبي:' : 'Coach Rationale:'}</strong> {generatedPlan.scientificRationale}
+                </div>
+              </div>
+
+              {/* Day Tabs */}
+              <div>
+                <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+                  {generatedPlan.sessions.map((s, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setSelectedSessionTab(idx)}
+                      style={{
+                        padding: '0.55rem 0.9rem',
+                        borderRadius: '8px',
+                        border: selectedSessionTab === idx ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                        background: selectedSessionTab === idx ? 'rgba(70, 217, 255, 0.15)' : 'var(--bg-tertiary)',
+                        color: selectedSessionTab === idx ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                        fontWeight: 700,
+                        fontSize: '0.85rem',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      {isRTL ? `اليوم ${idx + 1}: ${tTitle(s.title.split('-')[0].trim())}` : `Day ${idx + 1}: ${s.title.split('-')[0].trim()}`}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Active Session Content */}
+                {generatedPlan.sessions[selectedSessionTab] && (
+                  <div style={{
+                    padding: '1.25rem',
+                    borderRadius: '12px',
+                    backgroundColor: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border-color)',
+                    marginTop: '0.5rem',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                      <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>
+                        {tTitle(generatedPlan.sessions[selectedSessionTab].title)}
+                      </h4>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                        <Clock size={14} /> ~{generatedPlan.sessions[selectedSessionTab].estimatedMinutes || 50} {t('min')}
+                      </span>
+                    </div>
+
+                    {/* Exercises List */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      {generatedPlan.sessions[selectedSessionTab].exercises.map((ex, exIdx) => (
+                        <div
+                          key={exIdx}
+                          style={{
+                            padding: '0.75rem 1rem',
+                            borderRadius: '8px',
+                            backgroundColor: 'var(--bg-input)',
+                            border: '1px solid var(--border-color)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '0.35rem',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>
+                              {exIdx + 1}. {tExercise(ex.name)}
+                            </span>
+                            <span style={{
+                              fontSize: '0.72rem', background: 'rgba(70, 217, 255, 0.1)',
+                              color: 'var(--accent-primary)', padding: '0.15rem 0.5rem', borderRadius: '4px'
+                            }}>
+                              {tMuscle(ex.targetMuscle)}
+                            </span>
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                            <span><strong>{ex.sets}</strong> {t('sets')} × <strong>{ex.reps}</strong> {t('reps')}</span>
+                            <span>{isRTL ? 'الراحة:' : 'Rest:'} <strong>{ex.restSeconds}{isRTL ? ' ث' : 's'}</strong></span>
+                          </div>
+
+                          {ex.coachingCue && (
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                              🎯 {ex.coachingCue}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Status alerts */}
+              {appliedSuccess && (
+                <div style={{
+                  padding: '0.75rem 1rem', borderRadius: '8px',
+                  backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10b981',
+                  border: '1px solid rgba(16, 185, 129, 0.3)', fontSize: '0.85rem',
+                  display: 'flex', alignItems: 'center', gap: '0.5rem',
+                }}>
+                  <CheckCircle2 size={18} />
+                  <span>{isRTL ? 'تمت جدولة البرنامج بنجاح في تقويمك للأربعة أسابيع القادمة!' : 'Program successfully scheduled on your Calendar for the next 4 weeks!'}</span>
+                </div>
+              )}
+
+              {savedSuccess && (
+                <div style={{
+                  padding: '0.75rem 1rem', borderRadius: '8px',
+                  backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10b981',
+                  border: '1px solid rgba(16, 185, 129, 0.3)', fontSize: '0.85rem',
+                  display: 'flex', alignItems: 'center', gap: '0.5rem',
+                }}>
+                  <CheckCircle2 size={18} />
+                  <span>{isRTL ? 'تم حفظ الجدول في قوالبك الخاصة بقسم الجداول!' : 'Routine saved to your custom templates in Routines!'}</span>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleApplyToCalendar}
+                  disabled={isApplyingToCalendar || appliedSuccess}
+                  style={{
+                    flex: '1 1 200px',
+                    padding: '0.85rem',
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                  }}
+                >
+                  <Calendar size={18} />
+                  {isApplyingToCalendar 
+                    ? (isRTL ? 'جاري الجدولة...' : 'Scheduling...') 
+                    : appliedSuccess 
+                    ? (isRTL ? 'تمت الإضافة للتقويم' : 'Applied to Calendar') 
+                    : (isRTL ? 'تطبيق فوراً على التقويم' : 'Apply Directly to Calendar')}
+                </button>
+
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handleSaveToRoutines}
+                  disabled={savedSuccess}
+                  style={{
+                    flex: '1 1 180px',
+                    padding: '0.85rem',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                  }}
+                >
+                  <Dumbbell size={18} />
+                  {savedSuccess ? (isRTL ? 'تم الحفظ في الجداول' : 'Saved to Routines') : (isRTL ? 'حفظ كجدول' : 'Save as Routine')}
+                </button>
+
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => setGeneratedPlan(null)}
+                  style={{
+                    padding: '0.85rem',
+                    color: 'var(--text-secondary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.4rem',
+                  }}
+                >
+                  <RefreshCw size={16} /> {isRTL ? 'تعديل / إعادة التوليد' : 'Tweak / Re-generate'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+export default AIWorkoutGeneratorModal;

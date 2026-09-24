@@ -1,15 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, X, Send, Bot } from 'lucide-react';
+import { useData } from '../hooks/useData';
 import { useAI } from '../hooks/useAI';
-import { AppData, api } from '../lib/api';
+import { useTranslation } from '../lib/i18n';
+import ReactMarkdown from 'react-markdown';
 
 export function AIAssistant() {
-  const [data, setData] = useState<AppData | null>(null);
-  
-  useEffect(() => {
-    api.getData().then(setData);
-  }, []);
+  const { data } = useData();
+  const { t, isRTL } = useTranslation();
 
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
@@ -34,11 +33,11 @@ export function AIAssistant() {
   return (
     <>
       <motion.button
-        className="btn-primary"
+        className="btn-primary ai-fab"
         style={{
           position: 'fixed',
-          bottom: '2rem',
-          right: '2rem',
+          bottom: '5.5rem',
+          [isRTL ? 'left' : 'right']: '1.5rem',
           width: '3.5rem',
           height: '3.5rem',
           borderRadius: '50%',
@@ -62,12 +61,15 @@ export function AIAssistant() {
             initial={{ opacity: 0, y: 50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 50, scale: 0.9 }}
+            className="ai-panel"
             style={{
               position: 'fixed',
-              bottom: '6rem',
-              right: '2rem',
+              bottom: '10rem',
+              [isRTL ? 'left' : 'right']: '1.5rem',
               width: '350px',
+              maxWidth: 'calc(100vw - 3rem)',
               height: '500px',
+              maxHeight: 'calc(100dvh - 12rem)',
               backgroundColor: 'var(--bg-secondary)',
               borderRadius: 'var(--radius-lg)',
               boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.2)',
@@ -75,7 +77,8 @@ export function AIAssistant() {
               display: 'flex',
               flexDirection: 'column',
               zIndex: 100,
-              overflow: 'hidden'
+              overflow: 'hidden',
+              direction: isRTL ? 'rtl' : 'ltr'
             }}
           >
             <div style={{
@@ -88,7 +91,7 @@ export function AIAssistant() {
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Bot className="w-5 h-5" style={{ color: 'var(--accent-primary)' }} />
-                <h3 style={{ margin: 0, fontSize: '1rem' }}>AI Assistant</h3>
+                <h3 style={{ margin: 0, fontSize: '1rem' }}>{t('aiAssistantTitle')}</h3>
               </div>
               <button 
                 className="btn-icon btn-ghost" 
@@ -109,32 +112,38 @@ export function AIAssistant() {
                     alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start'
                   }}
                 >
-                  <div style={{
-                    maxWidth: '80%',
+                  <div className="markdown-content" style={{
+                    maxWidth: '85%',
                     padding: '0.75rem 1rem',
                     borderRadius: '1rem',
                     backgroundColor: msg.role === 'user' ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
                     color: msg.role === 'user' ? 'white' : 'var(--text-primary)',
-                    borderBottomRightRadius: msg.role === 'user' ? '0' : '1rem',
-                    borderBottomLeftRadius: msg.role === 'assistant' ? '0' : '1rem',
+                    borderBottomRightRadius: msg.role === 'user' ? (isRTL ? '1rem' : '0') : '1rem',
+                    borderBottomLeftRadius: msg.role === 'user' ? (isRTL ? '0' : '1rem') : (isRTL ? '1rem' : '0'),
                     fontSize: '0.875rem',
-                    lineHeight: 1.4
+                    lineHeight: 1.4,
+                    overflowWrap: 'break-word',
+                    textAlign: isRTL ? 'right' : 'left'
                   }}>
-                    {msg.content}
+                    {msg.role === 'user' ? (
+                      msg.content
+                    ) : (
+                      <ReactMarkdown>{msg.content}</ReactMarkdown>
+                    )}
                   </div>
                   <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                    {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {(msg.timestamp instanceof Date ? msg.timestamp : new Date(msg.timestamp)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
               ))}
               {isTyping && (
-                <div style={{ alignSelf: 'flex-start', padding: '0.75rem 1rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: '1rem', borderBottomLeftRadius: 0 }}>
+                <div style={{ alignSelf: 'flex-start', padding: '0.75rem 1rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: '1rem' }}>
                   <motion.div
                     animate={{ opacity: [0.4, 1, 0.4] }}
                     transition={{ repeat: Infinity, duration: 1.5 }}
                     style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}
                   >
-                    Typing...
+                    {t('aiAssistantTyping')}
                   </motion.div>
                 </div>
               )}
@@ -145,13 +154,13 @@ export function AIAssistant() {
               <input 
                 type="text" 
                 className="input" 
-                placeholder="Ask about workouts..."
+                placeholder={t('aiAssistantPlaceholder')}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                style={{ flex: 1 }}
+                style={{ flex: 1, textAlign: isRTL ? 'right' : 'left' }}
               />
               <button type="submit" className="btn btn-primary" style={{ padding: '0.5rem', borderRadius: 'var(--radius-md)' }} disabled={!inputValue.trim()}>
-                <Send className="w-5 h-5" />
+                <Send className="w-5 h-5" style={{ transform: isRTL ? 'scaleX(-1)' : 'none' }} />
               </button>
             </form>
           </motion.div>
@@ -160,3 +169,4 @@ export function AIAssistant() {
     </>
   );
 }
+export default AIAssistant;

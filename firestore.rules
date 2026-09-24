@@ -1,0 +1,85 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Check if the user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Check if the user is accessing their own data
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    // Validation helper for sessions
+    function isValidSession() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['id', 'title', 'date', 'duration', 'type', 'isCompleted'])
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 120
+        && data.date is string
+        && data.duration is number && data.duration >= 0 && data.duration <= 1440
+        && data.isCompleted is bool;
+    }
+
+    // Validation helper for routines
+    function isValidRoutine() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['id', 'name'])
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 120;
+    }
+
+    // Validation helper for history records
+    function isValidHistory() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['id', 'sessionId', 'date', 'title'])
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 120
+        && data.date is string;
+    }
+
+    // Validation helper for meal records
+    function isValidMeal() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['id', 'date', 'mealType', 'title', 'calories'])
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 150
+        && data.date is string
+        && data.mealType is string
+        && data.calories is number && data.calories >= 0;
+    }
+
+    // User root profile & settings
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+
+      // Sessions subcollection
+      match /sessions/{sessionId} {
+        allow read, delete: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidSession();
+      }
+
+      // Routines subcollection
+      match /routines/{routineId} {
+        allow read, delete: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidRoutine();
+      }
+
+      // History subcollection
+      match /history/{historyId} {
+        allow read, delete: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidHistory();
+      }
+
+      // Meals subcollection
+      match /meals/{mealId} {
+        allow read, delete: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidMeal();
+      }
+    }
+    
+    // Deny access to all other collections by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

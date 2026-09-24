@@ -137,23 +137,31 @@ app.on('window-all-closed', () => {
   }
 });
 
-// IPC Handlers for local JSON database
-ipcMain.handle('read-data', () => {
+// IPC Handlers for local JSON database (non-blocking async)
+ipcMain.handle('read-data', async () => {
   try {
-    const data = fs.readFileSync(dataPath, 'utf-8');
+    const data = await fs.promises.readFile(dataPath, 'utf-8');
     return JSON.parse(data);
   } catch (error) {
-    console.error('Failed to read data:', error);
+    console.error('Failed to read data asynchronously:', error);
     return getDynamicPPLData();
   }
 });
 
-ipcMain.handle('write-data', (event, data) => {
+ipcMain.handle('write-data', async (event, data) => {
   try {
-    fs.writeFileSync(dataPath, JSON.stringify(data, null, 2));
+    if (!data || typeof data !== 'object') {
+      throw new Error('Invalid payload: data must be an object');
+    }
+    const serialized = JSON.stringify(data, null, 2);
+    // Security check: limit local file size to 10MB to prevent storage exhaustion
+    if (Buffer.byteLength(serialized, 'utf8') > 10 * 1024 * 1024) {
+      throw new Error('Payload size exceeds 10MB limit');
+    }
+    await fs.promises.writeFile(dataPath, serialized, 'utf-8');
     return true;
   } catch (error) {
-    console.error('Failed to write data:', error);
+    console.error('Failed to write data asynchronously:', error);
     return false;
   }
 });

@@ -10,6 +10,11 @@ export default defineConfig(() => ({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      workbox: {
+        cleanupOutdatedCaches: true,
+        skipWaiting: true,
+        clientsClaim: true,
+      },
       devOptions: {
         enabled: true
       },
@@ -57,4 +62,18 @@ export default defineConfig(() => ({
       ignored: ["**/src-tauri/**"],
     },
   },
+  build: {
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/firebase')) return 'vendor-firebase';
+          if (id.includes('node_modules/@google/genai')) return 'vendor-gemini';
+          if (id.includes('node_modules/framer-motion')) return 'vendor-framer';
+          if (id.includes('node_modules/lucide-react')) return 'vendor-icons';
+          if (id.includes('node_modules/date-fns')) return 'vendor-date-fns';
+        }
+      }
+    }
+  }
 }));
