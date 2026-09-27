@@ -2,13 +2,24 @@ import React, { useState, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Utensils, Camera, Upload, Sparkles, Trash2, CheckCircle2, 
-  Flame, HeartPulse, Scale, RefreshCw, X, AlertCircle, Clock, Zap
+  Flame, X, AlertCircle, Clock, Zap,
+  Calculator, Plus, Edit3, Barcode
 } from 'lucide-react';
-import { isSameDay } from 'date-fns';
-import { GoogleGenAI } from '@google/genai';
+import { isSameDay, format } from 'date-fns';
+import { generateGeminiJson } from '../lib/gemini';
 import { useData } from '../hooks/useData';
-import { MealRecord, MealType, estimateWorkoutCalories } from '../lib/api';
+import { MealRecord, MealType, estimateWorkoutCalories, DEFAULT_NUTRITION_GOALS } from '../lib/api';
 import { useTranslation, TranslationKey } from '../lib/i18n';
+import { Button, Badge, EmptyState } from '../components/ui';
+import { TDEECalculatorModal } from '../components/TDEECalculatorModal';
+import { AIMealVisionModal } from '../components/AIMealVisionModal';
+import { BarcodeFoodScannerModal } from '../components/BarcodeFoodScannerModal';
+import { ManualMealModal } from '../components/ManualMealModal';
+import { InteractiveHydrationWaveCard } from '../components/InteractiveHydrationWaveCard';
+import { SegmentedMacroPill } from '../components/SegmentedMacroPill';
+import { validateClientFile, MAX_IMAGE_UPLOAD_BYTES, ALLOWED_IMAGE_MIME_TYPES } from '../lib/fileValidation';
+import { notify } from '../lib/feedback';
+import { gymAudio } from '../lib/audio';
 
 const MEAL_TYPES: { type: MealType; labelKey: TranslationKey; icon: string }[] = [
   { type: 'breakfast', labelKey: 'breakfast', icon: '🍳' },
@@ -16,15 +27,28 @@ const MEAL_TYPES: { type: MealType; labelKey: TranslationKey; icon: string }[] =
   { type: 'dinner', labelKey: 'dinner', icon: '🥩' },
   { type: 'snack', labelKey: 'snack', icon: '🍎' },
 ];
+const QUICK_MEALS = [
+  { title: 'Greek Yogurt & Berries', titleAr: 'زبادي يوناني مع توت', icon: '🫐', mealType: 'breakfast' as MealType, calories: 260, protein: 22, carbs: 28, fats: 7 },
+  { title: 'Chicken Rice Bowl', titleAr: 'طبق دجاج مع أرز', icon: '🍗', mealType: 'lunch' as MealType, calories: 610, protein: 46, carbs: 68, fats: 16 },
+  { title: 'Oatmeal & Peanut Butter', titleAr: 'شوفان مع زبدة فول', icon: '🥣', mealType: 'breakfast' as MealType, calories: 420, protein: 18, carbs: 54, fats: 14 },
+  { title: 'Protein Shake', titleAr: 'شيك بروتين', icon: '🥤', mealType: 'snack' as MealType, calories: 190, protein: 30, carbs: 10, fats: 4 },
+  { title: 'Tuna Salad', titleAr: 'سلطة تونة صحية', icon: '🥗', mealType: 'dinner' as MealType, calories: 310, protein: 38, carbs: 12, fats: 9 },
+];
 
 export function NutritionView() {
-  const { data, saveMeal, deleteMeal } = useData();
-  const { t, formatDate } = useTranslation();
+  const { data, saveMeal, deleteMeal, logWater, resetWater } = useData();
+  const { t, isRTL, formatDate } = useTranslation();
 
+  const [isTDEEModalOpen, setIsTDEEModalOpen] = useState(false);
+  const [isAIMealVisionOpen, setIsAIMealVisionOpen] = useState(false);
+  const [isBarcodeScannerOpen, setIsBarcodeScannerOpen] = useState(false);
+  const [isManualMealModalOpen, setIsManualMealModalOpen] = useState(false);
+  const [editingMeal, setEditingMeal] = useState<MealRecord | null>(null);
   const [mealType, setMealType] = useState<MealType>('lunch');
   const [description, setDescription] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [quickMealSearch, setQuickMealSearch] = useState('');
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [analysisResult, setAnalysisResult] = useState<{
     title: string;
@@ -40,27 +64,23 @@ export function NutritionView() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
-  const today = new Date();
+  const today = useMemo(() => new Date(), []);
+  const todayKey = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
   const todayMeals = useMemo(() => {
     if (!data?.meals) return [];
     return data.meals.filter(m => isSameDay(new Date(m.date), today));
-  }, [data?.meals, today]);
+  }, [data?.meals, todayKey]);
 
-  // Daily totals
-  const totalCaloriesConsumed = useMemo(() => {
-    return todayMeals.reduce((acc, m) => acc + (m.calories || 0), 0);
-  }, [todayMeals]);
-
-  const totalProtein = useMemo(() => {
-    return todayMeals.reduce((acc, m) => acc + (m.protein || 0), 0);
-  }, [todayMeals]);
-
-  const totalCarbs = useMemo(() => {
-    return todayMeals.reduce((acc, m) => acc + (m.carbs || 0), 0);
-  }, [todayMeals]);
-
-  const totalFats = useMemo(() => {
-    return todayMeals.reduce((acc, m) => acc + (m.fats || 0), 0);
+  // Combined single-pass daily totals computation
+  const { totalCaloriesConsumed, totalProtein, totalCarbs, totalFats } = useMemo(() => {
+    let cal = 0, pro = 0, carb = 0, fat = 0;
+    for (const m of todayMeals) {
+      cal += m.calories || 0;
+      pro += m.protein || 0;
+      carb += m.carbs || 0;
+      fat += m.fats || 0;
+    }
+    return { totalCaloriesConsumed: cal, totalProtein: pro, totalCarbs: carb, totalFats: fat };
   }, [todayMeals]);
 
   // Workouts burned calories today
@@ -87,9 +107,15 @@ export function NutritionView() {
       }
     }
     return burned;
-  }, [data?.sessions, data?.history, today]);
+  }, [data?.sessions, data?.history, todayKey]);
 
   const netBalance = totalCaloriesConsumed - todayBurnedCalories;
+
+  const nutritionGoals = data?.nutritionGoals || DEFAULT_NUTRITION_GOALS;
+  const todayWater = data?.waterLogs?.[todayKey] || 0;
+  const waterGoal = nutritionGoals.dailyWaterMl || 2500;
+
+  const calPercent = Math.min(150, Math.round((totalCaloriesConsumed / (nutritionGoals.dailyCalories || 2200)) * 100));
 
   // Compress image to fast base64 via canvas
   const processImageFile = (file: File) => {
@@ -127,7 +153,16 @@ export function NutritionView() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      processImageFile(e.target.files[0]);
+      const file = e.target.files[0];
+      const validation = validateClientFile(file, {
+        maxSizeBytes: MAX_IMAGE_UPLOAD_BYTES,
+        allowedMimeTypes: ALLOWED_IMAGE_MIME_TYPES
+      });
+      if (!validation.valid) {
+        setAnalysisError(validation.error || 'Invalid file format or size.');
+        return;
+      }
+      processImageFile(file);
     }
   };
 
@@ -137,18 +172,10 @@ export function NutritionView() {
       return;
     }
 
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) {
-      setAnalysisError('Gemini API key is not configured in environment variables.');
-      return;
-    }
-
     setIsAnalyzing(true);
     setAnalysisError(null);
 
     try {
-      const aiClient = new GoogleGenAI({ apiKey });
-
       let base64Data = '';
       let mimeType = 'image/jpeg';
       if (selectedImage) {
@@ -188,46 +215,12 @@ Respond ONLY with valid JSON with NO markdown fences, matching this schema:
   "aiNotes": "High in lean protein, excellent for post-workout recovery."
 }`;
 
-      const contentsParts: any[] = [];
-      if (base64Data) {
-        contentsParts.push({
-          inlineData: {
-            mimeType,
-            data: base64Data,
-          },
-        });
-      }
-      contentsParts.push({ text: prompt });
+      const parsed = await generateGeminiJson({
+        prompt,
+        imageBase64: base64Data || undefined,
+        mimeType
+      });
 
-      let response;
-      try {
-        response = await aiClient.models.generateContent({
-          model: 'gemini-3.6-flash',
-          contents: [
-            {
-              role: 'user',
-              parts: contentsParts,
-            },
-          ],
-        });
-      } catch (firstErr) {
-        console.warn('Primary model gemini-3.6-flash failed, falling back to gemini-flash-latest:', firstErr);
-        response = await aiClient.models.generateContent({
-          model: 'gemini-flash-latest',
-          contents: [
-            {
-              role: 'user',
-              parts: contentsParts,
-            },
-          ],
-        });
-      }
-
-      let rawText = response.text || '';
-      // Clean possible markdown code fence ```json ... ```
-      rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
-
-      const parsed = JSON.parse(rawText);
       setAnalysisResult({
         title: parsed.title || 'Nutritious Meal',
         calories: Number(parsed.calories) || 450,
@@ -239,6 +232,7 @@ Respond ONLY with valid JSON with NO markdown fences, matching this schema:
         aiNotes: parsed.aiNotes || 'Balanced nutritional profile.',
       });
     } catch (err: any) {
+
       console.error('Gemini meal analysis error:', err);
       setAnalysisError(err.message || 'Failed to analyze meal with AI. Please check your connection or try again.');
     } finally {
@@ -273,126 +267,389 @@ Respond ONLY with valid JSON with NO markdown fences, matching this schema:
     setAnalysisResult(null);
   };
 
+
+  const filteredQuickMeals = useMemo(() => {
+    const q = quickMealSearch.trim().toLowerCase();
+    if (!q) return QUICK_MEALS;
+    return QUICK_MEALS.filter(meal => 
+      meal.title.toLowerCase().includes(q) || (meal.titleAr && meal.titleAr.includes(q))
+    );
+  }, [quickMealSearch]);
+
+  const addQuickMeal = async (meal: typeof QUICK_MEALS[number]) => {
+    gymAudio.triggerSubtleHaptic([15]);
+    await saveMeal({
+      ...meal,
+      title: isRTL ? meal.titleAr : meal.title,
+      id: `quick-${Date.now()}-${meal.title.replace(/ /g, '-').toLowerCase()}`,
+      date: new Date().toISOString(),
+      description: isRTL ? 'إضافة سريعة' : 'Quick-added meal'
+    });
+    notify(isRTL ? `تمت إضافة ${meal.titleAr} بنجاح` : `Added ${meal.title}`, 'success');
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -12 }}
-      className="nutrition-page flex-col h-full"
-      style={{ paddingBottom: '4rem' }}
+      className="zen-page-container nutrition-page"
     >
       {/* Header */}
-      <div style={{ marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+      <div className="zen-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div style={{ 
-            width: '42px', height: '42px', borderRadius: '12px',
+            width: '42px', height: '42px', borderRadius: '14px',
             background: 'linear-gradient(135deg, #10b981, #06b6d4)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#fff', boxShadow: '0 8px 24px rgba(16, 185, 129, 0.25)'
+            color: '#fff', boxShadow: '0 6px 20px rgba(16, 185, 129, 0.25)'
           }}>
             <Utensils size={22} />
           </div>
           <div>
-            <h1 style={{ margin: 0, fontSize: '1.85rem', fontWeight: 800 }}>{t('nutritionTitle')}</h1>
-            <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+            <h1 style={{ margin: 0 }}>{t('nutritionTitle')}</h1>
+            <p style={{ margin: 0, color: 'var(--text-secondary)' }}>
               {t('nutritionSubtitle')}
+            </p>
+          </div>
+        </div>
+
+        <div className="nutrition-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => setIsAIMealVisionOpen(true)}
+            className="zen-pill-btn nutrition-scan-btn"
+            style={{
+              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(6, 182, 212, 0.25))',
+              border: '1px solid rgba(16, 185, 129, 0.45)',
+              color: '#10b981',
+              padding: '0.6rem 0.95rem',
+              fontWeight: 800,
+              boxShadow: '0 4px 16px rgba(16, 185, 129, 0.2)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            <Camera size={16} />
+            <span>{isRTL ? 'مسح بالكاميرا (AI)' : 'AI Camera'}</span>
+            <Sparkles size={13} style={{ color: '#06b6d4' }} />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setEditingMeal(null);
+              setIsManualMealModalOpen(true);
+            }}
+            className="zen-pill-btn"
+            style={{
+              background: 'rgba(16, 185, 129, 0.12)',
+              border: '1px solid rgba(16, 185, 129, 0.35)',
+              color: '#10b981',
+              padding: '0.6rem 0.95rem',
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            <Plus size={16} />
+            <span>{isRTL ? 'إدخال وجبة' : 'Log Meal'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsTDEEModalOpen(true)}
+            className="zen-pill-btn"
+            style={{
+              background: 'rgba(70, 217, 255, 0.08)',
+              border: '1px solid rgba(70, 217, 255, 0.25)',
+              color: '#46d9ff',
+              padding: '0.6rem 0.9rem',
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            <Calculator size={15} />
+            <span>{isRTL ? 'حاسبة TDEE' : 'TDEE'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Quick Add Section (Restored to top) */}
+      <section className="card nutrition-quick-add-card" style={{ marginBottom: '1.25rem', padding: '1rem 1.25rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '.65rem' }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: '1rem' }}>{isRTL ? 'إضافة سريعة' : 'Quick add'}</h3>
+            <span style={{ color: 'var(--text-secondary)', fontSize: '.8rem' }}>
+              {isRTL ? 'وجبات محفوظة شائعة — تُسجل فوراً.' : 'Saved staples — logged instantly.'}
+            </span>
+          </div>
+          <input 
+            className="input" 
+            type="search" 
+            value={quickMealSearch} 
+            onChange={event => setQuickMealSearch(event.target.value)} 
+            aria-label={isRTL ? 'بحث في الوجبات السريعة' : 'Search quick meals'} 
+            placeholder={isRTL ? 'ابحث عن وجبة…' : 'Search meals…'} 
+            style={{ maxWidth: '220px', minHeight: '38px' }} 
+          />
+        </div>
+        <div 
+          className="nutrition-quick-meals-track" 
+          style={{ 
+            display: 'flex', 
+            gap: '.5rem', 
+            overflowX: 'auto', 
+            WebkitOverflowScrolling: 'touch', 
+            paddingBottom: '4px',
+            scrollbarWidth: 'none'
+          }}
+        >
+          {filteredQuickMeals.map(meal => (
+            <Button 
+              key={meal.title} 
+              type="button" 
+              variant="secondary" 
+              size="sm" 
+              onClick={() => addQuickMeal(meal)}
+              style={{ flexShrink: 0, whiteSpace: 'nowrap' }}
+            >
+              <span style={{ marginRight: '0.25rem', marginLeft: '0.25rem' }}>＋</span>
+              <span>{isRTL ? (meal.titleAr || meal.title) : meal.title}</span>
+              <small style={{ color: 'var(--text-muted)', marginLeft: '0.35rem', marginRight: '0.35rem' }}>
+                {meal.calories} kcal
+              </small>
+            </Button>
+          ))}
+        </div>
+      </section>
+
+      {/* Top Overview: Unified Energy & Macros + Hydration */}
+      <div 
+        className="mobile-stack-grid nutrition-overview-grid"
+        style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))', 
+          gap: '1.25rem', 
+          marginBottom: '1.25rem' 
+        }}
+      >
+        {/* Unified Energy & Macros Card */}
+        <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <div style={{ padding: '0.45rem', background: 'rgba(16, 185, 129, 0.15)', borderRadius: '10px', color: '#10b981' }}>
+                  <Flame size={18} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>{t('dailyGoals')}</h3>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                    {t('caloriesIn')}: {totalCaloriesConsumed} kcal · {t('caloriesOut')}: {todayBurnedCalories} kcal
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsTDEEModalOpen(true)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--accent-primary)',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                {t('edit')}
+              </button>
+            </div>
+
+            {/* Calories Progress Bar */}
+            <div style={{ marginBottom: '1.35rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.35rem' }}>
+                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{t('calories')}</span>
+                <span style={{ fontWeight: 700 }}>
+                  <span style={{ color: totalCaloriesConsumed > nutritionGoals.dailyCalories ? '#f43f5e' : 'var(--text-primary)' }}>
+                    {totalCaloriesConsumed}
+                  </span>
+                  <span style={{ color: 'var(--text-muted)' }}> / {nutritionGoals.dailyCalories} kcal</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '0.35rem' }}>({calPercent}%)</span>
+                </span>
+              </div>
+              <div style={{ width: '100%', height: '8px', background: 'var(--bg-tertiary)', borderRadius: '999px', overflow: 'hidden' }}>
+                <div 
+                  style={{ 
+                    width: `${Math.min(100, calPercent)}%`, 
+                    height: '100%', 
+                    background: totalCaloriesConsumed > nutritionGoals.dailyCalories ? '#f43f5e' : 'linear-gradient(90deg, #10b981, #06b6d4)', 
+                    borderRadius: '999px',
+                    transition: 'width 0.4s ease'
+                  }} 
+                />
+              </div>
+            </div>
+
+            {/* Interactive Segmented Macro Pill & Dynamic Targets */}
+            <SegmentedMacroPill
+              protein={totalProtein}
+              targetProtein={nutritionGoals.dailyProtein}
+              carbs={totalCarbs}
+              targetCarbs={nutritionGoals.dailyCarbs}
+              fats={totalFats}
+              targetFats={nutritionGoals.dailyFats}
+              totalCalories={totalCaloriesConsumed}
+              targetCalories={nutritionGoals.dailyCalories}
+            />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1.25rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border-color)', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+            <span>{t('netBalance')}: <strong style={{ color: netBalance <= 0 ? '#10b981' : 'var(--text-primary)' }}>{netBalance > 0 ? `+${netBalance}` : netBalance} kcal</strong></span>
+            <span>{netBalance <= 0 ? t('calorieDeficitZone') : t('calorieSurplusZone')}</span>
+          </div>
+        </div>
+
+        {/* Interactive 3D Hydration Wave Chamber */}
+        <InteractiveHydrationWaveCard
+          todayWater={todayWater}
+          waterGoal={waterGoal}
+          onLogWater={(amount) => void logWater(amount, todayKey)}
+          onResetWater={() => void resetWater(todayKey)}
+        />
+      </div>
+
+      {/* Gym Lifestyle Nutrition Coaching Pillars */}
+      <div className="gym-lifestyle-advice-grid">
+        <div className="gym-advice-card">
+          <div className="gym-advice-icon" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b' }}>
+            ⚡
+          </div>
+          <div>
+            <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+              {isRTL ? 'وجبة ما قبل التمرين (Pre-Workout Fuel)' : 'Pre-Workout Fuel'}
+            </h4>
+            <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              {isRTL 
+                ? 'تناول كربوهيدرات معقدة مع مصدر بروتين خفيف قبل التمرين بـ 60-90 دقيقة لتغذية الجليكوجين العضلي وضمان طاقة انفجارية وضخ دموي قوي أثناء الرفع.' 
+                : 'Consume complex carbs and lean protein 60-90 minutes prior to training to fuel glycogen stores, endurance, and muscular pumps.'}
+            </p>
+          </div>
+        </div>
+
+        <div className="gym-advice-card">
+          <div className="gym-advice-icon" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981' }}>
+            🛡️
+          </div>
+          <div>
+            <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+              {isRTL ? 'استشفاء ما بعد التمرين (Post-Workout Anabolism)' : 'Post-Workout Anabolism'}
+            </h4>
+            <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              {isRTL 
+                ? 'احرص على 25-35 جم من البروتين عالي الجودة مع كارب سريع بعد التمرين لإيقاف الهدم العضلي وتنشيط عملية التخليق البروتيني (Muscle Protein Synthesis).' 
+                : 'Aim for 25-35g of high-bioavailability protein plus fast carbs post-workout to arrest catabolism and trigger muscle protein synthesis.'}
             </p>
           </div>
         </div>
       </div>
 
-      {/* Energy Balance & Daily Macro Cards */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', 
-        gap: '1.25rem', 
-        marginBottom: '2rem' 
-      }}>
-        {/* Calories Consumed */}
-        <div className="card" style={{ padding: '1.25rem', position: 'relative', overflow: 'hidden' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-            <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase' }}>
-              {t('caloriesIn')}
-            </span>
-            <div style={{ padding: '0.5rem', background: 'rgba(16, 185, 129, 0.12)', borderRadius: '8px', color: '#10b981' }}>
-              <Utensils size={18} />
-            </div>
-          </div>
-          <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-            {totalCaloriesConsumed} <span style={{ fontSize: '1rem', fontWeight: 500, color: 'var(--text-muted)' }}>kcal</span>
-          </div>
-          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-            {t('fromLoggedMeals')} ({todayMeals.length})
-          </div>
-        </div>
-
-        {/* Calories Burned */}
-        <div className="card" style={{ padding: '1.25rem', position: 'relative', overflow: 'hidden' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-            <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase' }}>
-              {t('caloriesOut')}
-            </span>
-            <div style={{ padding: '0.5rem', background: 'rgba(245, 158, 11, 0.12)', borderRadius: '8px', color: '#f59e0b' }}>
-              <Flame size={18} />
-            </div>
-          </div>
-          <div style={{ fontSize: '2rem', fontWeight: 800, color: '#f59e0b' }}>
-            {todayBurnedCalories} <span style={{ fontSize: '1rem', fontWeight: 500, color: 'var(--text-muted)' }}>kcal</span>
-          </div>
-          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-            {t('burnedFromGym')}
-          </div>
-        </div>
-
-        {/* Net Balance */}
-        <div className="card" style={{ padding: '1.25rem', position: 'relative', overflow: 'hidden' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-            <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase' }}>
-              {t('netBalance')}
-            </span>
-            <div style={{ padding: '0.5rem', background: 'rgba(6, 182, 212, 0.12)', borderRadius: '8px', color: '#06b6d4' }}>
-              <Scale size={18} />
-            </div>
-          </div>
-          <div style={{ fontSize: '2rem', fontWeight: 800, color: netBalance > 0 ? 'var(--text-primary)' : '#10b981' }}>
-            {netBalance > 0 ? `+${netBalance}` : netBalance} <span style={{ fontSize: '1rem', fontWeight: 500, color: 'var(--text-muted)' }}>kcal</span>
-          </div>
-          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-            {netBalance <= 0 ? t('calorieDeficitZone') : t('calorieSurplusZone')}
-          </div>
-        </div>
-
-        {/* Daily Macros */}
-        <div className="card" style={{ padding: '1.25rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-            <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase' }}>
-              {t('dailyMacros')}
-            </span>
-            <div style={{ padding: '0.5rem', background: 'rgba(139, 92, 246, 0.12)', borderRadius: '8px', color: '#8b5cf6' }}>
-              <HeartPulse size={18} />
-            </div>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem', marginTop: '0.5rem' }}>
-            <div style={{ textAlign: 'center', flex: 1, padding: '0.5rem', background: 'var(--bg-tertiary)', borderRadius: '8px' }}>
-              <div style={{ color: '#06b6d4', fontWeight: 700, fontSize: '1.1rem' }}>{totalProtein}g</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t('protein')}</div>
-            </div>
-            <div style={{ textAlign: 'center', flex: 1, padding: '0.5rem', background: 'var(--bg-tertiary)', borderRadius: '8px' }}>
-              <div style={{ color: '#f59e0b', fontWeight: 700, fontSize: '1.1rem' }}>{totalCarbs}g</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t('carbs')}</div>
-            </div>
-            <div style={{ textAlign: 'center', flex: 1, padding: '0.5rem', background: 'var(--bg-tertiary)', borderRadius: '8px' }}>
-              <div style={{ color: '#ec4899', fontWeight: 700, fontSize: '1.1rem' }}>{totalFats}g</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t('fats')}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Main Content Layout: Logger on Left/Top, Logged Meals on Right */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '2rem' }}>
+      <div className="nutrition-form-grid mobile-stack-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '2rem' }}>
         {/* Meal Logger Form */}
         <div className="card" style={{ padding: '1.75rem' }}>
+          {/* AI Macro Vision Scanner Hero Card */}
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(6, 182, 212, 0.15))',
+            border: '1.5px solid rgba(16, 185, 129, 0.35)',
+            borderRadius: '16px',
+            padding: '1rem 1.15rem',
+            marginBottom: '1.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.85rem',
+            flexWrap: 'wrap'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <div style={{
+                width: '42px',
+                height: '42px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(6, 182, 212, 0.25))',
+                border: '1px solid rgba(16, 185, 129, 0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#10b981'
+              }}>
+                <Camera size={22} />
+              </div>
+              <div>
+                <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#ffffff' }}>
+                  {isRTL ? 'ماسح الوجبات الذكي بالكاميرا (AI Vision)' : 'AI Macro Vision Scanner'}
+                </div>
+                <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                  {isRTL ? 'صوّر صحنك ⬅️ تحليل فوري للسعرات والماكروز والتسجيل بنقرة' : 'Snap your plate ⬅️ Instant calories & macros estimation'}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => setIsAIMealVisionOpen(true)}
+                style={{
+                  padding: '0.55rem 1rem',
+                  fontSize: '0.82rem',
+                  fontWeight: 800,
+                  borderRadius: '11px',
+                  background: 'linear-gradient(135deg, #10b981, #06b6d4)',
+                  color: '#041316',
+                  border: 'none',
+                  boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  cursor: 'pointer'
+                }}
+              >
+                <Sparkles size={15} />
+                <span>{isRTL ? 'ماسح الوجبة بالذكاء الاصطناعي' : 'AI Plate Scan'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsBarcodeScannerOpen(true)}
+                style={{
+                  padding: '0.55rem 1rem',
+                  fontSize: '0.82rem',
+                  fontWeight: 800,
+                  borderRadius: '11px',
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  color: '#ffffff',
+                  border: '1px solid rgba(16, 185, 129, 0.4)',
+                  boxShadow: '0 4px 14px rgba(0, 0, 0, 0.25)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  cursor: 'pointer',
+                  backdropFilter: 'blur(10px)'
+                }}
+              >
+                <Barcode size={16} style={{ color: '#10b981' }} />
+                <span>{isRTL ? 'مسح الباركود' : 'Barcode Scan'}</span>
+              </button>
+            </div>
+          </div>
+
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
             <Sparkles className="w-5 h-5" style={{ color: '#46d9ff' }} />
             <h2 style={{ margin: 0, fontSize: '1.25rem' }}>{t('logMealWithAI')}</h2>
@@ -403,7 +660,7 @@ Respond ONLY with valid JSON with NO markdown fences, matching this schema:
             <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', fontWeight: 600 }}>
               {t('mealType')}
             </label>
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <div className="meal-type-tabs" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               {MEAL_TYPES.map(m => (
                 <button
                   key={m.type}
@@ -576,10 +833,11 @@ Respond ONLY with valid JSON with NO markdown fences, matching this schema:
           )}
 
           {/* Analyze Button */}
-          <button
+          <Button
             type="button"
-            className="btn btn-primary"
+            variant="primary"
             onClick={handleAnalyze}
+            isLoading={isAnalyzing}
             disabled={isAnalyzing || (!selectedImage && !description.trim())}
             style={{ 
               width: '100%', 
@@ -588,22 +846,12 @@ Respond ONLY with valid JSON with NO markdown fences, matching this schema:
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center', 
-              gap: '0.6rem',
-              opacity: isAnalyzing || (!selectedImage && !description.trim()) ? 0.6 : 1
+              gap: '0.6rem'
             }}
           >
-            {isAnalyzing ? (
-              <>
-                <RefreshCw size={18} className="animate-spin" />
-                {t('analyzingText')}
-              </>
-            ) : (
-              <>
-                <Sparkles size={18} />
-                {t('analyzeDishBtn')}
-              </>
-            )}
-          </button>
+            <Sparkles size={18} />
+            <span>{t('analyzeDishBtn')}</span>
+          </Button>
 
           {/* AI Analysis Result Card */}
           <AnimatePresence>
@@ -655,6 +903,7 @@ Respond ONLY with valid JSON with NO markdown fences, matching this schema:
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t('estCalories')}</div>
                       <input 
                         type="number"
+                        inputMode="numeric"
                         className="input"
                         value={analysisResult.calories}
                         onChange={(e) => setAnalysisResult({ ...analysisResult, calories: Number(e.target.value) || 0 })}
@@ -667,6 +916,7 @@ Respond ONLY with valid JSON with NO markdown fences, matching this schema:
                       <div style={{ fontSize: '0.75rem', color: '#06b6d4' }}>{t('protein')}</div>
                       <input 
                         type="number"
+                        inputMode="numeric"
                         className="input"
                         value={analysisResult.protein}
                         onChange={(e) => setAnalysisResult({ ...analysisResult, protein: Number(e.target.value) || 0 })}
@@ -679,6 +929,7 @@ Respond ONLY with valid JSON with NO markdown fences, matching this schema:
                       <div style={{ fontSize: '0.75rem', color: '#f59e0b' }}>{t('carbs')}</div>
                       <input 
                         type="number"
+                        inputMode="numeric"
                         className="input"
                         value={analysisResult.carbs}
                         onChange={(e) => setAnalysisResult({ ...analysisResult, carbs: Number(e.target.value) || 0 })}
@@ -691,6 +942,7 @@ Respond ONLY with valid JSON with NO markdown fences, matching this schema:
                       <div style={{ fontSize: '0.75rem', color: '#ec4899' }}>{t('fats')}</div>
                       <input 
                         type="number"
+                        inputMode="numeric"
                         className="input"
                         value={analysisResult.fats}
                         onChange={(e) => setAnalysisResult({ ...analysisResult, fats: Number(e.target.value) || 0 })}
@@ -755,9 +1007,9 @@ Respond ONLY with valid JSON with NO markdown fences, matching this schema:
                   </div>
 
                   {/* Save to Log Button */}
-                  <button
+                  <Button
                     type="button"
-                    className="btn btn-primary"
+                    variant="primary"
                     onClick={handleSaveMeal}
                     style={{ 
                       width: '100%', 
@@ -770,8 +1022,8 @@ Respond ONLY with valid JSON with NO markdown fences, matching this schema:
                     }}
                   >
                     <CheckCircle2 size={18} />
-                    {t('saveToMeals')}
-                  </button>
+                    <span>{t('saveToMeals')}</span>
+                  </Button>
                 </div>
               </motion.div>
             )}
@@ -788,20 +1040,20 @@ Respond ONLY with valid JSON with NO markdown fences, matching this schema:
           </div>
 
           {todayMeals.length === 0 ? (
-            <div className="card" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-              <div style={{ 
-                width: '54px', height: '54px', borderRadius: '50%', 
-                background: 'var(--bg-tertiary)', display: 'flex', 
-                alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem auto' 
-              }}>
-                <Utensils size={24} style={{ color: 'var(--text-muted)' }} />
-              </div>
-              <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-primary)', fontSize: '1.1rem' }}>
-                {t('noMealsLoggedToday')}
-              </h3>
-              <p style={{ margin: 0, fontSize: '0.875rem' }}>
-                {t('noMealsLoggedDesc')}
-              </p>
+            <div className="card" style={{ padding: '2rem 1.5rem' }}>
+              <EmptyState
+                icon={<Utensils size={32} />}
+                title={t('noMealsLoggedToday')}
+                description={t('noMealsLoggedDesc')}
+                action={
+                  <Button
+                    variant="primary"
+                    onClick={() => setIsAIMealVisionOpen(true)}
+                  >
+                    <span>{isRTL ? '📷 فتح الماسح بالكاميرا' : '📷 Scan with Camera'}</span>
+                  </Button>
+                }
+              />
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -835,31 +1087,74 @@ Respond ONLY with valid JSON with NO markdown fences, matching this schema:
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                            <span style={{ 
-                              fontSize: '0.75rem', fontWeight: 700, textTransform: 'capitalize',
-                              background: 'var(--bg-tertiary)', padding: '0.2rem 0.5rem', borderRadius: '6px'
-                            }}>
-                              {typeObj.icon} {meal.mealType}
-                            </span>
+                            <Badge tone="cyan" size="sm">
+                              <span style={{ marginRight: '0.25rem', marginLeft: '0.25rem' }}>{typeObj.icon}</span>
+                              <span style={{ textTransform: 'capitalize' }}>{meal.mealType}</span>
+                            </Badge>
                             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                               <Clock size={12} /> {timeLabel}
                             </span>
                           </div>
 
-                          <button
-                            type="button"
-                            onClick={() => deleteMeal(meal.id)}
-                            style={{
-                              background: 'transparent',
-                              border: 'none',
-                              color: 'var(--text-muted)',
-                              cursor: 'pointer',
-                              padding: '0.25rem'
-                            }}
-                            title="Delete meal"
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                gymAudio.triggerSubtleHaptic([15]);
+                                setEditingMeal(meal);
+                                setIsManualMealModalOpen(true);
+                              }}
+                              style={{
+                                background: 'rgba(6, 182, 212, 0.08)',
+                                border: '1px solid rgba(6, 182, 212, 0.25)',
+                                color: '#06b6d4',
+                                cursor: 'pointer',
+                                width: '38px',
+                                height: '38px',
+                                minWidth: '38px',
+                                minHeight: '38px',
+                                borderRadius: '10px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.15s ease'
+                              }}
+                              title={isRTL ? 'تعديل الوجبة' : 'Edit meal'}
+                              aria-label={isRTL ? 'تعديل الوجبة' : 'Edit meal'}
+                            >
+                              <Edit3 size={16} />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (confirm(isRTL ? 'هل أنت متأكد من حذف هذه الوجبة؟' : 'Delete this meal?')) {
+                                  gymAudio.triggerSubtleHaptic([20]);
+                                  deleteMeal(meal.id);
+                                  notify(isRTL ? 'تم حذف الوجبة بنجاح' : 'Meal deleted successfully', 'success');
+                                }
+                              }}
+                              style={{
+                                background: 'rgba(239, 68, 68, 0.08)',
+                                border: '1px solid rgba(239, 68, 68, 0.2)',
+                                color: '#ef4444',
+                                cursor: 'pointer',
+                                width: '38px',
+                                height: '38px',
+                                minWidth: '38px',
+                                minHeight: '38px',
+                                borderRadius: '10px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.15s ease'
+                              }}
+                              title={isRTL ? 'حذف الوجبة' : 'Delete meal'}
+                              aria-label={isRTL ? 'حذف الوجبة' : 'Delete meal'}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
                         </div>
 
                         <h4 style={{ margin: '0.5rem 0 0.25rem 0', fontSize: '1.05rem', fontWeight: 700 }}>
@@ -904,6 +1199,55 @@ Respond ONLY with valid JSON with NO markdown fences, matching this schema:
           )}
         </div>
       </div>
+
+      {/* TDEE & Macro Goals Calculator Modal */}
+      <TDEECalculatorModal 
+        isOpen={isTDEEModalOpen} 
+        onClose={() => setIsTDEEModalOpen(false)} 
+      />
+
+      {/* AI Meal Vision Scanner Modal */}
+      <AIMealVisionModal
+        isOpen={isAIMealVisionOpen}
+        onClose={() => setIsAIMealVisionOpen(false)}
+        onSaveMeal={(meal) => {
+          saveMeal({
+            ...meal,
+            id: `meal-${Date.now()}`
+          });
+        }}
+      />
+
+      {/* Barcode Food Scanner Modal */}
+      <BarcodeFoodScannerModal
+        isOpen={isBarcodeScannerOpen}
+        onClose={() => setIsBarcodeScannerOpen(false)}
+        onSaveMeal={(meal) => {
+          saveMeal({
+            ...meal,
+            id: `meal-${Date.now()}`
+          });
+        }}
+      />
+
+      {/* Manual Meal Entry & Edit Modal */}
+      <ManualMealModal
+        isOpen={isManualMealModalOpen}
+        onClose={() => {
+          setIsManualMealModalOpen(false);
+          setEditingMeal(null);
+        }}
+        initialMeal={editingMeal}
+        onSave={async (meal: Omit<MealRecord, 'id'> | MealRecord) => {
+          const finalMeal: MealRecord = {
+            ...meal,
+            id: 'id' in meal && meal.id ? meal.id : `meal-${Date.now()}`
+          };
+          await saveMeal(finalMeal);
+          setIsManualMealModalOpen(false);
+          setEditingMeal(null);
+        }}
+      />
     </motion.div>
   );
 }

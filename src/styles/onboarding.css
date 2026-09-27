@@ -1,0 +1,483 @@
+/* ========================================================================== 
+   FORMA PRO — Interactive Onboarding Styles
+   ========================================================================== */
+
+@layer components {
+.forma-onboarding-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(0.75rem, 3vw, 1.5rem);
+  background: radial-gradient(circle at center, rgba(15, 23, 42, 0.94) 0%, rgba(3, 7, 18, 0.98) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  overflow-y: auto;
+  user-select: none;
+}
+
+.forma-onboarding-card {
+  width: 100%;
+  max-width: 32rem;
+  max-height: calc(100vh - 2rem);
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(170deg, rgba(20, 27, 45, 0.92) 0%, rgba(11, 15, 25, 0.98) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  border-radius: 28px;
+  box-shadow: 
+    0 24px 64px -12px rgba(0, 0, 0, 0.85),
+    0 0 40px rgba(56, 189, 248, 0.12),
+    inset 0 1px 1px rgba(255, 255, 255, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Ambient Top Accent Light */
+.forma-onboarding-glow {
+  position: absolute;
+  top: -80px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 300px;
+  height: 160px;
+  background: radial-gradient(ellipse at center, rgba(56, 189, 248, 0.35) 0%, rgba(16, 185, 129, 0.15) 50%, transparent 80%);
+  filter: blur(35px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Top Header */
+.forma-onboarding-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.15rem 1.4rem 0.5rem;
+  position: relative;
+  z-index: 2;
+}
+
+.forma-onboarding-step-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #38bdf8;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.forma-onboarding-close-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.forma-onboarding-close-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+/* Multi-step Route Capsules */
+.forma-onboarding-route {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.45rem;
+  padding: 0.3rem 1.4rem 0.8rem;
+  position: relative;
+  z-index: 2;
+}
+
+.forma-onboarding-route-bar {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.forma-onboarding-route-bar.is-active {
+  background: linear-gradient(90deg, #38bdf8, #10b981);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
+}
+
+/* Content Area */
+.forma-onboarding-content {
+  padding: 0.75rem 1.4rem 1.25rem;
+  overflow-y: auto;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+}
+
+/* Hero Badge & Header */
+.forma-onboarding-hero-head {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.forma-onboarding-icon-gem {
+  width: 62px;
+  height: 62px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.22), rgba(16, 185, 129, 0.22));
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #38bdf8;
+  margin-bottom: 0.85rem;
+  box-shadow: 0 12px 28px rgba(56, 189, 248, 0.25);
+}
+
+.forma-onboarding-title {
+  margin: 0 0 0.4rem;
+  font-size: clamp(1.25rem, 3.8vw, 1.6rem);
+  font-weight: 850;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.forma-onboarding-desc {
+  margin: 0;
+  font-size: 0.84rem;
+  color: #94a3b8;
+  line-height: 1.5;
+  max-width: 26rem;
+}
+
+/* Showcase Visual Simulation Cards */
+.forma-showcase-box {
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 18px;
+  padding: 1rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.forma-showcase-pills-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.6rem;
+}
+
+.forma-showcase-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.65rem 0.8rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  font-size: 0.78rem;
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
+.forma-showcase-pill svg {
+  color: #38bdf8;
+  flex-shrink: 0;
+}
+
+/* Lock Screen Mock Visual */
+.forma-lockscreen-mock {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.95));
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 16px;
+  padding: 0.9rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.forma-lockscreen-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.forma-lockscreen-title {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.forma-lockscreen-time {
+  font-family: monospace;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #10b981;
+}
+
+.forma-lockscreen-bar {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.forma-lockscreen-fill {
+  width: 68%;
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #38bdf8);
+  border-radius: 999px;
+}
+
+.forma-lockscreen-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.25rem;
+}
+
+.forma-lockscreen-btn {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.3rem 0.65rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #cbd5e1;
+}
+
+/* 3D Hologram / Muscle Simulation Card */
+.forma-muscle-mock {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: rgba(16, 185, 129, 0.06);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 16px;
+  padding: 0.85rem 1rem;
+}
+
+.forma-muscle-radar-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #10b981;
+  flex-shrink: 0;
+}
+
+/* Interactive Choices Grid */
+.forma-choice-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.forma-choice-label {
+  font-size: 0.75rem;
+  font-weight: 750;
+  color: #94a3b8;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.forma-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 0.55rem;
+}
+
+.forma-choice-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 0.75rem 0.6rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #94a3b8;
+  text-align: center;
+  font-family: inherit;
+}
+
+.forma-choice-card:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.forma-choice-card.is-active {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.14), rgba(16, 185, 129, 0.14));
+  border-color: #38bdf8;
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(56, 189, 248, 0.22);
+}
+
+.forma-choice-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.forma-choice-sub {
+  font-size: 0.68rem;
+  color: #94a3b8;
+}
+
+.forma-choice-card.is-active .forma-choice-sub {
+  color: #38bdf8;
+}
+
+/* Theme Swatches Selector */
+.forma-themes-swatches {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.55rem;
+}
+
+.forma-theme-swatch-card {
+  padding: 0.65rem 0.5rem;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.forma-theme-swatch-card.is-active {
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.1);
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.2);
+}
+
+.forma-theme-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.forma-theme-name {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Footer & Navigation */
+.forma-onboarding-footer {
+  padding: 1rem 1.4rem calc(1rem + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(11, 15, 25, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  position: relative;
+  z-index: 2;
+}
+
+.forma-onboarding-back-btn {
+  padding: 0.65rem 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: #94a3b8;
+  font-size: 0.82rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.forma-onboarding-back-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.forma-onboarding-primary-btn {
+  flex: 1;
+  padding: 0.72rem 1.25rem;
+  border-radius: 14px;
+  border: none;
+  background: linear-gradient(135deg, #38bdf8 0%, #10b981 100%);
+  color: #031219;
+  font-size: 0.88rem;
+  font-weight: 850;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(56, 189, 248, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.forma-onboarding-primary-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(56, 189, 248, 0.45);
+}
+
+.forma-onboarding-primary-btn:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 480px) {
+  .forma-onboarding-card {
+    border-radius: 22px;
+  }
+  .forma-onboarding-topline {
+    padding-inline: 1rem;
+  }
+  .forma-onboarding-route {
+    padding-inline: 1rem;
+  }
+  .forma-onboarding-content {
+    padding-inline: 1rem;
+  }
+  .forma-onboarding-footer {
+    padding-inline: 1rem;
+  }
+  .forma-showcase-pills-row {
+    grid-template-columns: 1fr;
+  }
+  .forma-themes-swatches {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+}

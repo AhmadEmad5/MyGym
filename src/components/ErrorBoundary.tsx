@@ -113,7 +113,7 @@ export class ErrorBoundary extends Component<Props, State> {
             
             <p style={{ color: '#94a3b8', fontSize: '0.925rem', lineHeight: '1.5', marginBottom: '1.75rem' }}>
               {isChunkError 
-                ? 'A fresh update of MyGym was deployed. Click below to load the latest version.'
+                ? 'A fresh update of FORMA was deployed. Click below to load the latest version.'
                 : 'An unexpected application error occurred. Your workouts and routines remain safely saved.'}
             </p>
 

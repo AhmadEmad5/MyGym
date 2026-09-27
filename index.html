@@ -1,20 +1,53 @@
 <!doctype html>
-<html lang="en">
+<html lang="ar" dir="rtl">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MyGym</title>
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    
+    <meta name="description" content="FORMA هو تطبيق اللياقة والتمرين الذكي لتتبع تمارين كمال الأجسام والكارديو، التغذية، وحساب الأوزان القصوى 1RM مع مساعدة الذكاء الاصطناعي." />
+    <meta name="keywords" content="fitness tracker, workout tracker, gym log, cardio timer, bodybuilding, nutrition tracker, كمال أجسام, تمارين, مدرب رياضي, كارديو" />
+    <meta name="author" content="FORMA Fitness" />
+    <meta name="application-name" content="FORMA" />
+    <meta name="theme-color" content="#0b0f19" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="FORMA" />
+    
+    <!-- OpenGraph Social Sharing -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="FORMA - Smart Fitness & Workout Tracker" />
+    <meta property="og:description" content="تتبع تمارينك الرياضية، مؤقت الكارديو الذكي، السعرات والتغذية، وسجلات الأرقام القياسية مع FORMA." />
+    <meta property="og:image" content="/pwa-512x512.png" />
+    <meta property="og:site_name" content="FORMA" />
+
+    <!-- Twitter Cards -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="FORMA - Smart Fitness & Workout Tracker" />
+    <meta name="twitter:description" content="Track your workouts, routines, cardio timers, and nutrition effortlessly." />
+    <meta name="twitter:image" content="/pwa-512x512.png" />
+
+    <title>FORMA | المدرب الرياضي الذكي ومتتبع التمارين</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script>
       (function() {
         try {
-          var t = localStorage.getItem('mygym_theme') || 'dark';
+          var t = localStorage.getItem('forma_theme') || localStorage.getItem('kinetic_theme') || localStorage.getItem('mygym_theme') || 'dark';
           document.documentElement.setAttribute('data-theme', t);
           document.documentElement.style.colorScheme = t === 'light' ? 'light' : 'dark';
-          var l = localStorage.getItem('mygym_lang') || 'en';
+          var storedL = localStorage.getItem('forma_lang') || localStorage.getItem('kinetic_lang') || localStorage.getItem('mygym_lang');
+          var l = 'ar';
+          if (storedL === 'ar' || storedL === 'en') {
+            l = storedL;
+          } else {
+            var navLang = (navigator.language || (navigator.languages && navigator.languages[0]) || '').toLowerCase();
+            l = navLang.indexOf('ar') === 0 ? 'ar' : 'en';
+          }
           document.documentElement.setAttribute('lang', l);
           document.documentElement.setAttribute('dir', l === 'ar' ? 'rtl' : 'ltr');
         } catch (e) {}

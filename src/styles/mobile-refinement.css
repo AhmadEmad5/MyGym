@@ -1,0 +1,391 @@
+/* Mobile-first finishing layer. Keep this last in main.tsx so it can refine
+   the legacy responsive rules without changing their desktop behavior. */
+@media (max-width: 900px) {
+  :root {
+    --mobile-page-gutter: clamp(0.875rem, 4vw, 1.25rem);
+    --mobile-touch-size: 44px;
+  }
+
+  .app-layout { min-height: 100dvh; }
+  .app-layout .main-content { min-height: 0; }
+
+  .app-layout .content-area {
+    padding-inline: var(--mobile-page-gutter);
+    padding-top: calc(62px + env(safe-area-inset-top, 0px) + 0.75rem);
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+    scroll-padding-block: 1rem 7rem;
+  }
+
+  .app-layout.has-live-bar .mobile-top-bar {
+    border-color: color-mix(in srgb, var(--border-highlight) 72%, transparent);
+  }
+
+  .app-layout.has-live-bar aside[aria-label="Floating Dynamic Island HUD"] {
+    top: calc(58px + env(safe-area-inset-top, 0px)) !important;
+  }
+
+  .app-layout.has-live-bar .content-area {
+    padding-top: calc(114px + env(safe-area-inset-top, 0px) + 0.5rem);
+  }
+
+  .mobile-top-bar {
+    background: color-mix(in srgb, var(--bg-primary) 88%, transparent) !important;
+    border-color: var(--border-color) !important;
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--bg-primary) 24%, transparent) !important;
+  }
+
+  .mobile-brand-title,
+  .mobile-top-actions,
+  .mobile-top-btn,
+  .mobile-top-avatar {
+    color: var(--text-primary) !important;
+  }
+
+  .mobile-top-btn,
+  .mobile-top-avatar {
+    width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+  }
+
+  .modern-nav-wrapper {
+    bottom: 0 !important;
+    padding: 0 max(0.65rem, env(safe-area-inset-right, 0px)) calc(0.5rem + env(safe-area-inset-bottom, 0px)) max(0.65rem, env(safe-area-inset-left, 0px)) !important;
+  }
+
+  .modern-navbar {
+    width: 100% !important;
+    max-width: 520px !important;
+    height: 74px !important;
+    min-height: 74px !important;
+    padding: 0.35rem 0.4rem !important;
+    border: 1px solid var(--border-highlight) !important;
+    border-radius: 24px !important;
+    background: color-mix(in srgb, var(--bg-secondary) 96%, transparent) !important;
+    box-shadow: 0 10px 30px color-mix(in srgb, var(--bg-primary) 42%, transparent), inset 0 1px 0 color-mix(in srgb, white 7%, transparent) !important;
+  }
+
+  .modern-nav-links.mobile-only-nav {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    gap: 0.25rem !important;
+  }
+
+  .modern-nav-item {
+    min-width: 0 !important;
+    min-height: 64px !important;
+    height: 64px !important;
+    max-height: none !important;
+    padding: 0.25rem 0.1rem !important;
+    gap: 0.2rem !important;
+    border: 0 !important;
+    border-radius: 18px !important;
+    color: var(--text-secondary) !important;
+    transition: color 160ms ease, background-color 160ms ease !important;
+  }
+
+  .modern-nav-item .nav-icon-wrap {
+    width: 40px !important;
+    height: 34px !important;
+    flex-shrink: 0;
+    border-radius: 12px;
+    display: grid !important;
+    place-items: center;
+    isolation: isolate;
+    transition: background-color 160ms ease, transform 160ms ease;
+  }
+
+  .modern-nav-item.nav-train-action .nav-icon-wrap {
+    background: var(--accent-gradient) !important;
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--accent-primary) 24%, transparent);
+  }
+
+  .modern-nav-item.nav-train-action .nav-icon {
+    color: #fff !important;
+  }
+
+  .modern-nav-item.nav-train-action .nav-short-label {
+    color: var(--accent-primary) !important;
+    font-weight: 800 !important;
+  }
+
+  .modern-nav-item .nav-icon {
+    width: 22px !important;
+    height: 22px !important;
+    display: block;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transform: none !important;
+    filter: none !important;
+    color: var(--text-secondary) !important;
+  }
+
+  .modern-nav-links.mobile-only-nav .nav-icon-badge {
+    top: -2px;
+    right: auto;
+    inset-inline-end: -3px;
+    min-width: 16px;
+    height: 16px;
+    padding-inline: 3px;
+    border: 2px solid var(--bg-secondary);
+    border-radius: 999px;
+    background: var(--text-primary);
+    color: var(--bg-primary);
+    font-size: 9px;
+    font-weight: 800;
+    line-height: 12px;
+    box-shadow: none;
+    pointer-events: none;
+  }
+
+  .more-sheet-item-icon {
+    flex: 0 0 42px;
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
+    background: color-mix(in srgb, var(--accent-primary) 10%, var(--bg-secondary));
+    color: var(--accent-primary);
+  }
+
+  .more-sheet-item.is-active .more-sheet-item-icon {
+    background: color-mix(in srgb, var(--accent-primary) 18%, var(--bg-secondary));
+    color: var(--accent-primary);
+  }
+
+  .modern-nav-item .nav-short-label {
+    max-width: 100%;
+    overflow: hidden;
+    font-size: 0.7rem !important;
+    font-weight: 650 !important;
+    line-height: 1.15 !important;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-secondary) !important;
+  }
+
+  .modern-nav-item.is-active {
+    background: transparent !important;
+  }
+
+  .modern-nav-item.is-active .nav-icon-wrap {
+    background: color-mix(in srgb, var(--accent-primary) 16%, var(--bg-tertiary)) !important;
+  }
+
+  .modern-nav-item.is-active .nav-icon,
+  .modern-nav-item.is-active .nav-short-label {
+    color: var(--accent-primary) !important;
+    filter: none !important;
+  }
+
+  .modern-nav-item.is-active .nav-short-label { font-weight: 800 !important; }
+
+  .modern-nav-item.nav-train-action.is-active .nav-icon-wrap {
+    background: var(--accent-gradient) !important;
+  }
+
+  .modern-nav-item.nav-train-action.is-active .nav-icon {
+    color: #fff !important;
+  }
+
+  .modern-nav-item:active .nav-icon-wrap {
+    transform: scale(0.94);
+  }
+
+  .modern-nav-item:focus-visible {
+    outline: 2px solid var(--accent-primary) !important;
+    outline-offset: -2px;
+  }
+
+  .more-sheet-panel,
+  .forma-mobile-sheet {
+    background: color-mix(in srgb, var(--bg-secondary) 96%, transparent) !important;
+    border-color: var(--border-highlight) !important;
+    padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .more-sheet-item,
+  .more-sheet-footer-btn {
+    min-height: var(--mobile-touch-size);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+  }
+
+  .more-sheet-item:hover,
+  .more-sheet-item.is-active {
+    color: var(--accent-primary) !important;
+    background: color-mix(in srgb, var(--accent-primary) 12%, var(--bg-secondary)) !important;
+    border-color: color-mix(in srgb, var(--accent-primary) 40%, var(--border-color)) !important;
+  }
+
+  .forma-mobile-sheet {
+    max-height: min(88dvh, 48rem);
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .forma-page-frame,
+  .zen-page-container,
+  .page-surface {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .forma-page-frame {
+    padding-inline: 0;
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .forma-page-header h1,
+  .zen-header h1 {
+    line-height: 1.1;
+    text-wrap: balance;
+  }
+
+  .forma-page-header p,
+  .zen-header p {
+    max-width: 44ch;
+  }
+
+  .today-dashboard-stack,
+  .nutrition-page,
+  .calendar-page,
+  .routines-page,
+  .performance-page,
+  .settings-page,
+  .session-detail-container {
+    min-width: 0;
+  }
+
+  .today-dashboard-stack { gap: 1rem; }
+
+  .today-active-surface,
+  .today-sessions-sidebar,
+  .today-recovery-section .card,
+  .today-fuel-column .card,
+  .today-hydration-column .card {
+    border-color: var(--border-highlight) !important;
+    box-shadow: 0 12px 28px color-mix(in srgb, var(--bg-primary) 25%, transparent) !important;
+  }
+
+  .today-primary-row > *,
+  .today-empty-actions > *,
+  .forma-page-actions > *,
+  .calendar-header-buttons-row > button {
+    min-height: var(--mobile-touch-size);
+  }
+
+  .calendar-page .calendar-week-ribbon,
+  .calendar-page .calendar-day-tab-bar,
+  .nutrition-page .nutrition-header-actions,
+  .routines-page .routines-header-actions {
+    scrollbar-width: none;
+  }
+
+  .calendar-page .calendar-week-ribbon::-webkit-scrollbar,
+  .calendar-page .calendar-day-tab-bar::-webkit-scrollbar { display: none; }
+
+  .calendar-page .calendar-workout-card,
+  .routines-page .routine-card,
+  .nutrition-page .meal-card,
+  .nutrition-page .logged-meal-card,
+  .performance-page > section,
+  .settings-page .settings-list {
+    box-shadow: 0 10px 24px color-mix(in srgb, var(--bg-primary) 20%, transparent) !important;
+  }
+
+  .calendar-page .calendar-workout-card:active,
+  .routines-page .routine-card:active {
+    transform: scale(0.99);
+  }
+
+  .session-detail-container {
+    padding-bottom: calc(9rem + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .session-detail-container .session-header-row {
+    top: env(safe-area-inset-top, 0px);
+    backdrop-filter: blur(18px);
+  }
+
+  .gym-floor-current-set-card {
+    padding: clamp(0.9rem, 4vw, 1.2rem) !important;
+    border: 1px solid color-mix(in srgb, var(--accent-cyan) 48%, var(--border-highlight)) !important;
+    border-radius: 22px !important;
+    background: var(--card-bg-gradient-hero) !important;
+    box-shadow: 0 16px 34px color-mix(in srgb, var(--bg-primary) 44%, transparent), 0 0 24px color-mix(in srgb, var(--accent-cyan) 10%, transparent) !important;
+  }
+
+  .gym-floor-current-set-card.is-completed {
+    border-color: color-mix(in srgb, var(--accent-green) 52%, var(--border-highlight)) !important;
+    background: linear-gradient(145deg, color-mix(in srgb, var(--accent-green) 10%, var(--bg-secondary)), var(--bg-secondary)) !important;
+  }
+
+  .gym-floor-thumb-stepper {
+    min-width: 48px;
+    min-height: 48px;
+    border-radius: 14px;
+  }
+
+  .gym-floor-check-circle {
+    min-width: 48px !important;
+    min-height: 48px !important;
+  }
+
+  .gym-floor-current-set-card input[type="number"] {
+    max-width: min(5.5rem, 25vw);
+    min-height: 48px;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-primary) !important;
+  }
+
+  .gym-floor-input-row {
+    background: color-mix(in srgb, var(--bg-input) 82%, var(--bg-primary)) !important;
+    border-color: var(--border-color) !important;
+  }
+
+  .gym-floor-set-heading,
+  .gym-floor-input-value input { color: var(--text-primary) !important; }
+  .gym-floor-input-label { color: var(--text-secondary) !important; }
+
+  .gym-floor-unit-toggle {
+    min-height: 40px;
+    color: var(--accent-cyan) !important;
+    background: color-mix(in srgb, var(--accent-cyan) 14%, transparent) !important;
+    border-color: color-mix(in srgb, var(--accent-cyan) 36%, transparent) !important;
+  }
+
+  .gym-floor-current-set-card button:focus-visible,
+  .gym-floor-current-set-card input:focus-visible {
+    outline-color: var(--accent-cyan);
+  }
+
+  .mobile-log-actions > button {
+    min-height: 48px;
+  }
+}
+
+@media (max-width: 380px) {
+  :root { --mobile-page-gutter: 0.8rem; }
+
+  .app-layout .content-area {
+    padding-inline: var(--mobile-page-gutter);
+  }
+
+  .mobile-brand-badge { display: none; }
+  .mobile-top-center { padding-inline: 0.15rem; }
+  .mobile-top-actions { gap: 0.2rem !important; }
+
+  .modern-navbar { padding-inline: 0.25rem !important; }
+  .modern-nav-links.mobile-only-nav { gap: 0.08rem !important; }
+  .modern-nav-item .nav-short-label { font-size: 0.69rem !important; }
+  .modern-nav-item .nav-icon-wrap { width: 36px !important; }
+
+  .gym-floor-current-set-card { padding: 0.8rem !important; }
+  .gym-floor-thumb-stepper { min-width: 44px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .calendar-page .calendar-workout-card:active,
+  .routines-page .routine-card:active { transform: none; }
+}

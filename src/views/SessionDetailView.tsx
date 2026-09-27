@@ -1,263 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence, Reorder, useDragControls } from 'framer-motion';
-import { ArrowLeft, Plus, Check, Play, Square, Trash2, GripVertical, Camera, X, CirclePlay, ExternalLink, Bell } from 'lucide-react';
-import { WorkoutSession, SetRecord, SessionExercise, estimateWorkoutCalories } from '../lib/api';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  ArrowLeft, Plus, Check, Play, Pause, Trash2, X, 
+  CirclePlay, ChevronRight, ChevronLeft, Sparkles, Dumbbell, 
+  RotateCcw, Info, CheckCircle2, Bell
+} from 'lucide-react';
+import { WorkoutSession, SetRecord, SessionExercise } from '../lib/api';
 import { useData } from '../hooks/useData';
 import { Modal } from '../components/Modal';
 import { useTranslation } from '../lib/i18n';
 import { gymAudio } from '../lib/audio';
-
-function ExerciseCard({ 
-  exercise, 
-  exIndex, 
-  updateSet, 
-  addSet,
-  updateExercise,
-  deleteExercise,
-  deleteSet
-}: { 
-  exercise: SessionExercise, 
-  exIndex: number, 
-  updateSet: (exIndex: number, setIndex: number, field: keyof SetRecord, value: any) => void,
-  addSet: (exIndex: number) => void,
-  updateExercise: (exIndex: number, field: keyof SessionExercise, value: any) => void,
-  deleteExercise: (exIndex: number) => void,
-  deleteSet: (exIndex: number, setIndex: number) => void
-}) {
-  const { t, tExercise, tMuscle, isRTL } = useTranslation();
-  const controls = useDragControls();
-  
-  const isCardio = exercise.targetMuscle === 'Cardio';
-  const [cardioTimer, setCardioTimer] = useState<number | null>(null);
-  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
-  const tutorialSearchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(`${exercise.name} proper form tutorial`)}`;
-  const embeddedTutorialUrl = exercise.videoUrl?.replace('www.youtube.com/embed/', 'www.youtube-nocookie.com/embed/');
-
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (cardioTimer !== null && cardioTimer > 0) {
-      interval = setInterval(() => {
-        setCardioTimer(t => (t ? t - 1 : 0));
-      }, 1000);
-    } else if (cardioTimer === 0) {
-      gymAudio.playRestTimerChime();
-      gymAudio.triggerVibration();
-      setCardioTimer(null);
-    }
-    return () => clearInterval(interval);
-  }, [cardioTimer]);
-
-  const handleCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        updateExercise(exIndex, 'imageUrl', reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  };
-
-  return (
-    <Reorder.Item 
-      value={exercise}
-      className="card" 
-      style={{ backgroundColor: 'var(--bg-tertiary)' }}
-      dragControls={controls}
-      dragListener={false}
-      whileDrag={{ scale: 1.02, boxShadow: '0 10px 20px rgba(0,0,0,0.2)' }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div 
-            style={{ display: 'flex', alignItems: 'center', padding: '0.25rem', cursor: 'grab', touchAction: 'none' }}
-            title="Drag to reorder"
-            onPointerDown={(e) => controls.start(e)}
-          >
-            <GripVertical className="w-5 h-5" style={{ color: 'var(--text-muted)' }} />
-          </div>
-          <div>
-            <h3 style={{ margin: 0, fontSize: '1.25rem' }}>{tExercise(exercise.name)}</h3>
-            <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-muted)' }}>{tMuscle(exercise.targetMuscle)}</p>
-          </div>
-        </div>
-        <button
-          type="button"
-          className="btn-icon btn-ghost"
-          style={{ color: 'var(--danger, #ef4444)', padding: '0.35rem' }}
-          title={t('deleteExercise')}
-          onClick={() => deleteExercise(exIndex)}
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
-      </div>
-
-      <div className="exercise-tutorial">
-        <div><CirclePlay size={18} /><span><strong>{t('formGuideTutorial')}</strong></span></div>
-        {embeddedTutorialUrl ? <button type="button" className="tutorial-trigger" onClick={() => setIsTutorialOpen(open => !open)}>{isTutorialOpen ? (isRTL ? 'إخفاء الفيديو' : 'Hide video') : (isRTL ? 'مشاهدة الشرح' : 'Watch tutorial')} <Play size={14} fill="currentColor" /></button> : <a className="tutorial-trigger" href={tutorialSearchUrl} target="_blank" rel="noreferrer">{isRTL ? 'بحث عن فيديو' : 'Find video'} <ExternalLink size={14} /></a>}
-      </div>
-      <AnimatePresence initial={false}>
-        {isTutorialOpen && embeddedTutorialUrl && <motion.div className="tutorial-player" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}><iframe width="100%" height="100%" src={`${embeddedTutorialUrl}?rel=0&modestbranding=1`} title={`${exercise.name} video tutorial`} frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen /></motion.div>}
-      </AnimatePresence>
-
-      {isCardio ? (
-        <div style={{ padding: '1rem', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 'var(--radius-md)' }}>
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1rem' }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>{t('cardioDuration')}</label>
-              <input 
-                type="number" 
-                className="input" 
-                value={exercise.duration || 0} 
-                onChange={e => updateExercise(exIndex, 'duration', parseInt(e.target.value) || 0)}
-                disabled={cardioTimer !== null}
-              />
-            </div>
-            {cardioTimer === null ? (
-              <button className="btn btn-primary" onClick={() => setCardioTimer((exercise.duration || 0) * 60)} style={{ marginTop: '1.25rem' }}>
-                {t('startTimer')}
-              </button>
-            ) : (
-              <button className="btn btn-secondary" onClick={() => setCardioTimer(null)} style={{ marginTop: '1.25rem' }}>
-                {t('stopTimer')}
-              </button>
-            )}
-          </div>
-
-          {cardioTimer !== null && (
-            <div style={{ fontSize: '3.5rem', fontWeight: 800, textAlign: 'center', margin: '2rem 0', color: 'var(--accent-primary)', fontVariantNumeric: 'tabular-nums' }}>
-              {formatTime(cardioTimer)}
-            </div>
-          )}
-
-          {(cardioTimer === 0 || exercise.imageUrl) && (
-            <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem', marginTop: '1rem' }}>
-              <h4 style={{ marginBottom: '0.75rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{t('treadmillCapture')}</h4>
-              {exercise.imageUrl ? (
-                <div style={{ position: 'relative', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
-                  <img src={exercise.imageUrl} alt="Treadmill screen" style={{ width: '100%', display: 'block' }} />
-                  <button 
-                    className="btn-icon" 
-                    style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', backgroundColor: 'rgba(0,0,0,0.5)', color: 'white' }}
-                    onClick={() => updateExercise(exIndex, 'imageUrl', undefined)}
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : (
-                <label className="btn btn-secondary" style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                  <Camera className="w-4 h-4" /> {t('takePicture')}
-                  <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleCapture} />
-                </label>
-              )}
-            </div>
-          )}
-        </div>
-      ) : (
-        <>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: isRTL ? 'right' : 'left', marginBottom: '1rem' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-                <th style={{ padding: '0.5rem 0', width: '2.5rem', textAlign: isRTL ? 'right' : 'left' }}>{t('setWord')}</th>
-                <th style={{ padding: '0.5rem', textAlign: isRTL ? 'right' : 'left' }}>{t('weight')}</th>
-                <th style={{ padding: '0.5rem', textAlign: isRTL ? 'right' : 'left' }}>{t('reps')}</th>
-                <th style={{ padding: '0.5rem', width: '3rem', textAlign: 'center' }}>{t('done')}</th>
-                <th style={{ padding: '0.5rem', width: '2.5rem', textAlign: 'center' }}></th>
-              </tr>
-            </thead>
-            <tbody>
-              <AnimatePresence>
-                {exercise.sets.map((set, setIndex) => (
-                  <motion.tr 
-                    key={set.id}
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    style={{ 
-                      borderBottom: '1px solid var(--border-color)',
-                      backgroundColor: set.isCompleted ? 'var(--bg-secondary)' : 'transparent',
-                      transition: 'background-color 0.3s ease'
-                    }}
-                  >
-                    <td style={{ padding: '0.5rem 0', fontWeight: 500 }}>{setIndex + 1}</td>
-                    <td style={{ padding: '0.5rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <input 
-                          type="number" 
-                          className="input" 
-                          style={{ width: '4rem', padding: '0.25rem 0.5rem' }} 
-                          value={set.weight}
-                          onChange={(e) => updateSet(exIndex, setIndex, 'weight', parseFloat(e.target.value) || 0)}
-                          disabled={set.isCompleted}
-                        />
-                        <button 
-                          className="btn-ghost" 
-                          style={{ padding: '0.25rem', fontSize: '0.75rem', borderRadius: '4px' }}
-                          onClick={() => updateSet(exIndex, setIndex, 'unit', set.unit === 'lb' ? 'kg' : 'lb')}
-                          disabled={set.isCompleted}
-                        >
-                          {set.unit}
-                        </button>
-                      </div>
-                    </td>
-                    <td style={{ padding: '0.5rem' }}>
-                      <input 
-                        type="number" 
-                        className="input" 
-                        style={{ width: '4rem', padding: '0.25rem 0.5rem' }} 
-                        value={set.repsActual}
-                        onChange={(e) => updateSet(exIndex, setIndex, 'repsActual', parseInt(e.target.value) || 0)}
-                        disabled={set.isCompleted}
-                      />
-                    </td>
-                    <td style={{ padding: '0.5rem', textAlign: 'center' }}>
-                      <motion.button 
-                        whileTap={{ scale: 0.8 }}
-                        className={`btn-icon ${set.isCompleted ? '' : 'btn-ghost'}`}
-                        style={{ 
-                          backgroundColor: set.isCompleted ? 'var(--success)' : 'transparent',
-                          color: set.isCompleted ? 'white' : 'inherit',
-                          padding: '0.25rem' 
-                        }}
-                        onClick={() => updateSet(exIndex, setIndex, 'isCompleted', !set.isCompleted)}
-                      >
-                        <Check className="w-5 h-5" />
-                      </motion.button>
-                    </td>
-                    <td style={{ padding: '0.5rem', textAlign: 'center' }}>
-                      {exercise.sets.length > 1 && (
-                        <button
-                          type="button"
-                          className="btn-icon btn-ghost"
-                          style={{ color: 'var(--text-muted)', padding: '0.2rem' }}
-                          title={t('deleteSet')}
-                          onClick={() => deleteSet(exIndex, setIndex)}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </td>
-                  </motion.tr>
-                ))}
-              </AnimatePresence>
-            </tbody>
-          </table>
-
-          <button className="btn-ghost" style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', padding: '0.5rem', color: 'var(--accent-primary)', fontWeight: 500 }} onClick={() => addSet(exIndex)}>
-            <Plus className="w-4 h-4" /> {t('addSet')}
-          </button>
-        </>
-      )}
-    </Reorder.Item>
-  );
-}
+import { notify } from '../lib/feedback';
+import { useWakeLock } from '../hooks/useWakeLock';
+import { selectPreviousPerformance } from '../lib/selectors';
+import { GymFloorSetCard } from '../components/mobile/GymFloorSetCard';
 
 const DEFAULT_EXERCISES = [
   { name: 'Treadmill', targetMuscle: 'Cardio' },
@@ -268,231 +25,281 @@ const DEFAULT_EXERCISES = [
   { 
     name: 'Seated Machine Chest Press', 
     targetMuscle: 'Chest', 
-    notes: 'يستهدف هذا التمرين منتصف الصدر لبناء الكتلة العضلية الإجمالية. يوفر الجهاز مساراً ثابتاً للحركة مما يجعله آمناً لرفع أوزان ثقيلة دون الحاجة لتوازن الأوزان الحرة.\n\nنصيحة للأداء: اسحب كتفيك للخلف وللأسفل (ضم لوحي الكتف) وألصق ظهرك بالمسند. ادفع الوزن باستخدام عضلات صدرك، ولا تفرد كوعيك (Lockout) بالكامل في نهاية الحركة للحفاظ على الضغط المستمر على العضلة.\n\nللعثور على الشرح (Short): ابحث في يوتيوب عن Machine Chest Press Form Short' 
+    notes: 'يستهدف منتصف الصدر لبناء الكتلة العضلية الإجمالية. اسحب كتفيك للخلف وللأسفل وادفع بالصدر دون قفل الكوعين بالكامل.' 
   },
   { 
     name: 'Incline Machine Chest Press', 
     targetMuscle: 'Chest', 
-    notes: 'تمرين لا غنى عنه لتطوير الجزء العلوي من الصدر، وهو الجزء الذي يعطي الصدر مظهراً ممتلئاً وبارزاً من الأعلى (عند عظمة الترقوة).\n\nنصيحة للأداء: اضبط ارتفاع المقعد بحيث تكون المقابض في مستوى الجزء العلوي من صدرك. حافظ على صدرك مرفوعاً وظهرك مقوساً قليلاً بشكل طبيعي طوال الرفعة.\n\nللعثور على الشرح (Short): ابحث في يوتيوب عن Incline Machine Chest Press Form Short' 
+    notes: 'تمرين أساسي لتطوير الجزء العلوي من الصدر. اضبط المقعد لتكون المقابض بمستوى أعلى الصدر.' 
   },
   { 
     name: 'High-to-Low Cable Crossover', 
     targetMuscle: 'Chest', 
-    notes: 'هذا التمرين ممتاز لاستهداف الجزء السفلي من الصدر وإعطاء العضلة التحديد السفلي، بالإضافة إلى التركيز على الخط الداخلي. الكيبل يوفر مقاومة مستمرة من بداية التمدد حتى أقصى نقطة انقباض.\n\nنصيحة للأداء: قف في منتصف الجهاز وخذ خطوة صغيرة للأمام. اثن كوعيك قليلاً (كأنك تعانق شجرة ضخمة)، واسحب الكيابل للأسفل حتى تتلاقى يداك أمام حوضك، واعصر عضلة الصدر بقوة في هذه النقطة لتفعيل الجزء الداخلي.\n\nللعثور على الشرح (Short): ابحث في يوتيوب عن High to Low Cable Crossover Form Short' 
+    notes: 'استهداف الجزء السفلي والداخلي للصدر بتمدد وانقباض كامل ومستمر عبر الكيبل.' 
   },
   { name: 'Lat Pulldown', targetMuscle: 'Back' },
   { name: 'Barbell Row', targetMuscle: 'Back' },
   { 
     name: 'Wide-Grip Lat Pulldown', 
     targetMuscle: 'Back', 
-    notes: 'يستهدف هذا التمرين العضلة الظهرية العريضة (المجنص - Lats) بشكل أساسي، وهو المسؤول الأول عن إعطاء الظهر المظهر العريض (V-Shape).\n\nنصيحة للأداء: اسحب البار باتجاه أعلى صدرك مع إرجاع كتفيك للخلف وللأسفل، واحرص على عدم الميل بجذعك للخلف بشكل مبالغ فيه.\n\nللعثور على الشرح (Short): ابحث في يوتيوب عن Wide Grip Lat Pulldown Form Short'
+    notes: 'يستهدف العضلة الظهرية العريضة (المجنص) لعرض الظهر V-Shape. اسحب باتجاه أعلى الصدر.' 
   },
   { 
     name: 'Seated Cable Row', 
     targetMuscle: 'Back', 
-    notes: 'يركز على عضلات منتصف الظهر (Rhomboids) وشبه المنحرف (Traps) بالإضافة للمجنص، مما يمنح الظهر سماكة وعمقاً عضلياً من الداخل.\n\nنصيحة للأداء: حافظ على استقامة أسفل ظهرك. عند سحب الوزن، تخيل أنك تحاول عصر قلم بين لوحي كتفك، واسمح لكتفيك بالتمدد للأمام عند العودة.\n\nللعثور على الشرح (Short): ابحث في يوتيوب عن Seated Cable Row Form Short'
+    notes: 'يركز على منتصف وسماكة الظهر. اعصر لوحي الكتف للخلف مع استقامة العمود الفقري.' 
   },
   { 
     name: 'Chest-Supported Machine Row', 
     targetMuscle: 'Back', 
-    notes: 'يوفر هذا الجهاز عزلاً تاماً لعضلات الظهر العلوية والوسطى. مسند الصدر يمنعك من استخدام قوة الدفع (الأرجحة) ويزيل الضغط تماماً عن فقرات أسفل الظهر، مما يجعله آمناً وفعالاً لرفع أوزان ثقيلة.\n\nنصيحة للأداء: ألصق صدرك بالمسند طوال الحركة. اسحب المقابض للخلف مع إبقاء كوعيك قريبين من جسمك لاستهداف المجنص، أو افتح كوعيك قليلاً لاستهداف أعلى الظهر.\n\nللعثور على الشرح (Short): ابحث في يوتيوب عن Chest Supported Row Machine Form Short'
+    notes: 'عزل تام لعضلات الظهر بدون ضغط على الفقرات القطنية.' 
   },
   { 
     name: 'Back Extension', 
     targetMuscle: 'Back', 
-    notes: 'تمرين أساسي لعزل وتقوية عضلات أسفل الظهر (Erector Spinae)، مما يحسن من استقامتك ويحميك من الإصابات.\n\nنصيحة للأداء: اضبط الوسادة لتكون أسفل حوضك مباشرة. انزل ببطء، ثم ارتفع للأعلى حتى يستقيم جسمك فقط (تجنب التقوس المفرط للخلف في أعلى نقطة).\n\nللعثور على الشرح (Short): ابحث في يوتيوب عن Back Extension Form Short'
+    notes: 'تقوية عضلات أسفل الظهر وحماية العمود الفقري.' 
   },
-  { 
-    name: 'Cable Reverse Curl', 
-    targetMuscle: 'Forearms', 
-    notes: 'يستهدف هذا التمرين العضلة العضدية الكعبرية (الجزء العلوي والجانبي من الساعد) بشكل أساسي، مما يعطي الساعد مظهراً عريضاً من الخارج.\n\nنصيحة للأداء: استخدم البار المستقيم أو المتعرج (EZ Bar) بالكيبل السفلي. امسك البار بقبضة علوية (راحة اليد تواجه الأرض)، وحافظ على ثبات كوعيك بجانبك أثناء سحب الوزن للأعلى.\n\nللعثور على الشرح (Short): ابحث في يوتيوب عن Cable Reverse Curl Form Short'
-  },
-  { 
-    name: 'Cable Wrist Curl', 
-    targetMuscle: 'Forearms', 
-    notes: 'يركز هذا التمرين على عضلات الثني (الجزء الداخلي من الساعد)، وهو الجزء المسؤول عن إعطاء الساعد الكتلة العضلية الأكبر والحجم الدائري.\n\nنصيحة للأداء: اسحب مقعداً أمام جهاز الكيبل السفلي، وضع ساعديك على فخذيك أو على المقعد بحيث تتدلى معاصمك خارج الحافة. دع البار ينزل حتى أطراف أصابعك للحصول على أقصى تمدد، ثم اقبض معصمك للأعلى بقوة.\n\nللعثور على الشرح (Short): ابحث في يوتيوب عن Seated Cable Wrist Curl Form Short'
-  },
-  { 
-    name: 'Cable Reverse Wrist Curl', 
-    targetMuscle: 'Forearms', 
-    notes: 'يستهدف عضلات التمديد (الجزء الخارجي والعلوي من الساعد). تقوية هذا الجزء ضرورية جداً لتوازن القوة في الذراع ومنع الإصابات أو آلام مفصل المعصم (مثل التهاب الأوتار).\n\nنصيحة للأداء: بنفس وضعية التمرين السابق، لكن اجعل راحة يدك تواجه الأرض. ارفع معصمك للأعلى باتجاه جسمك ببطء، وتحكم بالوزن أثناء النزول. لا تستخدم أوزاناً ثقيلة جداً هنا لتجنب إرهاق المفصل.\n\nللعثور على الشرح (Short): ابحث في يوتيوب عن Cable Reverse Wrist Curl Form Short'
-  },
-  { name: 'Overhead Press', targetMuscle: 'Shoulders' },
-  { name: 'Lateral Raises', targetMuscle: 'Shoulders' },
-  {
-    name: 'Machine Shoulder Press',
-    targetMuscle: 'Shoulders',
-    notes: 'يستهدف هذا الجهاز الرأس الأمامي والجانبي بشكل أساسي لبناء الحجم الإجمالي للكتف. الجهاز يوفر ثباتاً عالياً مما يسمح لك برفع أوزان ثقيلة بأمان تام مقارنة بالدمبلز.\n\nنصيحة للأداء: لا تجعل كوعيك مفتوحين للخارج بزاوية 90 درجة؛ بل اجعلهما يميلان للأمام قليلاً (حوالي 45 درجة) لحماية مفصل الكتف من الإصابة.\n\nللعثور على الشرح (Short): ابحث في يوتيوب عن Machine Shoulder Press Form Short'
-  },
-  {
-    name: 'Cable Lateral Raise',
-    targetMuscle: 'Shoulders',
-    notes: 'هذا التمرين هو السر للحصول على أكتاف عريضة ومكورة (3D). الكيبل يتفوق على الدمبل هنا لأنه يحافظ على الشد العضلي (Tension) من بداية الحركة في الأسفل وحتى نهايتها.\n\nنصيحة للأداء: اجعل الكيبل يمر من خلف ظهرك أو من أمامك، وارفع ذراعك للجانب مع ميلان بسيط للأمام. تخيل أنك تدفع الوزن بعيداً عنك وليس فقط للأعلى.\n\nللعثور على الشرح (Short): ابحث في يوتيوب عن Cable Lateral Raise Form Short'
-  },
-  {
-    name: 'Reverse Pec Deck Machine',
-    targetMuscle: 'Shoulders',
-    notes: 'الكتف الخلفي غالباً ما يتم إهماله، وتقويته ضرورية جداً لاستقامة المظهر (Posture) واكتمال شكل الكتف. هذا الجهاز يعزل الكتف الخلفي بفعالية دون تدخل عضلات الظهر.\n\nنصيحة للأداء: اضبط المقعد بحيث تكون يداك في مستوى كتفيك. ادفع المقابض للخارج، وتجنب عصر لوحي كتفك للخلف بقوة لضمان بقاء الضغط على الكتف الخلفي وليس على عضلات الظهر.\n\nللعثور على الشرح (Short): ابحث في يوتيوب عن Reverse Pec Deck Rear Delt Form Short'
-  },
+  { name: 'Machine Shoulder Press', targetMuscle: 'Shoulders', notes: 'بناء حجم الكتف الشامل. ميل الكوعين للأمام 45 درجة لحماية المفصل.' },
+  { name: 'Cable Lateral Raise', targetMuscle: 'Shoulders', notes: 'السر للحصول على أكتاف عريضة 3D مع شد متواصل عبر الكيبل.' },
+  { name: 'Reverse Pec Deck Machine', targetMuscle: 'Shoulders', notes: 'عزل الكتف الخلفي بامتياز لتحسين استقامة الوقفة وشكل الكتف.' },
   { name: 'Barbell Back Squat', targetMuscle: 'Legs' },
   { name: 'Leg Press', targetMuscle: 'Legs' },
   { name: 'Romanian Deadlift', targetMuscle: 'Legs' },
-  { name: 'Bicep Curls', targetMuscle: 'Biceps' },
-  { 
-    name: 'Machine Preacher Curl', 
-    targetMuscle: 'Biceps', 
-    videoUrl: 'https://www.youtube.com/embed/S4dDLFp3e8w', 
-    notes: 'هذا التمرين هو البديل المثالي للبار، حيث يعزل عضلة البايسيبس بالكامل ويمنعك من الأرجحة بفضل وسادة الارتكاز. يركز بشكل كبير على الرأس القصير (Short Head) لزيادة الكتلة الإجمالية للعضلة.\n\nنصيحة للأداء: ألصق إبطك جيداً بالوسادة ولا ترفع كوعك عن السطح أبداً أثناء سحب الوزن.'
-  },
-  { 
-    name: 'Behind-The-Back Cable Curl', 
-    targetMuscle: 'Biceps', 
-    videoUrl: 'https://www.youtube.com/embed/unQKwAs4Svc', 
-    notes: 'هذا هو البديل الأفضل للدمبلز على المقعد المائل. نظراً لأن الكيبل يسحب ذراعك للخلف، فإنه يضع "الرأس الطويل" (Long Head) تحت أقصى درجات التمدد، وهو أمر أساسي لبناء وتكوير قمة البايسيبس (Bicep Peak).\n\nنصيحة للأداء: خذ خطوة للأمام بعيداً عن جهاز الكيبل، وحافظ على ثبات كوعك خلف مستوى جسمك طوال الحركة.'
-  },
-  { 
-    name: 'Rope Cable Hammer Curl', 
-    targetMuscle: 'Biceps', 
-    videoUrl: 'https://www.youtube.com/embed/wGukDGOJYAs', 
-    notes: 'بديل ممتاز لتمرين المطرقة بالدمبل، حيث يوفر الكيبل مقاومة ثابتة لا تضعف في أي نقطة من الرفعة. يستهدف العضلة العضدية (Brachialis) الموجودة أسفل البايسيبس لزيادة سمك وعرض الذراع بشكل عام.\n\nنصيحة للأداء: ثبت كوعيك بجانبك تماماً، واحرص على المباعدة بين طرفي الحبل قليلاً عند الوصول لأعلى نقطة لزيادة الانقباض.'
-  },
-  { 
-    name: 'Cable Rope Triceps Pushdown', 
-    targetMuscle: 'Triceps', 
-    notes: 'يستهدف هذا التمرين الرأس الجانبي (Lateral Head) بشكل رئيسي، وهو الجزء الذي يعطي الذراع العرض والمظهر الجانبي البارز. استخدام الحبل يسمح بمدى حركي أطول مقارنة بالبار.\n\nنصيحة للأداء: ثبت كوعيك بإحكام بجانب خصرك. ادفع الحبل للأسفل وعند الوصول لأدنى نقطة، باعد بين طرفي الحبل للخارج لزيادة الانقباض.\n\nللعثور على الشرح (Short): ابحث في يوتيوب عن Cable Rope Triceps Pushdown Form Short' 
-  },
-  { 
-    name: 'Overhead Cable Triceps Extension', 
-    targetMuscle: 'Triceps', 
-    notes: 'هذا التمرين ضروري لاستهداف "الرأس الطويل" (Long Head)، والذي يشكل الجزء الأكبر من حجم الترايسيبس. رفع الذراع فوق مستوى الرأس يضع العضلة تحت أقصى درجات التمدد.\n\nنصيحة للأداء: استخدم الحبل واسحب الكيبل من الأسفل أو من مستوى الكتف. حافظ على ثبات كوعيك واتجاههما للأمام، وافرد ذراعيك بالكامل مع ثبات الجذع.\n\nللعثور على الشرح (Short): ابحث في يوتيوب عن Overhead Cable Triceps Extension Form Short' 
-  },
-  { 
-    name: 'Triceps Dip Machine', 
-    targetMuscle: 'Triceps', 
-    notes: 'هذا الجهاز هو البديل الآمن لتمرين الغطس الحر (Dips). يستهدف الرؤوس الثلاثة معاً لبناء كتلة عضلية شاملة، ويسمح لك برفع أوزان ثقيلة دون المخاطرة بأربطة الكتف.\n\nنصيحة للأداء: حافظ على استقامة ظهرك والتصاقه بالمسند. ادفع المقابض للأسفل باستخدام الترايسيبس وتجنب الميل بجذعك للأمام حتى لا ينتقل الضغط إلى عضلات الصدر، وتحكم بالوزن أثناء العودة للأعلى.\n\nللعثور على الشرح (Short): ابحث في يوتيوب عن Triceps Dip Machine Form Short' 
-  },
-  { 
-    name: 'Kneeling Cable Crunch', 
-    targetMuscle: 'Core', 
-    notes: 'يستهدف هذا التمرين عضلات البطن الأمامية (Rectus Abdominis - العضلات السداسية). الكيبل يوفر مقاومة ممتازة تجبر عضلات البطن على العمل بجهد لثني الجذع.\n\nنصيحة للأداء: امسك الحبل خلف رقبتك أو بجانب أذنيك. ثبت حوضك تماماً (لا تجلس على كعبيك أثناء النزول)، وتخيل أنك تحاول تقريب قفصك الصدري من حوضك باستخدام عضلات بطنك فقط، وليس بسحب الحبل بذراعيك.\n\nللعثور على الشرح (Short): ابحث في يوتيوب عن Kneeling Cable Crunch Form Short' 
-  },
-  { 
-    name: 'Ab Crunch Machine', 
-    targetMuscle: 'Core', 
-    notes: 'بديل ممتاز للكرنش الأرضي، يوفر عزلاً عالياً جداً لعضلات البطن بالكامل ويحمي أسفل الظهر بفضل مسند الجهاز.\n\nنصيحة للأداء: اضبط المقعد بحيث يكون محور دوران الجهاز موازياً لأسفل صدرك أو بطنك (حسب تصميم الجهاز). أخرج الزفير (تنفس للخارج) بالكامل عند عصر عضلات بطنك للأسفل للحصول على أقصى انقباض عضلي.\n\nللعثور على الشرح (Short): ابحث في يوتيوب عن Ab Crunch Machine Form Short' 
-  },
-  { 
-    name: 'Cable Woodchopper', 
-    targetMuscle: 'Core', 
-    notes: 'هذا التمرين هو الأفضل لاستهداف العضلات الجانبية للبطن (الخواصر - Obliques) وتقوية الجذع بشكل عام من خلال الحركة الدورانية.\n\nنصيحة للأداء: اضبط الكيبل في أعلى نقطة أو في مستوى الكتف. حافظ على استقامة ذراعيك تقريباً، وقم بالدوران باستخدام جذعك (خصرك) وليس فقط بتحريك ذراعيك أو كتفيك، وحافظ على ثبات قدميك وحوضك قدر الإمكان.\n\nللعثور على الشرح (Short): ابحث في يوتيوب عن Cable Woodchopper Form Short' 
-  },
+  { name: 'Machine Preacher Curl', targetMuscle: 'Biceps', notes: 'عزل البايسيبس بالكامل ومنع الأرجحة بفضل وسادة التثبيت.' },
+  { name: 'Behind-The-Back Cable Curl', targetMuscle: 'Biceps', notes: 'تمدد قوي للرأس الطويل لبناء قمة عضلة البايسيبس.' },
+  { name: 'Rope Cable Hammer Curl', targetMuscle: 'Biceps', notes: 'استهداف العضلة العضدية لزيادة سمك وعرض الذراع.' },
+  { name: 'Cable Rope Triceps Pushdown', targetMuscle: 'Triceps', notes: 'استهداف الرأس الجانبي للترايسيبس للحصول على مظهر حدوة الحصان.' },
+  { name: 'Overhead Cable Triceps Extension', targetMuscle: 'Triceps', notes: 'تمدد كامل للرأس الطويل المسؤول عن الحجم الأكبر للذراع.' },
+  { name: 'Triceps Dip Machine', targetMuscle: 'Triceps', notes: 'استهداف شامل ومكثف للترايسيبس بأمان وثبات.' },
+  { name: 'Cable Reverse Curl', targetMuscle: 'Forearms' },
+  { name: 'Cable Wrist Curl', targetMuscle: 'Forearms' },
+  { name: 'Kneeling Cable Crunch', targetMuscle: 'Core', notes: 'ثني الجذع بعضلات البطن فقط مع ثبات الحوض لبناء العضلات السداسية.' },
+  { name: 'Ab Crunch Machine', targetMuscle: 'Core', notes: 'عزل متقدم ومريح للبطن مع دعم كامل للظهر.' }
 ];
 
 export function SessionDetailView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data, saveSession, deleteSession, saveHistory } = useData();
+  const { data, saveSession, deleteSession, finishWorkoutSession } = useData();
   const { t, formatDate, tTitle, tExercise, tMuscle, isRTL } = useTranslation();
-  const [session, setSession] = useState<WorkoutSession | null>(null);
-  
-  // Timer state
-  const [activeTimer, setActiveTimer] = useState<number | null>(null);
-  const [showRestCompleteToast, setShowRestCompleteToast] = useState(false);
-  
-  // Add Exercise state
+
+  // Screen Wake Lock: keeps mobile display on during workout session
+  useWakeLock(true);
+
+  const session = useMemo(() => {
+    return data?.sessions?.find(s => s.id === id) || null;
+  }, [data?.sessions, id]);
+
+  const [activeExerciseIndex, setActiveExerciseIndex] = useState<number>(0);
+  const [selectedMuscleFilter, setSelectedMuscleFilter] = useState<string>('all');
+
+  // Smart Rest Timer State
+  const [restTimerSeconds, setRestTimerSeconds] = useState<number | null>(null);
+  const [isTimerPaused, setIsTimerPaused] = useState(false);
+  const [showRestCelebration, setShowRestCelebration] = useState(false);
+
+  // Cardio execution state
+  const [cardioRunning, setCardioRunning] = useState(false);
+  const [cardioSeconds, setCardioSeconds] = useState(0);
+
+  // Modals & Drawers
   const [isAddExerciseModalOpen, setIsAddExerciseModalOpen] = useState(false);
+  const [showTutorialModal, setShowTutorialModal] = useState(false);
+  const [showNotesAccordion, setShowNotesAccordion] = useState(false);
 
-  const handleFinishWorkout = async () => {
-    if (!session) return;
-    const updatedSession = { ...session, isCompleted: true };
-    await saveSession(updatedSession);
-    setSession(updatedSession);
-
-    const burnedCalories = estimateWorkoutCalories(updatedSession);
-    await saveHistory({
-      id: Date.now().toString(),
-      sessionId: session.id,
-      date: new Date().toISOString(),
-      title: session.title,
-      snapshot: updatedSession,
-      burnedCalories
-    });
-    navigate('/history');
-  };
-
-  useEffect(() => {
-    if (data) {
-      const foundSession = data.sessions.find(s => s.id === id);
-      if (foundSession) {
-        setSession(foundSession);
-      }
-    }
-  }, [data, id]);
-
+  // Rest Timer Interval
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (activeTimer !== null && activeTimer > 0) {
+    if (restTimerSeconds !== null && restTimerSeconds > 0 && !isTimerPaused) {
       interval = setInterval(() => {
-        setActiveTimer(t => (t ? t - 1 : 0));
+        setRestTimerSeconds(prev => (prev && prev > 0 ? prev - 1 : 0));
       }, 1000);
-    } else if (activeTimer === 0) {
+    } else if (restTimerSeconds === 0) {
       if (data?.settings?.soundAlerts !== false) {
         gymAudio.playRestTimerChime();
       }
       if (data?.settings?.vibrationAlerts !== false) {
         gymAudio.triggerVibration();
       }
-      setShowRestCompleteToast(true);
-      const toastTimeout = setTimeout(() => setShowRestCompleteToast(false), 4500);
-      setActiveTimer(null);
-      return () => clearTimeout(toastTimeout);
+      setShowRestCelebration(true);
+      const timeout = setTimeout(() => setShowRestCelebration(false), 4000);
+      setRestTimerSeconds(null);
+      return () => clearTimeout(timeout);
     }
     return () => clearInterval(interval);
-  }, [activeTimer, data?.settings?.soundAlerts, data?.settings?.vibrationAlerts]);
+  }, [restTimerSeconds, isTimerPaused, data?.settings?.soundAlerts, data?.settings?.vibrationAlerts]);
+
+  // Cardio timer interval
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (cardioRunning) {
+      interval = setInterval(() => {
+        setCardioSeconds(s => s + 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [cardioRunning]);
+
+  const exercises = useMemo(() => session?.exercises || [], [session?.exercises]);
+
+  // Group exercises by muscle
+  const muscleGroups = useMemo(() => {
+    const map = new Map<string, SessionExercise[]>();
+    exercises.forEach(ex => {
+      const muscle = ex.targetMuscle || 'Other';
+      if (!map.has(muscle)) map.set(muscle, []);
+      map.get(muscle)!.push(ex);
+    });
+    return Array.from(map.entries()).map(([muscle, items]) => ({
+      muscle,
+      count: items.length
+    }));
+  }, [exercises]);
+
+  const filteredExercises = useMemo(() => {
+    if (selectedMuscleFilter === 'all') return exercises;
+    return exercises.filter(ex => ex.targetMuscle === selectedMuscleFilter);
+  }, [exercises, selectedMuscleFilter]);
+
+  // Current active exercise in focus mode
+  const currentExercise = exercises[activeExerciseIndex] || exercises[0];
+
+  // Progressive Overload reference for current exercise
+  const previousRecord = useMemo(() => {
+    if (!data || !currentExercise?.name) return null;
+    return selectPreviousPerformance(currentExercise.name, data, session?.id);
+  }, [data, currentExercise?.name, session?.id]);
+
+  // Selected Set Index for floor mode focus
+  const [selectedSetIndex, setSelectedSetIndex] = useState<number | null>(null);
+
+  // Auto-derived active set index
+  const activeSetIndex = useMemo(() => {
+    if (selectedSetIndex !== null && currentExercise?.sets?.[selectedSetIndex]) {
+      return selectedSetIndex;
+    }
+    if (!currentExercise?.sets) return 0;
+    const firstUnfinished = currentExercise.sets.findIndex(s => !s.isCompleted);
+    return firstUnfinished !== -1 ? firstUnfinished : Math.max(0, currentExercise.sets.length - 1);
+  }, [selectedSetIndex, currentExercise?.sets]);
+
+  // Reset selected set when exercise changes
+  useEffect(() => {
+    setSelectedSetIndex(null);
+  }, [activeExerciseIndex]);
 
   const handleUpdateSession = async (updatedSession: WorkoutSession) => {
     if (!data) return;
     await saveSession(updatedSession);
-    setSession(updatedSession);
   };
 
-  const deleteExercise = (exerciseIndex: number) => {
-    if (!session) return;
-    if (!confirm(t('deleteExerciseConfirm'))) return;
-    const updatedExercises = (session.exercises || []).filter((_, idx) => idx !== exerciseIndex);
-    handleUpdateSession({ ...session, exercises: updatedExercises });
-  };
+  if (!session) {
+    return (
+      <div className="page-surface session-detail-container flex-col" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <Dumbbell className="w-10 h-10 animate-bounce" style={{ color: 'var(--accent-primary)', marginBottom: '1rem' }} />
+        <p style={{ color: 'var(--text-secondary)' }}>{t('loading') || 'Loading workout session...'}</p>
+      </div>
+    );
+  }
 
-  const deleteSet = (exerciseIndex: number, setIndex: number) => {
+  // Set updates
+  const updateSet = (exerciseIdx: number, setIdx: number, field: keyof SetRecord, value: any) => {
     if (!session) return;
-    const ex = session.exercises[exerciseIndex];
-    if (!ex || !ex.sets || ex.sets.length <= 1) return;
     const updatedExercises = session.exercises.map((exercise, eIdx) => {
-      if (eIdx !== exerciseIndex) return exercise;
-      return {
-        ...exercise,
-        sets: exercise.sets.filter((_, sIdx) => sIdx !== setIndex)
-      };
+      if (eIdx !== exerciseIdx) return exercise;
+      const updatedSets = (exercise.sets || []).map((set, sIdx) => {
+        if (sIdx !== setIdx) return set;
+        return { ...set, [field]: value };
+      });
+      return { ...exercise, sets: updatedSets };
     });
     handleUpdateSession({ ...session, exercises: updatedExercises });
   };
 
-  const addSet = (exerciseIndex: number) => {
+  // Toggle Set Complete with Smart Auto-fill & Smart Rest Timer
+  const handleToggleSetComplete = (exerciseIdx: number, setIdx: number) => {
     if (!session) return;
-    const ex = session.exercises[exerciseIndex];
+    const currentEx = session.exercises[exerciseIdx];
+    const currentSet = currentEx.sets[setIdx];
+    const nextState = !currentSet.isCompleted;
+
+    const updatedExercises = session.exercises.map((exercise, eIdx) => {
+      if (eIdx !== exerciseIdx) return exercise;
+      const updatedSets = exercise.sets.map((set, sIdx) => {
+        if (sIdx === setIdx) {
+          return { ...set, isCompleted: nextState };
+        }
+        // Auto-fill next uncompleted set with current set's weight and reps
+        if (nextState && sIdx === setIdx + 1 && !set.isCompleted) {
+          return {
+            ...set,
+            weight: set.weight === 0 ? currentSet.weight : set.weight,
+            repsActual: set.repsActual === 0 ? currentSet.repsActual || set.repsTarget : set.repsActual,
+            unit: currentSet.unit
+          };
+        }
+        return set;
+      });
+      return { ...exercise, sets: updatedSets };
+    });
+
+    handleUpdateSession({ ...session, exercises: updatedExercises });
+
+    if (nextState) {
+      // Auto-advance active set index if completing
+      const nextUncompletedIdx = currentEx.sets.findIndex((s, i) => i > setIdx && !s.isCompleted);
+      if (nextUncompletedIdx !== -1) {
+        setSelectedSetIndex(nextUncompletedIdx);
+      }
+
+      // Play audio & vibration
+      gymAudio.playSetCompleteChime();
+      gymAudio.triggerSubtleHaptic([30, 45]);
+
+      // Trigger Smart Rest Timer
+      const restSec = currentEx.restTime || data?.settings?.restTimerSeconds || 90;
+      setRestTimerSeconds(restSec);
+      setIsTimerPaused(false);
+    }
+  };
+
+  // Quick weight adjustment
+  const handleQuickWeightAdjust = (exerciseIdx: number, setIdx: number, delta: number) => {
+    if (!session) return;
+    const ex = session.exercises[exerciseIdx];
+    const set = ex.sets[setIdx];
+    const nextWeight = Math.max(0, Math.round(((set.weight || 0) + delta) * 10) / 10);
+    updateSet(exerciseIdx, setIdx, 'weight', nextWeight);
+    gymAudio.triggerSubtleHaptic([15]);
+  };
+
+  // Quick rep adjustment
+  const handleQuickRepAdjust = (exerciseIdx: number, setIdx: number, delta: number) => {
+    if (!session) return;
+    const ex = session.exercises[exerciseIdx];
+    const set = ex.sets[setIdx];
+    const currentReps = set.repsActual > 0 ? set.repsActual : set.repsTarget || 10;
+    const nextReps = Math.max(1, currentReps + delta);
+    updateSet(exerciseIdx, setIdx, 'repsActual', nextReps);
+    gymAudio.triggerSubtleHaptic([15]);
+  };
+
+  const addSet = (exerciseIdx: number) => {
+    if (!session) return;
+    const ex = session.exercises[exerciseIdx];
     const lastSet = ex.sets?.[ex.sets.length - 1];
     
     const newSet: SetRecord = {
-      id: Date.now().toString(),
+      id: `s-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       weight: lastSet ? lastSet.weight : 0,
       repsTarget: lastSet ? lastSet.repsTarget : 10,
-      repsActual: 0,
-      unit: lastSet ? lastSet.unit : (data?.settings?.weightUnit || 'lb'),
+      repsActual: lastSet ? lastSet.repsActual : 0,
+      unit: lastSet ? lastSet.unit : (data?.settings?.weightUnit || 'kg'),
       isCompleted: false
     };
 
     const updatedExercises = session.exercises.map((exercise, eIdx) => {
-      if (eIdx !== exerciseIndex) return exercise;
+      if (eIdx !== exerciseIdx) return exercise;
       return {
         ...exercise,
         sets: [...(exercise.sets || []), newSet]
@@ -501,197 +308,683 @@ export function SessionDetailView() {
     handleUpdateSession({ ...session, exercises: updatedExercises });
   };
 
-  const updateSet = (exerciseIndex: number, setIndex: number, field: keyof SetRecord, value: any) => {
+  const deleteSet = (exerciseIdx: number, setIdx: number) => {
     if (!session) return;
+    const ex = session.exercises[exerciseIdx];
+    if (!ex || !ex.sets || ex.sets.length <= 1) return;
+    const updatedExercises = session.exercises.map((exercise, eIdx) => {
+      if (eIdx !== exerciseIdx) return exercise;
+      return {
+        ...exercise,
+        sets: exercise.sets.filter((_, s) => s !== setIdx)
+      };
+    });
+    handleUpdateSession({ ...session, exercises: updatedExercises });
+  };
 
-    // If we're marking the set as completed, start rest timer
-    if (field === 'isCompleted' && value === true) {
-      setActiveTimer(session.exercises[exerciseIndex].restTime || 90);
+  const deleteExercise = (exerciseIdx: number) => {
+    if (!session) return;
+    if (!confirm(isRTL ? 'هل أنت متأكد من حذف هذا التمرين؟' : 'Delete this exercise?')) return;
+    const updated = session.exercises.filter((_, idx) => idx !== exerciseIdx);
+    handleUpdateSession({ ...session, exercises: updated });
+    if (activeExerciseIndex >= updated.length) {
+      setActiveExerciseIndex(Math.max(0, updated.length - 1));
     }
+  };
 
+  // "Complete Exercise" Button Logic requested by user:
+  // Completes all sets of the exercise, celebrates, and automatically goes to next exercise!
+  const handleCompleteCurrentExercise = () => {
+    if (!session || !currentExercise) return;
+    
+    // Mark all sets of this exercise as completed
     const updatedExercises = session.exercises.map((exercise, eIdx) => {
-      if (eIdx !== exerciseIndex) return exercise;
-      const updatedSets = (exercise.sets || []).map((set, sIdx) => {
-        if (sIdx !== setIndex) return set;
-        return { ...set, [field]: value };
-      });
-      return { ...exercise, sets: updatedSets };
+      if (eIdx !== activeExerciseIndex) return exercise;
+      const completedSets = exercise.sets.map(s => ({
+        ...s,
+        isCompleted: true,
+        repsActual: s.repsActual > 0 ? s.repsActual : (s.repsTarget || 10)
+      }));
+      return { ...exercise, sets: completedSets };
     });
+
     handleUpdateSession({ ...session, exercises: updatedExercises });
+    gymAudio.playCelebrationFanfare();
+    gymAudio.triggerVibration([50, 40, 70]);
+
+    // If there is a next exercise, automatically go to it!
+    if (activeExerciseIndex < session.exercises.length - 1) {
+      setActiveExerciseIndex(prev => prev + 1);
+      notify(
+        isRTL 
+          ? `رائع! تم إنهاء ${tExercise(currentExercise.name)} والبدء في التالي.` 
+          : `Exercise completed! Next: ${tExercise(session.exercises[activeExerciseIndex + 1]?.name)}`,
+        'success'
+      );
+    } else {
+      // Last exercise finished! Offer to finish the entire workout
+      notify(
+        isRTL ? 'أحسنت! أنهيت جميع التمارين، يمكنك إنهاء الجلسة الآن.' : 'All exercises completed! You can now finish the workout.',
+        'success'
+      );
+    }
   };
 
-  const updateExercise = (exerciseIndex: number, field: keyof SessionExercise, value: any) => {
+  // Finish Workout
+  const handleFinishWorkout = async () => {
     if (!session) return;
-    const updatedExercises = session.exercises.map((exercise, eIdx) => {
-      if (eIdx !== exerciseIndex) return exercise;
-      return { ...exercise, [field]: value };
-    });
-    handleUpdateSession({ ...session, exercises: updatedExercises });
+    const updatedSession = { ...session, isCompleted: true };
+    await finishWorkoutSession(updatedSession);
+    gymAudio.playCelebrationFanfare();
+    notify(isRTL ? 'تهانينا! تم حفظ التمرين في السجل بنجاح 🎉' : 'Workout completed and logged to History! 🎉', 'success');
+    navigate('/today', { replace: true });
   };
 
-  const handleReorderExercises = (newExercises: SessionExercise[]) => {
+  const handleAddExerciseTemplate = (template: { name: string; targetMuscle: string; notes?: string }) => {
     if (!session) return;
-    const updatedSession = { ...session, exercises: newExercises };
-    handleUpdateSession(updatedSession);
-  };
-  
-  // Add standard exercise
-  const handleAddExercise = (exerciseTemplate: { name: string, targetMuscle: string, videoUrl?: string, notes?: string }) => {
-    if (!session) return;
-    const newExercise: SessionExercise = {
-      id: Date.now().toString(),
-      name: exerciseTemplate.name,
-      targetMuscle: exerciseTemplate.targetMuscle,
+    const newEx: SessionExercise = {
+      id: `ex-${Date.now()}`,
+      name: template.name,
+      targetMuscle: template.targetMuscle,
       restTime: data?.settings?.restTimerSeconds || 90,
-      videoUrl: exerciseTemplate.videoUrl,
-      notes: exerciseTemplate.notes || '',
+      notes: template.notes || '',
       sets: [
-        {
-          id: '1',
-          weight: 0,
-          repsTarget: 10,
-          repsActual: 0,
-          unit: data?.settings?.weightUnit || 'lb',
-          isCompleted: false
-        }
+        { id: `s-${Date.now()}-1`, weight: 0, repsTarget: 10, repsActual: 0, unit: data?.settings?.weightUnit || 'kg', isCompleted: false },
+        { id: `s-${Date.now()}-2`, weight: 0, repsTarget: 10, repsActual: 0, unit: data?.settings?.weightUnit || 'kg', isCompleted: false },
+        { id: `s-${Date.now()}-3`, weight: 0, repsTarget: 10, repsActual: 0, unit: data?.settings?.weightUnit || 'kg', isCompleted: false }
       ]
     };
-
-    const updatedSession = {
+    handleUpdateSession({
       ...session,
-      exercises: [...(session.exercises || []), newExercise]
-    };
-
-    handleUpdateSession(updatedSession);
+      exercises: [...(session.exercises || []), newEx]
+    });
     setIsAddExerciseModalOpen(false);
+    setActiveExerciseIndex(session.exercises.length);
   };
 
-  if (!session) return null;
-
-  const formatTime = (seconds: number) => {
+  const formatTimer = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
+  const isCardio = currentExercise?.targetMuscle === 'Cardio';
+  const isAllCurrentSetsDone = currentExercise?.sets?.every(s => s.isCompleted);
+  const isLastExercise = activeExerciseIndex === session.exercises.length - 1;
+
   return (
-    <motion.div 
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
-      className="page-surface session-detail-page flex-col"
-      style={{ display: 'flex', flexDirection: 'column', paddingBottom: '3rem' }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <button className="btn-icon btn-ghost" onClick={() => navigate(-1)}>
-            <ArrowLeft className="w-6 h-6" style={{ transform: isRTL ? 'scaleX(-1)' : 'none' }} />
+    <div className="page-surface session-detail-container flex-col" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', paddingBottom: '5rem' }}>
+      
+      {/* 1. Header Bar */}
+      <header style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between', 
+        gap: '0.75rem', 
+        marginBottom: '1rem',
+        padding: '0.75rem 1rem',
+        borderRadius: '18px',
+        background: 'rgba(18, 24, 38, 0.75)',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(255, 255, 255, 0.08)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <button 
+            type="button"
+            className="btn-icon btn-ghost" 
+            onClick={() => navigate('/today')}
+            style={{ color: 'var(--text-secondary)' }}
+            aria-label="Back to Today"
+          >
+            <ArrowLeft className="w-5 h-5" style={{ transform: isRTL ? 'scaleX(-1)' : 'none' }} />
           </button>
           <div>
-            <h1 style={{ margin: 0 }}>{tTitle(session.title)}</h1>
-            <p style={{ margin: 0, color: 'var(--text-secondary)' }}>{formatDate(new Date(session.date), 'EEEE, d MMMM yyyy')}</p>
+            <h1 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+              {tTitle(session.title)}
+            </h1>
+            <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+              {formatDate(new Date(session.date), 'EEEE, d MMMM')}
+            </p>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          {session.isCompleted ? (
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '0.4rem',
-              background: 'rgba(16, 185, 129, 0.15)', color: '#10b981',
-              padding: '0.45rem 0.85rem', borderRadius: '8px',
-              fontSize: '0.875rem', fontWeight: 600
-            }}>
-              <Check className="w-4 h-4" /> {t('workoutCompleted')}
-            </div>
-          ) : (
-            <button 
-              type="button"
-              className="btn btn-primary"
-              onClick={handleFinishWorkout}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '0.4rem',
-                padding: '0.45rem 0.9rem', fontSize: '0.875rem', borderRadius: '8px'
-              }}
-            >
-              <Check className="w-4 h-4" /> {t('finishWorkout')}
-            </button>
-          )}
-          <button 
-            className="btn-icon btn-ghost" 
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={handleFinishWorkout}
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.4rem', 
+              padding: '0.45rem 0.85rem', 
+              fontSize: '0.825rem',
+              borderRadius: '12px',
+              fontWeight: 700,
+              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)'
+            }}
+          >
+            <Check className="w-4 h-4" />
+            <span>{t('finishWorkout')}</span>
+          </button>
+
+          <button
+            type="button"
+            className="btn-icon btn-ghost"
             onClick={async () => {
               if (confirm(t('deleteSessionConfirm'))) {
                 await deleteSession(session.id);
-                navigate(-1);
+                navigate('/today');
               }
-            }} 
-            style={{ color: 'var(--danger)' }}
+            }}
+            style={{ color: 'var(--text-muted)' }}
             title={t('deleteSession')}
           >
-            <Trash2 className="w-5 h-5" />
+            <Trash2 className="w-4 h-4" />
           </button>
         </div>
-      </div>
+      </header>
 
-      <AnimatePresence>
-        {activeTimer !== null && (
-          <motion.div 
-            initial={{ opacity: 0, y: -20, height: 0 }}
-            animate={{ opacity: 1, y: 0, height: 'auto' }}
-            exit={{ opacity: 0, y: -20, height: 0 }}
-            style={{ 
-              backgroundColor: 'var(--accent-primary)', 
-              color: 'white', 
-              padding: '1rem', 
-              borderRadius: 'var(--radius-md)', 
-              display: 'flex', 
-              justifyContent: 'space-between', 
+      {/* 2. Muscle Group Selector & Separation */}
+      <section style={{ marginBottom: '1rem' }} aria-label="Muscle Group Filter">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.25rem' }} className="hide-scrollbar">
+          <button
+            type="button"
+            onClick={() => setSelectedMuscleFilter('all')}
+            style={{
+              padding: '0.35rem 0.75rem',
+              borderRadius: '20px',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              border: selectedMuscleFilter === 'all' ? '1px solid #06b6d4' : '1px solid rgba(255,255,255,0.08)',
+              background: selectedMuscleFilter === 'all' ? 'rgba(6, 182, 212, 0.18)' : 'rgba(255,255,255,0.04)',
+              color: selectedMuscleFilter === 'all' ? '#38bdf8' : 'var(--text-secondary)',
+              whiteSpace: 'nowrap',
+              cursor: 'pointer'
+            }}
+          >
+            {isRTL ? 'جميع العضلات' : 'All Muscles'} ({exercises.length})
+          </button>
+
+          {muscleGroups.map(group => (
+            <button
+              key={group.muscle}
+              type="button"
+              onClick={() => {
+                setSelectedMuscleFilter(group.muscle);
+                const firstIdx = exercises.findIndex(e => e.targetMuscle === group.muscle);
+                if (firstIdx !== -1) setActiveExerciseIndex(firstIdx);
+              }}
+              style={{
+                padding: '0.35rem 0.75rem',
+                borderRadius: '20px',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                border: selectedMuscleFilter === group.muscle ? '1px solid #10b981' : '1px solid rgba(255,255,255,0.08)',
+                background: selectedMuscleFilter === group.muscle ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.04)',
+                color: selectedMuscleFilter === group.muscle ? '#34d399' : 'var(--text-secondary)',
+                whiteSpace: 'nowrap',
+                cursor: 'pointer'
+              }}
+            >
+              {tMuscle(group.muscle)} ({group.count})
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* 3. Horizontal Exercise Ribbon Stepper */}
+      <nav style={{ marginBottom: '1.25rem' }} aria-label="Exercise Stepper">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', overflowX: 'auto', padding: '0.35rem' }} className="hide-scrollbar">
+          {filteredExercises.map((ex) => {
+            const realIdx = exercises.findIndex(e => e.id === ex.id);
+            const isSelected = realIdx === activeExerciseIndex;
+            const isDone = ex.sets?.every(s => s.isCompleted);
+
+            return (
+              <button
+                key={ex.id || realIdx}
+                type="button"
+                onClick={() => {
+                  setActiveExerciseIndex(realIdx);
+                  gymAudio.triggerSubtleHaptic([15]);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.5rem 0.85rem',
+                  borderRadius: '14px',
+                  border: isSelected 
+                    ? '1.5px solid #06b6d4' 
+                    : isDone 
+                    ? '1px solid rgba(16, 185, 129, 0.4)' 
+                    : '1px solid rgba(255, 255, 255, 0.08)',
+                  background: isSelected 
+                    ? 'linear-gradient(135deg, rgba(6, 182, 212, 0.25) 0%, rgba(14, 165, 233, 0.15) 100%)' 
+                    : isDone
+                    ? 'rgba(16, 185, 129, 0.08)'
+                    : 'rgba(18, 24, 38, 0.6)',
+                  color: isSelected ? '#ffffff' : isDone ? '#34d399' : 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <div style={{
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.7rem',
+                  fontWeight: 800,
+                  background: isDone ? '#10b981' : isSelected ? '#06b6d4' : 'rgba(255,255,255,0.1)',
+                  color: '#ffffff'
+                }}>
+                  {isDone ? <Check className="w-3 h-3" /> : realIdx + 1}
+                </div>
+                <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                    {tExercise(ex.name)}
+                  </div>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                    {tMuscle(ex.targetMuscle)}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+
+          <button
+            type="button"
+            onClick={() => setIsAddExerciseModalOpen(true)}
+            style={{
+              display: 'flex',
               alignItems: 'center',
-              marginBottom: '1.5rem',
-              overflow: 'hidden'
+              justifyContent: 'center',
+              padding: '0.5rem 0.75rem',
+              borderRadius: '14px',
+              border: '1px dashed rgba(255, 255, 255, 0.2)',
+              background: 'rgba(255, 255, 255, 0.03)',
+              color: 'var(--accent-primary)',
+              cursor: 'pointer',
+              flexShrink: 0
+            }}
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        </div>
+      </nav>
+
+      {/* 4. Active Exercise Card (Focus Mode) */}
+      {currentExercise && (
+        <article style={{
+          borderRadius: '20px',
+          background: 'rgba(18, 24, 38, 0.85)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          backdropFilter: 'blur(24px)',
+          padding: '1.25rem',
+          boxShadow: '0 20px 45px -10px rgba(0, 0, 0, 0.5), 0 0 25px rgba(6, 182, 212, 0.08)',
+          marginBottom: '1.5rem'
+        }}>
+          {/* Exercise Header */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', marginBottom: '1rem' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                <span style={{
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  padding: '0.2rem 0.55rem',
+                  borderRadius: '6px',
+                  background: 'rgba(6, 182, 212, 0.2)',
+                  color: '#38bdf8'
+                }}>
+                  {tMuscle(currentExercise.targetMuscle)}
+                </span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  {isRTL ? `تمرين ${activeExerciseIndex + 1} من ${exercises.length}` : `Exercise ${activeExerciseIndex + 1} of ${exercises.length}`}
+                </span>
+              </div>
+              <h2 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                {tExercise(currentExercise.name)}
+              </h2>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              {currentExercise.notes && (
+                <button
+                  type="button"
+                  className="btn-icon btn-ghost"
+                  onClick={() => setShowNotesAccordion(prev => !prev)}
+                  style={{ color: showNotesAccordion ? '#38bdf8' : 'var(--text-muted)', padding: '0.35rem' }}
+                  title="Form Advice & Tips"
+                >
+                  <Info className="w-5 h-5" />
+                </button>
+              )}
+              {currentExercise.videoUrl && (
+                <button
+                  type="button"
+                  className="btn-icon btn-ghost"
+                  onClick={() => setShowTutorialModal(true)}
+                  style={{ color: '#06b6d4', padding: '0.35rem' }}
+                  title="Video Tutorial"
+                >
+                  <CirclePlay className="w-5 h-5" />
+                </button>
+              )}
+              <button
+                type="button"
+                className="btn-icon btn-ghost"
+                onClick={() => deleteExercise(activeExerciseIndex)}
+                style={{ color: 'var(--danger, #ef4444)', padding: '0.35rem' }}
+                title="Delete exercise"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Form Notes Accordion */}
+          <AnimatePresence>
+            {showNotesAccordion && currentExercise.notes && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                style={{
+                  background: 'rgba(6, 182, 212, 0.08)',
+                  border: '1px solid rgba(6, 182, 212, 0.25)',
+                  borderRadius: '12px',
+                  padding: '0.75rem 1rem',
+                  fontSize: '0.82rem',
+                  lineHeight: '1.5',
+                  color: 'var(--text-secondary)',
+                  marginBottom: '1rem'
+                }}
+              >
+                <div style={{ fontWeight: 700, color: '#38bdf8', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Sparkles className="w-4 h-4" />
+                  <span>{isRTL ? 'نصيحة الأداء الصحيح' : 'Proper Form Tips'}</span>
+                </div>
+                <p style={{ margin: 0, whiteSpace: 'pre-line' }}>{currentExercise.notes}</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Cardio View or Weights Sets View */}
+          {isCardio ? (
+            <div style={{
+              background: 'rgba(0, 0, 0, 0.25)',
+              borderRadius: '16px',
+              padding: '1.5rem',
+              textAlign: 'center',
+              border: '1px solid rgba(255, 255, 255, 0.05)'
+            }}>
+              <div style={{ fontSize: '3.5rem', fontWeight: 900, color: '#06b6d4', fontVariantNumeric: 'tabular-nums', marginBottom: '1rem' }}>
+                {formatTimer(cardioSeconds)}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => setCardioRunning(r => !r)}
+                  style={{ minWidth: '120px', borderRadius: '12px' }}
+                >
+                  {cardioRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                  <span>{cardioRunning ? t('stopTimer') : t('startTimer')}</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => { setCardioRunning(false); setCardioSeconds(0); }}
+                  style={{ borderRadius: '12px' }}
+                >
+                  <RotateCcw className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              {/* Sets Rows: Gym Floor Mode */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1rem' }}>
+                {currentExercise.sets?.map((set, sIdx) => {
+                  const isCurrentActive = sIdx === activeSetIndex;
+                  return (
+                    <GymFloorSetCard
+                      key={set.id || sIdx}
+                      set={set}
+                      setIndex={sIdx}
+                      totalSets={currentExercise.sets.length}
+                      previousRecord={previousRecord}
+                      onUpdateSet={(field, val) => updateSet(activeExerciseIndex, sIdx, field, val)}
+                      onToggleComplete={() => handleToggleSetComplete(activeExerciseIndex, sIdx)}
+                      onQuickWeightAdjust={(delta) => handleQuickWeightAdjust(activeExerciseIndex, sIdx, delta)}
+                      onQuickRepAdjust={(delta) => handleQuickRepAdjust(activeExerciseIndex, sIdx, delta)}
+                      onDeleteSet={currentExercise.sets.length > 1 ? () => deleteSet(activeExerciseIndex, sIdx) : undefined}
+                      isCompact={!isCurrentActive}
+                      onSelectSet={() => setSelectedSetIndex(sIdx)}
+                    />
+                  );
+                })}
+              </div>
+
+              {/* Add Set Button */}
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => addSet(activeExerciseIndex)}
+                style={{
+                  width: '100%',
+                  padding: '0.55rem',
+                  borderRadius: '12px',
+                  border: '1px dashed rgba(255, 255, 255, 0.15)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.4rem',
+                  fontSize: '0.85rem',
+                  color: 'var(--accent-primary)',
+                  fontWeight: 600,
+                  marginBottom: '1.25rem'
+                }}
+              >
+                <Plus className="w-4 h-4" />
+                <span>{t('addSet')}</span>
+              </button>
+            </div>
+          )}
+
+          {/* 5. USER REQUESTED FEATURE: "Complete Exercise" Button & Auto-Go to Next Exercise */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '1rem' }}>
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.97 }}
+              onClick={handleCompleteCurrentExercise}
+              style={{
+                flex: 1,
+                padding: '0.85rem 1.25rem',
+                borderRadius: '14px',
+                border: 'none',
+                background: isAllCurrentSetsDone 
+                  ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' 
+                  : 'linear-gradient(135deg, #06b6d4 0%, #0284c7 100%)',
+                color: '#ffffff',
+                fontWeight: 800,
+                fontSize: '0.95rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                cursor: 'pointer',
+                boxShadow: isAllCurrentSetsDone 
+                  ? '0 8px 24px -4px rgba(16, 185, 129, 0.5)' 
+                  : '0 8px 24px -4px rgba(6, 182, 212, 0.4)'
+              }}
+            >
+              <CheckCircle2 className="w-5 h-5" />
+              <span>
+                {isLastExercise
+                  ? (isRTL ? 'أنهِ هذا التمرين الأخير' : 'Complete Final Exercise')
+                  : (isRTL ? 'أنهِ هذا التمرين وانتقل للتالي' : 'Complete Exercise & Go Next')}
+              </span>
+              <ChevronRight className="w-4 h-4" style={{ transform: isRTL ? 'scaleX(-1)' : 'none' }} />
+            </motion.button>
+
+            {/* Stepper Next/Prev buttons */}
+            <div style={{ display: 'flex', gap: '0.35rem' }}>
+              <button
+                type="button"
+                className="btn-icon btn-ghost"
+                disabled={activeExerciseIndex === 0}
+                onClick={() => setActiveExerciseIndex(prev => Math.max(0, prev - 1))}
+                style={{ borderRadius: '12px', padding: '0.75rem' }}
+                title="Previous Exercise"
+              >
+                <ChevronLeft className="w-5 h-5" style={{ transform: isRTL ? 'scaleX(-1)' : 'none' }} />
+              </button>
+              <button
+                type="button"
+                className="btn-icon btn-ghost"
+                disabled={activeExerciseIndex === exercises.length - 1}
+                onClick={() => setActiveExerciseIndex(prev => Math.min(exercises.length - 1, prev + 1))}
+                style={{ borderRadius: '12px', padding: '0.75rem' }}
+                title="Next Exercise"
+              >
+                <ChevronRight className="w-5 h-5" style={{ transform: isRTL ? 'scaleX(-1)' : 'none' }} />
+              </button>
+            </div>
+          </div>
+        </article>
+      )}
+
+      {/* 6. Smart Rest Timer Floating HUD */}
+      <AnimatePresence>
+        {restTimerSeconds !== null && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 50, scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 450, damping: 28 }}
+            style={{
+              position: 'fixed',
+              bottom: 'calc(16px + max(0px, env(safe-area-inset-bottom, 0px)))',
+              left: '16px',
+              right: '16px',
+              margin: '0 auto',
+              maxWidth: '480px',
+              zIndex: 9999,
+              background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.96) 0%, rgba(9, 13, 22, 0.98) 100%)',
+              border: '1.5px solid rgba(6, 182, 212, 0.45)',
+              borderRadius: '20px',
+              padding: '0.75rem 1.25rem',
+              backdropFilter: 'blur(25px)',
+              boxShadow: '0 20px 45px -10px rgba(0, 0, 0, 0.8), 0 0 30px rgba(6, 182, 212, 0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '1rem'
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <Play className="w-5 h-5" />
-              <span style={{ fontWeight: 600 }}>{t('restTimerActive')}</span>
+              <div style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '12px',
+                background: 'rgba(6, 182, 212, 0.2)',
+                color: '#38bdf8',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Dumbbell className="w-5 h-5 animate-pulse" />
+              </div>
+              <div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                  {isRTL ? 'وقت الراحة والاستشفاء' : 'Rest Timer'}
+                </div>
+                <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#38bdf8', fontVariantNumeric: 'tabular-nums', lineHeight: 1.1 }}>
+                  {formatTimer(restTimerSeconds)}
+                </div>
+              </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <span style={{ fontSize: '1.5rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
-                {formatTime(activeTimer)}
-              </span>
-              <button className="btn-icon" style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white' }} onClick={() => setActiveTimer(null)}>
-                <Square className="w-4 h-4" />
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+              <button
+                type="button"
+                onClick={() => setRestTimerSeconds(s => Math.max(5, (s || 0) - 15))}
+                style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem', fontWeight: 700, borderRadius: '8px', background: 'rgba(255,255,255,0.08)', border: 'none', color: '#ffffff', cursor: 'pointer' }}
+              >
+                -15s
+              </button>
+              <button
+                type="button"
+                onClick={() => setRestTimerSeconds(s => (s || 0) + 15)}
+                style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem', fontWeight: 700, borderRadius: '8px', background: 'rgba(255,255,255,0.08)', border: 'none', color: '#ffffff', cursor: 'pointer' }}
+              >
+                +15s
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsTimerPaused(p => !p)}
+                style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem', borderRadius: '8px', background: 'rgba(6, 182, 212, 0.2)', border: 'none', color: '#38bdf8', cursor: 'pointer' }}
+              >
+                {isTimerPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+              </button>
+              <button
+                type="button"
+                className="btn-icon btn-ghost"
+                onClick={() => setRestTimerSeconds(null)}
+                style={{ color: 'var(--text-muted)', padding: '0.3rem' }}
+                title="Skip Rest"
+              >
+                <X className="w-4 h-4" />
               </button>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
+      {/* Rest Celebration Notification */}
       <AnimatePresence>
-        {showRestCompleteToast && (
+        {showRestCelebration && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: -10 }}
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: -10 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
             style={{
-              backgroundColor: 'rgba(16, 185, 129, 0.16)',
-              border: '1px solid rgba(16, 185, 129, 0.4)',
-              color: '#10b981',
-              padding: '0.85rem 1.2rem',
-              borderRadius: 'var(--radius-md)',
+              position: 'fixed',
+              bottom: 'calc(24px + max(0px, env(safe-area-inset-bottom, 0px)))',
+              left: '16px',
+              right: '16px',
+              margin: '0 auto',
+              maxWidth: '420px',
+              zIndex: 9999,
+              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.95), rgba(5, 150, 105, 0.98))',
+              color: '#ffffff',
+              borderRadius: '16px',
+              padding: '0.85rem 1.25rem',
+              boxShadow: '0 20px 45px -10px rgba(16, 185, 129, 0.6)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              marginBottom: '1.5rem'
+              gap: '0.75rem'
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', fontWeight: 600, fontSize: '0.925rem' }}>
-              <Bell className="w-5 h-5" />
-              <span>{t('restCompleteNotification')}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', fontWeight: 700, fontSize: '0.9rem' }}>
+              <Bell className="w-5 h-5 animate-bounce" />
+              <span>{isRTL ? 'انتهت الراحة! ابدأ جولتك التالية بقوة 💪' : 'Rest complete! Ready for your next set 💪'}</span>
             </div>
-            <button 
-              type="button" 
-              className="btn-icon btn-ghost" 
-              style={{ padding: '0.2rem', color: '#10b981' }} 
-              onClick={() => setShowRestCompleteToast(false)}
+            <button
+              type="button"
+              className="btn-icon btn-ghost"
+              onClick={() => setShowRestCelebration(false)}
+              style={{ color: '#ffffff', padding: '0.2rem' }}
             >
               <X className="w-4 h-4" />
             </button>
@@ -699,55 +992,60 @@ export function SessionDetailView() {
         )}
       </AnimatePresence>
 
-      <Reorder.Group 
-        axis="y" 
-        values={session.exercises || []} 
-        onReorder={handleReorderExercises} 
-        style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', listStyle: 'none', padding: 0, margin: 0, paddingBottom: '1rem' }}
-      >
-        {session.exercises?.map((exercise, exIndex) => (
-          <ExerciseCard 
-            key={exercise.id} 
-            exercise={exercise} 
-            exIndex={exIndex} 
-            updateSet={updateSet} 
-            addSet={addSet} 
-            updateExercise={updateExercise}
-            deleteExercise={deleteExercise}
-            deleteSet={deleteSet}
-          />
-        ))}
-      </Reorder.Group>
+      {/* Video Tutorial Modal */}
+      {currentExercise?.videoUrl && (
+        <Modal
+          isOpen={showTutorialModal}
+          onClose={() => setShowTutorialModal(false)}
+          title={`${tExercise(currentExercise.name)} — ${isRTL ? 'فيديو الشرح' : 'Tutorial'}`}
+        >
+          <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', borderRadius: '14px' }}>
+            <iframe
+              src={currentExercise.videoUrl.replace('youtube.com/watch?v=', 'youtube.com/embed/')}
+              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              title={currentExercise.name}
+            />
+          </div>
+        </Modal>
+      )}
 
-      <button 
-        className="btn-ghost" 
-        style={{ width: '100%', padding: '1rem', borderRadius: '1rem', border: '2px dashed var(--border-color)', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', transition: 'all 0.2s' }}
-        onClick={() => setIsAddExerciseModalOpen(true)}
+      {/* Add Exercise Modal */}
+      <Modal
+        isOpen={isAddExerciseModalOpen}
+        onClose={() => setIsAddExerciseModalOpen(false)}
+        title={t('addExercise')}
       >
-        <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '0.5rem', borderRadius: '50%' }}>
-          <Plus className="w-5 h-5" />
-        </div>
-        <span style={{ fontWeight: 500 }}>{t('addExercise')}</span>
-      </button>
-
-      <Modal isOpen={isAddExerciseModalOpen} onClose={() => setIsAddExerciseModalOpen(false)} title={t('addExercise')}>
         <div style={{ display: 'grid', gap: '0.5rem', maxHeight: '60vh', overflowY: 'auto' }} className="hide-scrollbar">
           {DEFAULT_EXERCISES.map((ex, i) => (
-            <button 
-              key={i} 
-              className="card" 
-              style={{ textAlign: isRTL ? 'right' : 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '1rem', transition: 'background-color 0.2s' }}
-              onClick={() => handleAddExercise(ex)}
+            <button
+              key={i}
+              type="button"
+              className="card"
+              style={{
+                textAlign: isRTL ? 'right' : 'left',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                cursor: 'pointer',
+                padding: '0.85rem 1rem',
+                borderRadius: '12px',
+                background: 'rgba(255, 255, 255, 0.04)',
+                border: '1px solid rgba(255, 255, 255, 0.08)'
+              }}
+              onClick={() => handleAddExerciseTemplate(ex)}
             >
               <div>
-                <div style={{ fontWeight: 600 }}>{tExercise(ex.name)}</div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{tMuscle(ex.targetMuscle)}</div>
+                <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{tExercise(ex.name)}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{tMuscle(ex.targetMuscle)}</div>
               </div>
-              <Plus className="w-4 h-4 text-accent-primary" />
+              <Plus className="w-5 h-5 text-accent-primary" />
             </button>
           ))}
         </div>
       </Modal>
-    </motion.div>
+
+    </div>
   );
 }

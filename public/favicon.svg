@@ -1,8 +1,77 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <rect width="100" height="100" rx="25" fill="#0f172a" />
-  <path d="M 35,50 L 65,50" stroke="#3b82f6" stroke-width="8" stroke-linecap="round" />
-  <rect x="25" y="30" width="8" height="40" rx="3" fill="#3b82f6" />
-  <rect x="15" y="38" width="6" height="24" rx="2" fill="#60a5fa" />
-  <rect x="67" y="30" width="8" height="40" rx="3" fill="#3b82f6" />
-  <rect x="79" y="38" width="6" height="24" rx="2" fill="#60a5fa" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <radialGradient id="cyanGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="limeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e4ff54"/>
+      <stop offset="50%" stop-color="#c6f432"/>
+      <stop offset="100%" stop-color="#84cc16"/>
+    </linearGradient>
+    <linearGradient id="chromeBar" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="50%" stop-color="#94a3b8"/>
+      <stop offset="100%" stop-color="#334155"/>
+    </linearGradient>
+    <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background Squircle -->
+  <rect width="512" height="512" rx="128" fill="#080c14"/>
+  <rect x="3" y="3" width="506" height="506" rx="125" stroke="#38bdf8" stroke-opacity="0.35" stroke-width="4"/>
+  
+  <!-- Subtle cyan ambient aura -->
+  <circle cx="256" cy="256" r="220" fill="url(#cyanGlow)"/>
+
+  <!-- Barbell Graphic with Neon Lime Aesthetics -->
+  <g filter="url(#neonGlow)">
+    <!-- Central Bar -->
+    <rect x="150" y="246" width="212" height="20" rx="10" fill="url(#chromeBar)"/>
+    <rect x="180" y="249" width="152" height="14" rx="7" fill="url(#limeGrad)"/>
+    
+    <!-- Left Inner Collar -->
+    <rect x="190" y="232" width="14" height="48" rx="5" fill="#1e293b"/>
+    <rect x="193" y="235" width="8" height="42" rx="3" fill="url(#limeGrad)"/>
+
+    <!-- Left Plate 1 (Inner Big) -->
+    <rect x="160" y="176" width="24" height="160" rx="10" fill="#0b1108" stroke="#c6f432" stroke-width="4"/>
+    <rect x="167" y="192" width="10" height="128" rx="5" fill="url(#limeGrad)"/>
+
+    <!-- Left Plate 2 (Mid) -->
+    <rect x="134" y="198" width="20" height="116" rx="8" fill="#0b1108" stroke="#a3e635" stroke-width="3.5"/>
+    <rect x="139" y="210" width="10" height="92" rx="4" fill="url(#limeGrad)"/>
+
+    <!-- Left Plate 3 (Outer Small) -->
+    <rect x="112" y="218" width="16" height="76" rx="6" fill="#0b1108" stroke="#bef264" stroke-width="3"/>
+    <rect x="116" y="226" width="8" height="60" rx="3" fill="url(#limeGrad)"/>
+    
+    <!-- Left Bar Tip -->
+    <rect x="96" y="250" width="16" height="12" rx="4" fill="#94a3b8"/>
+
+    <!-- Right Inner Collar -->
+    <rect x="308" y="232" width="14" height="48" rx="5" fill="#1e293b"/>
+    <rect x="311" y="235" width="8" height="42" rx="3" fill="url(#limeGrad)"/>
+
+    <!-- Right Plate 1 (Inner Big) -->
+    <rect x="328" y="176" width="24" height="160" rx="10" fill="#0b1108" stroke="#c6f432" stroke-width="4"/>
+    <rect x="335" y="192" width="10" height="128" rx="5" fill="url(#limeGrad)"/>
+
+    <!-- Right Plate 2 (Mid) -->
+    <rect x="358" y="198" width="20" height="116" rx="8" fill="#0b1108" stroke="#a3e635" stroke-width="3.5"/>
+    <rect x="363" y="210" width="10" height="92" rx="4" fill="url(#limeGrad)"/>
+
+    <!-- Right Plate 3 (Outer Small) -->
+    <rect x="384" y="218" width="16" height="76" rx="6" fill="#0b1108" stroke="#bef264" stroke-width="3"/>
+    <rect x="388" y="226" width="8" height="60" rx="3" fill="url(#limeGrad)"/>
+
+    <!-- Right Bar Tip -->
+    <rect x="400" y="250" width="16" height="12" rx="4" fill="#94a3b8"/>
+  </g>
 </svg>

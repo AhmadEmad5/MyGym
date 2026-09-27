@@ -1,62 +1,53 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Dumbbell, 
-  CalendarDays, 
-  Sparkles, 
-  CheckCircle2, 
-  ArrowRight, 
-  ArrowLeft, 
-  X,
-  Trophy
+  Dumbbell, Sparkles, Activity, Timer, Camera, Barcode, 
+  Flame, Palette, Globe, Check, ArrowRight, ArrowLeft, X, 
+  Zap, HeartPulse, Smartphone, Layers
 } from 'lucide-react';
+import { useData } from '../hooks/useData';
 import { useTranslation } from '../lib/i18n';
+import { gymAudio } from '../lib/audio';
 
 interface OnboardingTourProps {
   onFinish: () => void;
 }
 
+const THEME_OPTIONS = [
+  { id: 'dark', label: 'Obsidian', color: '#38bdf8' },
+  { id: 'midnight', label: 'Midnight', color: '#60a5fa' },
+  { id: 'ocean', label: 'Ocean', color: '#14b8a6' },
+  { id: 'neon', label: 'Neon', color: '#e879f9' },
+  { id: 'forest', label: 'Forest', color: '#10b981' },
+  { id: 'sunset', label: 'Sunset', color: '#f97316' },
+];
+
 export function OnboardingTour({ onFinish }: OnboardingTourProps) {
-  const { t, isRTL } = useTranslation();
+  const { data, updateSettings, theme, setTheme } = useData();
+  const { isRTL, language, setLanguage } = useTranslation();
   const [currentStep, setCurrentStep] = useState(0);
+  const settings = data?.settings;
 
-  const steps = [
-    {
-      title: t('welcomeTourTitle'),
-      subtitle: t('welcomeTourSubtitle'),
-      description: t('welcomeTourDesc'),
-      icon: Dumbbell,
-      badge: `${t('stepOf')} 1 ${t('of')} 4`
-    },
-    {
-      title: t('todayTourTitle'),
-      subtitle: t('todayTourSubtitle'),
-      description: t('todayTourDesc'),
-      icon: CheckCircle2,
-      badge: `${t('stepOf')} 2 ${t('of')} 4`
-    },
-    {
-      title: t('calendarTourTitle'),
-      subtitle: t('calendarTourSubtitle'),
-      description: t('calendarTourDesc'),
-      icon: CalendarDays,
-      badge: `${t('stepOf')} 3 ${t('of')} 4`
-    },
-    {
-      title: t('aiTourTitle'),
-      subtitle: t('aiTourSubtitle'),
-      description: t('aiTourDesc'),
-      icon: Sparkles,
-      badge: `${t('stepOf')} 4 ${t('of')} 4`
+  const totalSteps = 5;
+
+  const saveSettingsPatch = async (patch: Partial<NonNullable<typeof settings>>) => {
+    try {
+      await updateSettings({
+        weightUnit: settings?.weightUnit || 'kg',
+        theme: settings?.theme || 'midnight',
+        ...settings,
+        ...patch,
+      }, data?.user);
+      gymAudio.triggerSubtleHaptic([15]);
+    } catch {
+      // fallback smoothly
     }
-  ];
-
-  const step = steps[currentStep];
-  const isLast = currentStep === steps.length - 1;
-  const Icon = step.icon;
+  };
 
   const handleNext = () => {
-    if (isLast) {
+    gymAudio.triggerSubtleHaptic([20, 25]);
+    if (currentStep === totalSteps - 1) {
+      gymAudio.triggerDualPulseHaptic();
       onFinish();
     } else {
       setCurrentStep(prev => prev + 1);
@@ -64,220 +55,440 @@ export function OnboardingTour({ onFinish }: OnboardingTourProps) {
   };
 
   const handlePrev = () => {
-    if (currentStep > 0) {
-      setCurrentStep(prev => prev - 1);
-    }
+    gymAudio.triggerSubtleHaptic([15]);
+    setCurrentStep(prev => Math.max(0, prev - 1));
   };
 
   return (
-    <div 
-      dir={isRTL ? 'rtl' : 'ltr'}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(5, 8, 16, 0.82)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-        zIndex: 9999,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '1.5rem'
-      }}
-    >
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 15 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 15 }}
-        transition={{ type: 'spring', damping: 26, stiffness: 320 }}
-        style={{
-          width: '100%',
-          maxWidth: '520px',
-          backgroundColor: '#0f172a',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          borderRadius: '1.5rem',
-          boxShadow: '0 30px 60px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05)',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-          position: 'relative',
-          textAlign: isRTL ? 'right' : 'left'
-        }}
+    <div className="forma-onboarding-backdrop" dir={isRTL ? 'rtl' : 'ltr'}>
+      <motion.section
+        className="forma-onboarding-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="forma-onboarding-title"
+        initial={{ opacity: 0, y: 24, scale: 0.96 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 24, scale: 0.96 }}
+        transition={{ type: 'spring', stiffness: 350, damping: 28 }}
       >
-        {/* Top Glow & Skip */}
-        <div 
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: '15%',
-            right: '15%',
-            height: '2px',
-            background: 'linear-gradient(90deg, transparent, var(--accent-primary, #38bdf8), transparent)',
-            opacity: 0.8
-          }} 
-        />
+        {/* Glow Halo */}
+        <div className="forma-onboarding-glow" />
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.25rem 1.5rem 0.5rem 1.5rem' }}>
-          <span 
-            style={{
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              color: 'var(--accent-primary, #38bdf8)',
-              backgroundColor: 'rgba(56, 189, 248, 0.1)',
-              padding: '0.25rem 0.65rem',
-              borderRadius: '2rem',
-              border: '1px solid rgba(56, 189, 248, 0.2)'
-            }}
-          >
-            {step.badge}
-          </span>
+        {/* Topline Bar */}
+        <div className="forma-onboarding-topline">
+          <div className="forma-onboarding-step-tag">
+            <Sparkles size={13} />
+            <span>{isRTL ? `الخطوة ${currentStep + 1} من ${totalSteps}` : `STEP ${currentStep + 1} OF ${totalSteps}`}</span>
+          </div>
+
           <button
             type="button"
-            onClick={onFinish}
-            className="btn-icon btn-ghost"
-            style={{
-              padding: '0.4rem',
-              borderRadius: '50%',
-              color: 'var(--text-muted, #94a3b8)',
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
+            className="forma-onboarding-close-btn"
+            onClick={() => {
+              gymAudio.triggerSubtleHaptic([15]);
+              onFinish();
             }}
-            title={t('skip')}
+            aria-label={isRTL ? 'تخطي الشرح' : 'Skip Tour'}
+            title={isRTL ? 'تخطي الشرح' : 'Skip Tour'}
           >
-            <X className="w-5 h-5" />
+            <X size={16} />
           </button>
         </div>
 
-        {/* Content Body */}
-        <div style={{ padding: '1.5rem 2rem 2rem 2rem', textAlign: 'center', minHeight: '300px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentStep}
-              initial={{ opacity: 0, x: isRTL ? -20 : 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: isRTL ? 20 : -20 }}
-              transition={{ duration: 0.22 }}
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}
-            >
-              {/* Icon Container */}
-              <div 
-                style={{
-                  width: '72px',
-                  height: '72px',
-                  borderRadius: '1.25rem',
-                  background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(129, 140, 248, 0.15))',
-                  border: '1px solid rgba(56, 189, 248, 0.3)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'var(--accent-primary, #38bdf8)',
-                  marginBottom: '1.5rem',
-                  boxShadow: '0 10px 25px -5px rgba(56, 189, 248, 0.25)'
-                }}
-              >
-                <Icon className="w-9 h-9" />
-              </div>
-
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 700, margin: '0 0 0.4rem 0', color: '#f8fafc', textAlign: 'center' }}>
-                {step.title}
-              </h2>
-
-              <div style={{ fontSize: '0.9rem', color: 'var(--accent-primary, #38bdf8)', fontWeight: 600, marginBottom: '1rem', textAlign: 'center' }}>
-                {step.subtitle}
-              </div>
-
-              <p style={{ color: '#94a3b8', fontSize: '0.925rem', lineHeight: '1.6', margin: 0, maxWidth: '420px', textAlign: 'center' }}>
-                {step.description}
-              </p>
-            </motion.div>
-          </AnimatePresence>
+        {/* 5-Step Progress Indicators */}
+        <div className="forma-onboarding-route" aria-label="Tour progress">
+          {Array.from({ length: totalSteps }).map((_, index) => (
+            <div
+              key={index}
+              className={`forma-onboarding-route-bar ${index <= currentStep ? 'is-active' : ''}`}
+            />
+          ))}
         </div>
 
-        {/* Footer Navigation */}
-        <div 
-          style={{
-            padding: '1.25rem 2rem',
-            backgroundColor: 'rgba(15, 23, 42, 0.6)',
-            borderTop: '1px solid rgba(255, 255, 255, 0.06)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '1rem'
-          }}
-        >
-          {/* Step Dots */}
-          <div style={{ display: 'flex', gap: '0.4rem' }}>
-            {steps.map((_, idx) => (
-              <div
-                key={idx}
-                style={{
-                  width: idx === currentStep ? '24px' : '8px',
-                  height: '8px',
-                  borderRadius: '4px',
-                  backgroundColor: idx === currentStep ? 'var(--accent-primary, #38bdf8)' : 'rgba(255, 255, 255, 0.15)',
-                  transition: 'all 0.25s ease'
-                }}
-              />
-            ))}
-          </div>
+        {/* Animated Step Content */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentStep}
+            className="forma-onboarding-content"
+            initial={{ opacity: 0, x: isRTL ? -20 : 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: isRTL ? 20 : -20 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
+          >
+            {/* ── STEP 1: WELCOME & PILLARS ────────────────────────────── */}
+            {currentStep === 0 && (
+              <>
+                <div className="forma-onboarding-hero-head">
+                  <div className="forma-onboarding-icon-gem">
+                    <Dumbbell size={30} />
+                  </div>
+                  <h2 id="forma-onboarding-title" className="forma-onboarding-title">
+                    {isRTL ? 'مرحباً بك في FORMA PRO' : 'Welcome to FORMA PRO'}
+                  </h2>
+                  <p className="forma-onboarding-desc">
+                    {isRTL
+                      ? 'مساعدك الرياضي الهندسي المتكامل — مصمم لرفع مستواك البدني عبر التتبع الدقيق والذكاء الاصطناعي.'
+                      : 'Your elite athletic ecosystem — engineered for precision performance, 3D anatomy, and AI intelligence.'}
+                  </p>
+                </div>
 
-          {/* Action Buttons */}
-          <div style={{ display: 'flex', gap: '0.65rem' }}>
-            {currentStep > 0 && (
-              <button
-                type="button"
-                onClick={handlePrev}
-                className="btn btn-secondary"
-                style={{
-                  padding: '0.6rem 1rem',
-                  fontSize: '0.875rem',
-                  borderRadius: '0.75rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.35rem'
-                }}
-              >
-                <ArrowLeft className="w-4 h-4" style={{ transform: isRTL ? 'rotate(180deg)' : 'none' }} />
-                <span>{t('back')}</span>
-              </button>
+                <div className="forma-showcase-box">
+                  <div className="forma-showcase-pills-row">
+                    <div className="forma-showcase-pill">
+                      <Layers size={18} />
+                      <span>{isRTL ? 'تتبع فوري للأوزان والجولات' : 'Live Sets & PR Tracking'}</span>
+                    </div>
+                    <div className="forma-showcase-pill">
+                      <HeartPulse size={18} />
+                      <span>{isRTL ? 'هولوغرام العضلات 3D' : '3D Muscle Anatomy'}</span>
+                    </div>
+                    <div className="forma-showcase-pill">
+                      <Barcode size={18} />
+                      <span>{isRTL ? 'ماسح الوجبات والباركود' : 'AI Meals & Barcode Scan'}</span>
+                    </div>
+                    <div className="forma-showcase-pill">
+                      <Smartphone size={18} />
+                      <span>{isRTL ? 'مؤقت شاشة القفل Live HUD' : 'Lock Screen Live HUD'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Language Selection */}
+                <div className="forma-choice-group">
+                  <div className="forma-choice-label">
+                    <Globe size={14} />
+                    <span>{isRTL ? 'اختر لغة الواجهة الأساسية' : 'Select your primary language'}</span>
+                  </div>
+                  <div className="forma-choice-grid">
+                    <button
+                      type="button"
+                      className={`forma-choice-card ${language === 'ar' ? 'is-active' : ''}`}
+                      onClick={() => {
+                        setLanguage('ar');
+                        void saveSettingsPatch({ language: 'ar' });
+                      }}
+                    >
+                      <strong className="forma-choice-title">العربية</strong>
+                      <span className="forma-choice-sub">الواجهة العربية الافتراضية</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`forma-choice-card ${language === 'en' ? 'is-active' : ''}`}
+                      onClick={() => {
+                        setLanguage('en');
+                        void saveSettingsPatch({ language: 'en' });
+                      }}
+                    >
+                      <strong className="forma-choice-title">English</strong>
+                      <span className="forma-choice-sub">Global Standard LTR</span>
+                    </button>
+                  </div>
+                </div>
+              </>
             )}
 
+            {/* ── STEP 2: 3D HOLOGRAM & DUAL-PULSE REST ───────────────── */}
+            {currentStep === 1 && (
+              <>
+                <div className="forma-onboarding-hero-head">
+                  <div className="forma-onboarding-icon-gem" style={{ color: '#10b981', borderColor: 'rgba(16, 185, 129, 0.4)' }}>
+                    <Activity size={30} />
+                  </div>
+                  <h2 className="forma-onboarding-title">
+                    {isRTL ? 'الهولوغرام العضلي 3D ومؤقت الراحة' : '3D Anatomy & Smart Rest Timer'}
+                  </h2>
+                  <p className="forma-onboarding-desc">
+                    {isRTL
+                      ? 'شاهد العضلات المستهدفة مباشرة في مجسم ثلاثي الأبعاد، واستقبل تنبيهات اهتزازية مزدوجة عند انتهاء الراحة تخترق صخب الصالة.'
+                      : 'Visualize activated muscles in real-time 3D, and receive piercing dual-pulse haptics through gym noise.'}
+                  </p>
+                </div>
+
+                <div className="forma-muscle-mock">
+                  <div className="forma-muscle-radar-icon">
+                    <Zap size={22} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#ffffff' }}>
+                      {isRTL ? 'نظام الاهتزاز المزدوج (Dual-Pulse)' : 'Dual-Pulse Haptics Active'}
+                    </div>
+                    <div style={{ fontSize: '0.74rem', color: '#94a3b8' }}>
+                      {isRTL ? 'اهتزاز قوي ونغمة ترددية عند 3 .. 2 .. 1 في جيبك' : 'Distinct vibration bursts & high-pitch chime at 3..2..1'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Weight Unit Setup */}
+                <div className="forma-choice-group">
+                  <div className="forma-choice-label">
+                    <Dumbbell size={14} />
+                    <span>{isRTL ? 'وحدة قياس الأوزان المعتمدة' : 'Preferred Weight Unit'}</span>
+                  </div>
+                  <div className="forma-choice-grid">
+                    <button
+                      type="button"
+                      className={`forma-choice-card ${settings?.weightUnit === 'kg' ? 'is-active' : ''}`}
+                      onClick={() => void saveSettingsPatch({ weightUnit: 'kg' })}
+                    >
+                      <strong className="forma-choice-title">KG</strong>
+                      <span className="forma-choice-sub">{isRTL ? 'كيلوغرام (متري)' : 'Kilograms'}</span>
+                      {settings?.weightUnit === 'kg' && <Check size={14} style={{ color: '#38bdf8' }} />}
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`forma-choice-card ${settings?.weightUnit === 'lb' ? 'is-active' : ''}`}
+                      onClick={() => void saveSettingsPatch({ weightUnit: 'lb' })}
+                    >
+                      <strong className="forma-choice-title">LB</strong>
+                      <span className="forma-choice-sub">{isRTL ? 'رطل (إمبريالي)' : 'Pounds'}</span>
+                      {settings?.weightUnit === 'lb' && <Check size={14} style={{ color: '#38bdf8' }} />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Default Rest Timer Setup */}
+                <div className="forma-choice-group">
+                  <div className="forma-choice-label">
+                    <Timer size={14} />
+                    <span>{isRTL ? 'فترة الراحة الافتراضية بين الجولات' : 'Default Rest Timer'}</span>
+                  </div>
+                  <div className="forma-choice-grid">
+                    {[60, 90, 120].map((sec) => (
+                      <button
+                        key={sec}
+                        type="button"
+                        className={`forma-choice-card ${settings?.restTimerSeconds === sec ? 'is-active' : ''}`}
+                        onClick={() => void saveSettingsPatch({ restTimerSeconds: sec })}
+                      >
+                        <strong className="forma-choice-title">{sec}s</strong>
+                        <span className="forma-choice-sub">
+                          {sec === 60 ? (isRTL ? 'تضخيم سريع' : 'Fast') : sec === 90 ? (isRTL ? 'قياسي موصى به' : 'Optimal') : (isRTL ? 'قوة عضلية' : 'Heavy')}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* ── STEP 3: NUTRITION & BARCODE VISION ───────────────────── */}
+            {currentStep === 2 && (
+              <>
+                <div className="forma-onboarding-hero-head">
+                  <div className="forma-onboarding-icon-gem" style={{ color: '#38bdf8', borderColor: 'rgba(56, 189, 248, 0.4)' }}>
+                    <Camera size={30} />
+                  </div>
+                  <h2 className="forma-onboarding-title">
+                    {isRTL ? 'التغذية الذكية وماسح الباركود' : 'AI Nutrition & Barcode Scanner'}
+                  </h2>
+                  <p className="forma-onboarding-desc">
+                    {isRTL
+                      ? 'صوّر طبق طعامك لتحليله بالذكاء الاصطناعي، أو امسح باركود المكملات والأغذية بكاميرا الهاتف للحصول على الماكروز فوراً.'
+                      : 'Snap your meal plate for instant AI analysis, or scan food barcodes directly to log exact calories & macros.'}
+                  </p>
+                </div>
+
+                <div className="forma-showcase-box">
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#38bdf8' }}>
+                      {isRTL ? 'الماكروز اليومية المتزامنة' : 'Daily Macro Tracking'}
+                    </span>
+                    <span style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: 700 }}>
+                      {isRTL ? 'حاسبة TDEE دقيقة' : 'TDEE Engine'}
+                    </span>
+                  </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '0.45rem', textAlign: 'center' }}>
+                    <div style={{ background: 'rgba(255,255,255,0.04)', padding: '0.5rem', borderRadius: '10px' }}>
+                      <div style={{ fontSize: '0.62rem', color: '#94a3b8' }}>{isRTL ? 'السعرات' : 'Cals'}</div>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#f59e0b' }}>{data?.nutritionGoals?.dailyCalories ?? 2200}</div>
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.04)', padding: '0.5rem', borderRadius: '10px' }}>
+                      <div style={{ fontSize: '0.62rem', color: '#94a3b8' }}>{isRTL ? 'بروتين' : 'Protein'}</div>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#10b981' }}>{data?.nutritionGoals?.dailyProtein ?? 150}g</div>
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.04)', padding: '0.5rem', borderRadius: '10px' }}>
+                      <div style={{ fontSize: '0.62rem', color: '#94a3b8' }}>{isRTL ? 'كارب' : 'Carbs'}</div>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#38bdf8' }}>{data?.nutritionGoals?.dailyCarbs ?? 220}g</div>
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.04)', padding: '0.5rem', borderRadius: '10px' }}>
+                      <div style={{ fontSize: '0.62rem', color: '#94a3b8' }}>{isRTL ? 'دهون' : 'Fats'}</div>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#ec4899' }}>{data?.nutritionGoals?.dailyFats ?? 65}g</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Training Week Start */}
+                <div className="forma-choice-group">
+                  <div className="forma-choice-label">
+                    <Flame size={14} />
+                    <span>{isRTL ? 'بداية أسبوع التمرين المفضل لديك' : 'First Day of Training Week'}</span>
+                  </div>
+                  <div className="forma-choice-grid">
+                    <button
+                      type="button"
+                      className={`forma-choice-card ${settings?.weekStartsOn === 'sunday' ? 'is-active' : ''}`}
+                      onClick={() => void saveSettingsPatch({ weekStartsOn: 'sunday' })}
+                    >
+                      <strong className="forma-choice-title">{isRTL ? 'الأحد' : 'Sunday'}</strong>
+                      <span className="forma-choice-sub">{isRTL ? 'مناسب للشرق الأوسط' : 'Regional Default'}</span>
+                      {settings?.weekStartsOn === 'sunday' && <Check size={14} style={{ color: '#38bdf8' }} />}
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`forma-choice-card ${settings?.weekStartsOn === 'monday' ? 'is-active' : ''}`}
+                      onClick={() => void saveSettingsPatch({ weekStartsOn: 'monday' })}
+                    >
+                      <strong className="forma-choice-title">{isRTL ? 'الاثنين' : 'Monday'}</strong>
+                      <span className="forma-choice-sub">{isRTL ? 'التقويم الدولي' : 'International'}</span>
+                      {settings?.weekStartsOn === 'monday' && <Check size={14} style={{ color: '#38bdf8' }} />}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* ── STEP 4: LOCK SCREEN & THEMES ─────────────────────────── */}
+            {currentStep === 3 && (
+              <>
+                <div className="forma-onboarding-hero-head">
+                  <div className="forma-onboarding-icon-gem" style={{ color: '#e879f9', borderColor: 'rgba(232, 121, 249, 0.4)' }}>
+                    <Palette size={30} />
+                  </div>
+                  <h2 className="forma-onboarding-title">
+                    {isRTL ? 'شاشة القفل والمظهر الشخصي' : 'Lock Screen Live HUD & Themes'}
+                  </h2>
+                  <p className="forma-onboarding-desc">
+                    {isRTL
+                      ? 'تحكم بفترة الراحة وتخطّ الجولات مباشرة من شاشة القفل دون لمس قفل الهاتف، واختر المظهر اللوني الذي يعكس طاقتك.'
+                      : 'Control rest sets right from your device lock screen, and personalize your high-performance theme.'}
+                  </p>
+                </div>
+
+                {/* Simulated Lock Screen Live HUD */}
+                <div className="forma-lockscreen-mock">
+                  <div className="forma-lockscreen-header">
+                    <span className="forma-lockscreen-title">
+                      {isRTL ? '🔥 جولة راحة — ضغط صدر بالبار' : '🔥 Rest Timer — Bench Press'}
+                    </span>
+                    <span className="forma-lockscreen-time">00:45</span>
+                  </div>
+                  <div className="forma-lockscreen-bar">
+                    <div className="forma-lockscreen-fill" />
+                  </div>
+                  <div className="forma-lockscreen-actions">
+                    <span className="forma-lockscreen-btn">{isRTL ? '+30 ثانية' : '+30s'}</span>
+                    <span className="forma-lockscreen-btn" style={{ color: '#10b981', borderColor: 'rgba(16, 185, 129, 0.4)' }}>
+                      {isRTL ? 'تخطي الراحة ⏭' : 'Skip Rest ⏭'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Theme Selector */}
+                <div className="forma-choice-group">
+                  <div className="forma-choice-label">
+                    <Palette size={14} />
+                    <span>{isRTL ? 'اختر مظهرك المفضل (يمكنك تغييره متى شئت)' : 'Select your favorite theme'}</span>
+                  </div>
+
+                  <div className="forma-themes-swatches">
+                    {THEME_OPTIONS.map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        className={`forma-theme-swatch-card ${theme === t.id ? 'is-active' : ''}`}
+                        onClick={() => {
+                          setTheme(t.id);
+                          void saveSettingsPatch({ theme: t.id });
+                        }}
+                      >
+                        <span className="forma-theme-dot" style={{ backgroundColor: t.color, color: t.color }} />
+                        <span className="forma-theme-name">{t.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* ── STEP 5: READY TO DOMINATE ────────────────────────────── */}
+            {currentStep === 4 && (
+              <>
+                <div className="forma-onboarding-hero-head">
+                  <div className="forma-onboarding-icon-gem" style={{ color: '#f59e0b', borderColor: 'rgba(245, 158, 11, 0.4)' }}>
+                    <Flame size={32} />
+                  </div>
+                  <h2 className="forma-onboarding-title">
+                    {isRTL ? 'أنت الآن جاهز لصنع الفارق!' : 'Ready to Dominate Your Training!'}
+                  </h2>
+                  <p className="forma-onboarding-desc">
+                    {isRTL
+                      ? 'تم ضبط كافة تفضيلاتك بنجاح. خطط لتمارينك، تتبع أوزانك، واستعن بالمساعد الذكي AI متى احتجت لاستشارة.'
+                      : 'All your preferences are synchronized. Log your workouts, beat personal records, and achieve your peak shape.'}
+                  </p>
+                </div>
+
+                <div className="forma-showcase-box" style={{ background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.08), rgba(16, 185, 129, 0.08))' }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                    <Check size={16} style={{ color: '#10b981' }} />
+                    <span>{isRTL ? 'ملخص إعداداتك الجاهزة' : 'Your Ready Profile'}</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem', fontSize: '0.76rem', color: '#cbd5e1' }}>
+                    <div>• {isRTL ? 'الوحدة:' : 'Unit:'} <strong>{settings?.weightUnit?.toUpperCase() || 'KG'}</strong></div>
+                    <div>• {isRTL ? 'المؤقت:' : 'Rest:'} <strong>{settings?.restTimerSeconds || 90}s</strong></div>
+                    <div>• {isRTL ? 'المظهر:' : 'Theme:'} <strong>{theme?.toUpperCase()}</strong></div>
+                    <div>• {isRTL ? 'الأسبوع يبدأ:' : 'Starts:'} <strong>{settings?.weekStartsOn === 'monday' ? (isRTL ? 'الاثنين' : 'Monday') : (isRTL ? 'الأحد' : 'Sunday')}</strong></div>
+                  </div>
+                </div>
+
+                <div style={{ padding: '0.2rem 0.5rem', fontSize: '0.74rem', color: '#94a3b8', textAlign: 'center' }}>
+                  {isRTL
+                    ? '💡 يمكنك في أي وقت إعادة تشغيل هذه الجولة أو تعديل الإعدادات من شاشة الإعدادات (Settings).'
+                    : '💡 You can replay this tour or tweak preferences anytime in Settings.'}
+                </div>
+              </>
+            )}
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Footer Navigation */}
+        <div className="forma-onboarding-footer">
+          {currentStep > 0 ? (
             <button
               type="button"
-              onClick={handleNext}
-              className="btn btn-primary"
-              style={{
-                padding: '0.6rem 1.4rem',
-                fontSize: '0.875rem',
-                fontWeight: 600,
-                borderRadius: '0.75rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                boxShadow: '0 4px 14px rgba(56, 189, 248, 0.3)'
-              }}
+              className="forma-onboarding-back-btn"
+              onClick={handlePrev}
             >
-              {isLast ? (
-                <>
-                  <span>{t('getStarted')}</span>
-                  <Trophy className="w-4 h-4" />
-                </>
-              ) : (
-                <>
-                  <span>{t('next')}</span>
-                  <ArrowRight className="w-4 h-4" style={{ transform: isRTL ? 'rotate(180deg)' : 'none' }} />
-                </>
-              )}
+              {isRTL ? <ArrowRight size={15} /> : <ArrowLeft size={15} />}
+              <span>{isRTL ? 'السابق' : 'Back'}</span>
             </button>
-          </div>
+          ) : (
+            <div />
+          )}
+
+          <button
+            type="button"
+            className="forma-onboarding-primary-btn"
+            onClick={handleNext}
+          >
+            <span>
+              {currentStep === totalSteps - 1
+                ? (isRTL ? 'ابدأ تمرينك الآن 🚀' : 'Start Training Now 🚀')
+                : (isRTL ? 'المتابعة' : 'Continue')}
+            </span>
+            {currentStep === totalSteps - 1 ? (
+              <Check size={16} />
+            ) : (
+              isRTL ? <ArrowLeft size={16} /> : <ArrowRight size={16} />
+            )}
+          </button>
         </div>
-      </motion.div>
+      </motion.section>
     </div>
   );
 }
+
+export default OnboardingTour;

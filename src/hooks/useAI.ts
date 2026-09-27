@@ -1,17 +1,41 @@
-import { useState, useCallback } from 'react';
-import { GoogleGenAI, Type } from '@google/genai';
+import { useState, useCallback, useEffect } from 'react';
+import { Type } from '@google/genai';
 import { useData } from './useData';
+import { callWithModelFallback } from '../lib/gemini';
+
+export type ChatActionCard = 
+  | {
+      type: 'workout_scheduled';
+      data: {
+        sessionId: string;
+        title: string;
+        date: string;
+        duration: number;
+        type: string;
+      };
+    }
+  | {
+      type: 'meal_suggestion';
+      data: {
+        title: string;
+        mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+        calories: number;
+        protein: number;
+        carbs: number;
+        fats: number;
+        notes?: string;
+      };
+    };
 
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  actionCard?: ChatActionCard;
 }
 
-const aiClient = new GoogleGenAI({
-  apiKey: import.meta.env.VITE_GEMINI_API_KEY || '',
-});
+export const CHAT_STORAGE_KEY = 'forma_ai_chat_history';
 
 function sanitizeAIContext(raw: any) {
   if (!raw || typeof raw !== 'object') return {};
@@ -67,18 +91,67 @@ export function useAI(fallbackData: any = null) {
   const contextData = data || fallbackData;
   const isArabic = (contextData?.settings?.language || localStorage.getItem('mygym_lang')) === 'ar';
 
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: '1',
-      role: 'assistant',
-      content: isArabic 
-        ? 'مرحباً! أنا مساعدك الرياضي بالذكاء الاصطناعي. كيف أستطيع مساعدتك اليوم في تمرينك وتغذيتك؟'
-        : 'Hi! I am your AI fitness assistant. How can I help you reach your goals today?',
-      timestamp: new Date(),
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem(CHAT_STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed.map((m: any) => ({
+              ...m,
+              timestamp: new Date(m.timestamp)
+            }));
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to parse stored chat history:', e);
+      }
     }
-  ]);
+    return [
+      {
+        id: '1',
+        role: 'assistant',
+        content: isArabic 
+          ? 'مرحباً! أنا مساعدك الرياضي بالذكاء الاصطناعي. كيف أستطيع مساعدتك اليوم في تمرينك وتغذيتك؟'
+          : 'Hi! I am your AI fitness assistant. How can I help you reach your goals today?',
+        timestamp: new Date(),
+      }
+    ];
+  });
+
   const [isTyping, setIsTyping] = useState(false);
   const lastSentRef = useState<{ time: number }>({ time: 0 })[0];
+
+  // Persist chat history to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined' && messages.length > 0) {
+      try {
+        // Keep at most 40 messages to avoid local storage bloat
+        const toSave = messages.slice(-40);
+        localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(toSave));
+      } catch (e) {
+        console.warn('Failed to persist chat history:', e);
+      }
+    }
+  }, [messages]);
+
+  // Clear chat history
+  const clearHistory = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(CHAT_STORAGE_KEY);
+    }
+    setMessages([
+      {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: isArabic 
+          ? 'تم مسح المحادثة. مرحباً بك مجدداً! كيف أستطيع مساعدتك اليوم؟'
+          : 'Chat cleared. Hello again! How can I help you today?',
+        timestamp: new Date(),
+      }
+    ]);
+  }, [isArabic]);
 
   const sendMessage = useCallback(async (content: string) => {
     const trimmed = content.trim();
@@ -89,7 +162,9 @@ export function useAI(fallbackData: any = null) {
       const errorMsg: ChatMessage = {
         id: Date.now().toString(),
         role: 'assistant',
-        content: 'Message too long. Please limit your prompt to 1,000 characters.',
+        content: isArabic 
+          ? 'الرسالة طويلة جداً. يرجى كتابة رسالة أقل من 1,000 حرف.' 
+          : 'Message too long. Please limit your prompt to 1,000 characters.',
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, errorMsg]);
@@ -102,7 +177,9 @@ export function useAI(fallbackData: any = null) {
       const rateLimitMsg: ChatMessage = {
         id: Date.now().toString(),
         role: 'assistant',
-        content: 'Please wait a moment before sending another message.',
+        content: isArabic 
+          ? 'يرجى الانتظار لحظة قبل إرسال رسالة أخرى.' 
+          : 'Please wait a moment before sending another message.',
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, rateLimitMsg]);
@@ -128,11 +205,16 @@ export function useAI(fallbackData: any = null) {
           }
 
           const sanitized = sanitizeAIContext(contextData);
-          const systemInstruction = `You are an elite, encouraging fitness AI assistant in the MyGym app.
+          const systemInstruction = `You are an elite, encouraging fitness AI assistant in the FORMA app.
 ${isArabic ? 'CRITICAL: The user has selected Arabic. Respond primarily in natural, motivating Arabic unless asked otherwise.' : 'Respond in helpful, motivating English.'}
 Here is a concise summary of the user's data for context:
 ${JSON.stringify(sanitized)}
-Limit your responses to a few paragraphs, be concise and helpful. You have access to tools to modify the calendar. Only use tools if explicitly requested by the user or if it's the clear intent. Confirm with the user in your response after using a tool.`;
+Limit your responses to a few paragraphs, be concise and helpful.
+
+CRITICAL INSTRUCTIONS FOR INTERACTIVE ACTION CARDS:
+1. If the user asks for a meal suggestion, post-workout food, high-protein recipe, or diet idea: YOU MUST CALL the 'suggest_meal' tool so an interactive action card is rendered.
+2. If the user asks to schedule, plan, or add a workout: YOU MUST CALL the 'add_workout_session' tool so that an interactive workout card is rendered.
+Only use tools if explicitly requested by the user or if it's the clear intent. Confirm with the user in your response after using a tool.`;
 
           const tools = [{
             functionDeclarations: [
@@ -148,6 +230,23 @@ Limit your responses to a few paragraphs, be concise and helpful. You have acces
                     duration: { type: Type.INTEGER, description: "Duration in minutes" }
                   },
                   required: ["title", "date", "type", "duration"]
+                }
+              },
+              {
+                name: "suggest_meal",
+                description: "Suggests a specific healthy meal with calculated nutritional macros (calories, protein, carbs, fats) and recipe notes.",
+                parameters: {
+                  type: Type.OBJECT,
+                  properties: {
+                    title: { type: Type.STRING, description: "The name of the meal (e.g., 'Salmon with Quinoa and Asparagus')" },
+                    mealType: { type: Type.STRING, description: "Meal type: breakfast, lunch, dinner, or snack" },
+                    calories: { type: Type.INTEGER, description: "Estimated total calories (kcal)" },
+                    protein: { type: Type.INTEGER, description: "Protein in grams" },
+                    carbs: { type: Type.INTEGER, description: "Carbohydrates in grams" },
+                    fats: { type: Type.INTEGER, description: "Fats in grams" },
+                    notes: { type: Type.STRING, description: "Brief recipe description, ingredients or health highlights" }
+                  },
+                  required: ["title", "mealType", "calories", "protein", "carbs", "fats"]
                 }
               },
               {
@@ -180,34 +279,25 @@ Limit your responses to a few paragraphs, be concise and helpful. You have acces
             parts: [{ text: msg.content }]
           }));
 
-          let response;
-          try {
-            response = await aiClient.models.generateContent({
-              model: 'gemini-3.6-flash',
+          const response = await callWithModelFallback((model, client) =>
+            client.models.generateContent({
+              model,
               contents,
               config: {
                 systemInstruction,
                 tools,
               }
-            });
-          } catch (modelErr) {
-            console.warn("Primary gemini-3.6-flash failed in useAI, trying gemini-flash-latest:", modelErr);
-            response = await aiClient.models.generateContent({
-              model: 'gemini-flash-latest',
-              contents,
-              config: {
-                systemInstruction,
-                tools,
-              }
-            });
-          }
+            })
+          );
 
           let responseText = response.text || "";
+          let actionCard: ChatActionCard | undefined = undefined;
 
           // Handle function calls
           if (response.functionCalls && response.functionCalls.length > 0) {
-            const functionResponses = [];
-            for (const call of response.functionCalls) {
+            const functionCalls = response.functionCalls;
+            const functionResponses: any[] = [];
+            for (const call of functionCalls) {
               let result = {};
               try {
                 if (call.name === 'add_workout_session') {
@@ -235,7 +325,34 @@ Limit your responses to a few paragraphs, be concise and helpful. You have acces
                     exercises: []
                   };
                   await saveSession(newSession);
+                  
+                  actionCard = {
+                    type: 'workout_scheduled',
+                    data: {
+                      sessionId: newSession.id,
+                      title: newSession.title,
+                      date: newSession.date,
+                      duration: newSession.duration,
+                      type: newSession.type
+                    }
+                  };
                   result = { status: "success", message: `Successfully added ${args.title} on ${scheduledDate.toDateString()}`, sessionId: newSession.id };
+                } else if (call.name === 'suggest_meal') {
+                  const args = call.args as any;
+                  const mType = (args.mealType || 'lunch').toLowerCase();
+                  actionCard = {
+                    type: 'meal_suggestion',
+                    data: {
+                      title: args.title || 'وجبة صحية متوازنة',
+                      mealType: ['breakfast', 'lunch', 'dinner', 'snack'].includes(mType) ? mType : 'lunch',
+                      calories: Number(args.calories) || 0,
+                      protein: Number(args.protein) || 0,
+                      carbs: Number(args.carbs) || 0,
+                      fats: Number(args.fats) || 0,
+                      notes: args.notes || undefined
+                    }
+                  };
+                  result = { status: "success", message: `Meal suggestion card ready for ${args.title}` };
                 } else if (call.name === 'delete_workout_session') {
                   const args = call.args as any;
                   await deleteSession(args.sessionId);
@@ -263,18 +380,20 @@ Limit your responses to a few paragraphs, be concise and helpful. You have acces
             }
 
             // Send function response back to the model to get final response
-            const followUpResponse = await aiClient.models.generateContent({
-              model: 'gemini-3.6-flash',
-              contents: [
-                ...contents,
-                { role: 'model', parts: response.functionCalls.map(f => ({ functionCall: f })) },
-                { role: 'user', parts: functionResponses.map(f => ({ functionResponse: f })) }
-              ],
-              config: {
-                systemInstruction,
-                tools,
-              }
-            });
+            const followUpResponse = await callWithModelFallback((model, client) =>
+              client.models.generateContent({
+                model,
+                contents: [
+                  ...contents,
+                  { role: 'model', parts: functionCalls.map((f: any) => ({ functionCall: f })) },
+                  { role: 'user', parts: functionResponses.map(f => ({ functionResponse: f })) }
+                ],
+                config: {
+                  systemInstruction,
+                  tools,
+                }
+              })
+            );
             responseText = followUpResponse.text || "Action completed successfully.";
           }
 
@@ -283,6 +402,7 @@ Limit your responses to a few paragraphs, be concise and helpful. You have acces
             role: 'assistant',
             content: responseText || "I'm not sure how to respond to that.",
             timestamp: new Date(),
+            actionCard
           };
 
           setMessages(currentMessages => [...currentMessages, newAssistantMsg]);
@@ -304,7 +424,7 @@ Limit your responses to a few paragraphs, be concise and helpful. You have acces
       return newMessages;
     });
 
-  }, [contextData, saveSession, deleteSession]);
+  }, [contextData, saveSession, deleteSession, isArabic]);
 
-  return { messages, isTyping, sendMessage };
+  return { messages, isTyping, sendMessage, clearHistory };
 }

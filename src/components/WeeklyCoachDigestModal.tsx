@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Bot, Sparkles, X, RefreshCw, Trophy, Target, Compass, 
   Dumbbell, Utensils, Flame, Calendar
 } from 'lucide-react';
-import { GoogleGenAI } from '@google/genai';
+import { generateGeminiJson } from '../lib/gemini';
 import { format, subDays, isAfter } from 'date-fns';
 import { useData } from '../hooks/useData';
 import { useTranslation } from '../lib/i18n';
@@ -124,27 +125,9 @@ Strictly return JSON with this structure:
 }`;
 
     try {
-      const aiClient = new GoogleGenAI({ apiKey });
-      let response;
-      try {
-        response = await aiClient.models.generateContent({
-          model: 'gemini-3.6-flash',
-          contents: prompt,
-        });
-      } catch {
-        response = await aiClient.models.generateContent({
-          model: 'gemini-flash-latest',
-          contents: prompt,
-        });
-      }
-
-      const text = response.text || '';
-      const firstBrace = text.indexOf('{');
-      const lastBrace = text.lastIndexOf('}');
-      const jsonCandidate = (firstBrace !== -1 && lastBrace !== -1)
-        ? text.slice(firstBrace, lastBrace + 1)
-        : text.replace(/```json/gi, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(jsonCandidate);
+      const parsed = await generateGeminiJson({
+        prompt
+      });
 
       const newDigest: CoachDigest = {
         consistency: parsed.consistency || '',
@@ -156,6 +139,7 @@ Strictly return JSON with this structure:
       setDigest(newDigest);
       localStorage.setItem(storageKey, JSON.stringify(newDigest));
     } catch (err: any) {
+
       console.error('Failed to generate weekly coach digest:', err);
       setErrorMessage(
         isRTL 
@@ -167,21 +151,38 @@ Strictly return JSON with this structure:
     }
   };
 
+  useEffect(() => {
+    if (!isOpen) return;
+    document.body.classList.add('modal-open');
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.classList.remove('modal-open');
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <AnimatePresence>
       <div 
+        className="portal-modal-backdrop"
         style={{
           position: 'fixed',
           inset: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.75)',
-          backdropFilter: 'blur(8px)',
+          backgroundColor: 'rgba(0, 0, 0, 0.82)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 1000,
-          padding: '1rem',
+          zIndex: 10000,
+          padding: '0.75rem',
           direction: isRTL ? 'rtl' : 'ltr'
         }}
         onClick={onClose}
@@ -190,16 +191,17 @@ Strictly return JSON with this structure:
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
+          className="modal-card"
           style={{
             backgroundColor: 'var(--bg-surface, #131722)',
             border: '1px solid var(--border-color, rgba(255,255,255,0.1))',
             borderRadius: '1.25rem',
             width: '100%',
             maxWidth: '560px',
-            maxHeight: '90vh',
+            maxHeight: 'calc(100dvh - env(safe-area-inset-top, 0px) - 20px)',
             overflowY: 'auto',
-            padding: '1.75rem',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+            padding: '1.5rem',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
             position: 'relative'
           }}
           onClick={e => e.stopPropagation()}
@@ -414,6 +416,7 @@ Strictly return JSON with this structure:
           </div>
         </motion.div>
       </div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

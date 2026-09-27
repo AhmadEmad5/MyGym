@@ -1,0 +1,347 @@
+@layer components {
+  .zen-page-container,
+  .page-surface {
+    position: relative;
+    width: min(1240px, 100%);
+    margin: 0 auto;
+    padding-bottom: 3rem;
+    overflow-x: clip;
+    overflow-x: hidden;
+  }
+
+  .zen-page-container::before,
+  .page-surface.session-detail-page::before {
+    position: absolute;
+    inset-inline-start: 0;
+    inset-block-start: 0.4rem;
+    width: 1px;
+    height: min(10rem, 18vh);
+    background: linear-gradient(180deg, var(--accent-cyan), var(--premium-line), transparent);
+    content: '';
+    opacity: 0.72;
+    pointer-events: none;
+  }
+
+  .zen-header {
+    position: relative;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--premium-line);
+  }
+
+  .zen-header h1 {
+    letter-spacing: -0.06em;
+    font-weight: 850;
+  }
+
+  .zen-header p { font-size: 0.86rem; }
+
+  .zen-page-container > .card,
+  .zen-page-container > section.card,
+  .nutrition-page .card,
+  .performance-page > section,
+  .settings-page .card,
+  .calendar-page .calendar-day-header-bar,
+  .calendar-page .calendar-workout-card {
+    border-color: var(--premium-line) !important;
+    border-radius: 0.95rem !important;
+    box-shadow: none !important;
+  }
+
+  .calendar-page .calendar-workout-card,
+  .routines-page .routine-card,
+  .nutrition-page .card,
+  .performance-page > section {
+    background: linear-gradient(145deg, color-mix(in srgb, var(--bg-secondary) 92%, transparent), color-mix(in srgb, var(--bg-primary) 86%, transparent)) !important;
+  }
+
+  .calendar-page .calendar-week-ribbon {
+    position: relative;
+    padding-block-end: 1rem;
+    border-bottom: 1px solid var(--premium-line);
+  }
+
+  .calendar-page .ribbon-day-pill {
+    border-radius: 0.7rem;
+    box-shadow: none;
+  }
+
+  .calendar-page .ribbon-day-pill.is-selected {
+    border-color: var(--accent-cyan);
+    background: color-mix(in srgb, var(--accent-cyan) 10%, var(--bg-secondary));
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-cyan) 22%, transparent);
+  }
+
+  .calendar-page .calendar-day-header-bar {
+    border-inline-start: 2px solid var(--accent-cyan) !important;
+    background: color-mix(in srgb, var(--bg-secondary) 78%, transparent) !important;
+  }
+
+  .calendar-page .calendar-workout-card:hover,
+  .routines-page .routine-card:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--accent-cyan) 42%, var(--premium-line)) !important;
+  }
+
+  .routines-page .routines-card-grid {
+    align-items: stretch;
+    gap: 1rem !important;
+  }
+
+  .routines-page .routines-card-grid > * {
+    min-width: 0;
+  }
+
+  .routines-page .routine-card,
+  .routines-page .routines-card-grid > div > div {
+    border-radius: 0.9rem !important;
+  }
+
+  .routines-page .routine-card::after { display: none; }
+
+  .nutrition-page .nutrition-overview-grid,
+  .nutrition-page .nutrition-form-grid {
+    gap: 1rem !important;
+  }
+
+  .nutrition-page .nutrition-overview-grid > .card,
+  .nutrition-page .nutrition-form-grid > .card {
+    border-inline-start: 1px solid var(--premium-line) !important;
+  }
+
+  .nutrition-page .meal-card,
+  .nutrition-page .meal-item,
+  .nutrition-page .logged-meal-card {
+    border-color: var(--premium-line) !important;
+    border-radius: 0.8rem !important;
+    box-shadow: none !important;
+  }
+
+  .performance-page {
+    --performance-rule: var(--premium-line);
+  }
+
+  .performance-page > div:not(.forma-performance-ledger),
+  .performance-page > section:not(.forma-performance-ledger) {
+    position: relative;
+  }
+
+  .performance-page > div:not(.forma-performance-ledger)::before,
+  .performance-page > section:not(.forma-performance-ledger)::before {
+    position: absolute;
+    inset-inline-start: 0;
+    inset-block-start: 1.2rem;
+    width: 1px;
+    height: 2.3rem;
+    background: var(--accent-cyan);
+    content: '';
+    opacity: 0.65;
+  }
+
+  .performance-page table {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .settings-page {
+    max-width: 1240px;
+  }
+
+  .settings-page .settings-hero {
+    padding-bottom: 1.1rem;
+    border-bottom: 1px solid var(--premium-line);
+  }
+
+  .settings-page .settings-profile {
+    border-inline-start: 2px solid var(--accent-cyan) !important;
+  }
+
+  .settings-page .settings-section-title {
+    margin-bottom: 0.7rem;
+  }
+
+  .settings-page .settings-list {
+    border-radius: 0.8rem !important;
+    box-shadow: none !important;
+  }
+
+  .settings-page .setting-row {
+    min-height: 4.2rem;
+    border-bottom-color: var(--premium-line);
+  }
+
+  .settings-page .theme-choice {
+    display: flex;
+    width: 100%;
+    min-height: 7.5rem;
+    flex-direction: column;
+    align-items: stretch;
+    text-align: start;
+    border-radius: 0.7rem;
+    box-shadow: none;
+  }
+
+  .settings-page .theme-preview {
+    width: 100%;
+    flex: 0 0 3.4rem;
+  }
+
+  .settings-page .theme-choice:hover {
+    transform: none;
+    border-color: var(--accent-cyan);
+  }
+
+  .session-detail-page {
+    max-width: 1240px;
+  }
+
+  .session-detail-page .session-header-row {
+    position: sticky;
+    top: 0;
+    z-index: 25;
+    padding-block: 0.7rem;
+    border-bottom: 1px solid var(--premium-line);
+    background: color-mix(in srgb, var(--bg-primary) 88%, transparent);
+    backdrop-filter: blur(18px);
+  }
+
+  .session-detail-page .exercise-session-card {
+    border-inline-start: 1px solid var(--premium-line) !important;
+    border-radius: 0.9rem !important;
+    box-shadow: none !important;
+  }
+
+  .session-detail-page .set-row.is-current-active-set {
+    background: color-mix(in srgb, var(--accent-cyan) 5%, transparent);
+  }
+
+  @media (max-width: 900px) {
+    .zen-page-container::before,
+    .page-surface.session-detail-page::before { display: none; }
+    .zen-page-container,
+    .page-surface { width: 100%; }
+  }
+
+  @media (max-width: 640px) {
+    /* Calendar Mobile High-Density */
+    .calendar-page .calendar-header-bar {
+      margin-bottom: 0.85rem !important;
+      gap: 0.65rem;
+    }
+    .calendar-page .calendar-nav-stepper {
+      width: 100%;
+      justify-content: space-between;
+    }
+    .calendar-page .calendar-header-buttons-row {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+    }
+    .calendar-page .calendar-header-buttons-row > button {
+      min-height: 40px;
+      justify-content: center;
+      padding: 0.4rem 0.65rem;
+      font-size: 0.82rem;
+    }
+    .calendar-page .calendar-week-ribbon {
+      padding-block-end: 0.65rem !important;
+      gap: 0.35rem;
+    }
+    .calendar-page .ribbon-day-pill {
+      min-width: 44px;
+      padding: 0.45rem 0.25rem !important;
+    }
+    .calendar-page .calendar-day-tab-bar {
+      gap: 0.35rem;
+      margin-bottom: 0.75rem !important;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      flex-wrap: nowrap;
+      padding-bottom: 2px;
+    }
+    .calendar-page .day-tab-pill {
+      white-space: nowrap;
+      flex-shrink: 0;
+      padding: 0.35rem 0.65rem !important;
+      font-size: 0.78rem !important;
+    }
+    .calendar-page .calendar-workout-card {
+      padding: 0.75rem 0.85rem !important;
+      border-radius: 14px !important;
+      margin-bottom: 0.65rem !important;
+    }
+
+    /* Nutrition Mobile High-Density */
+    .nutrition-page .zen-header {
+      padding-bottom: 0.65rem !important;
+    }
+    .nutrition-page .nutrition-header-actions {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1.2fr 1fr 0.8fr;
+      gap: 0.4rem !important;
+    }
+    .nutrition-page .nutrition-header-actions > button {
+      width: 100%;
+      min-height: 38px !important;
+      padding: 0.35rem 0.5rem !important;
+      font-size: 0.76rem !important;
+      justify-content: center;
+    }
+    .nutrition-page .nutrition-overview-grid {
+      grid-template-columns: 1fr !important;
+      gap: 0.75rem !important;
+      margin-bottom: 0.75rem !important;
+    }
+    .nutrition-page .nutrition-overview-grid > .card {
+      padding: 0.85rem 0.95rem !important;
+      border-radius: 16px !important;
+    }
+    .nutrition-page .nutrition-quick-add-card {
+      padding: 0.75rem 0.85rem !important;
+      margin-bottom: 0.65rem !important;
+      border-radius: 16px !important;
+    }
+    .nutrition-page .meal-card,
+    .nutrition-page .logged-meal-card {
+      padding: 0.65rem 0.75rem !important;
+      margin-bottom: 0.5rem !important;
+    }
+
+    /* Routines Mobile High-Density */
+    .routines-page .routines-card-grid {
+      grid-template-columns: 1fr !important;
+      gap: 0.75rem !important;
+    }
+    .routines-page .routine-card {
+      padding: 0.85rem !important;
+      border-radius: 16px !important;
+    }
+
+    /* Settings Mobile High-Density */
+    .settings-page .settings-hero {
+      padding-bottom: 0.75rem !important;
+    }
+    .settings-page .setting-row {
+      min-height: 3.4rem !important;
+      padding: 0.45rem 0 !important;
+    }
+    .settings-page .theme-choice {
+      min-height: 5.5rem !important;
+    }
+
+    /* Session Detail Active Workout Mobile High-Density */
+    .session-detail-page .session-header-row {
+      padding-block: 0.4rem !important;
+    }
+    .session-detail-page .exercise-session-card {
+      padding: 0.75rem 0.65rem !important;
+      border-radius: 14px !important;
+      margin-bottom: 0.65rem !important;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .calendar-page .calendar-workout-card:hover,
+    .routines-page .routine-card:hover { transform: none; }
+  }
+}

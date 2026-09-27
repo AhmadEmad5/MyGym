@@ -9,6 +9,8 @@ export type WorkoutSession = {
   exercises: SessionExercise[];
 };
 
+export type SetType = 'normal' | 'warmup' | 'dropset' | 'failure';
+
 export type SetRecord = {
   id: string;
   weight: number;
@@ -16,6 +18,8 @@ export type SetRecord = {
   repsActual: number;
   unit: 'lb' | 'kg';
   isCompleted: boolean;
+  type?: SetType; // 'normal' | 'warmup' | 'dropset' | 'failure'
+  rpe?: 'easy' | 'target' | 'failure';
 };
 
 export type SessionExercise = {
@@ -27,7 +31,13 @@ export type SessionExercise = {
   videoUrl?: string;
   sets: SetRecord[];
   duration?: number; // for cardio in minutes
+  distanceKm?: number; // for cardio in km
+  caloriesBurned?: number; // for cardio burned calories
+  heartRate?: number; // for cardio average heart rate
+  pace?: string; // for cardio speed / pace
   imageUrl?: string; // for treadmill captures
+  supersetId?: string; // Links exercises into a superset group (e.g. 'ss-1')
+  isCompleted?: boolean;
 };
 
 export type Exercise = {
@@ -49,11 +59,18 @@ export type UserSettings = {
   theme: string;
   density?: 'comfortable' | 'compact';
   motion?: 'full' | 'reduced';
-  weekStartsOn?: 'sunday' | 'monday';
+  weekStartsOn?: 'saturday' | 'sunday' | 'monday';
   restTimerSeconds?: number;
   soundAlerts?: boolean;
   vibrationAlerts?: boolean;
   language?: 'en' | 'ar';
+  workoutReminderEnabled?: boolean;
+  workoutReminderTime?: string; // "HH:mm" e.g. "18:00"
+  warmTint?: 'off' | 'on' | 'auto';
+  keepScreenAwake?: boolean;
+  autoCollapseFinishedExercises?: boolean;
+  fontScale?: 'default' | 'large';
+  highContrast?: boolean;
 };
 
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
@@ -89,6 +106,177 @@ export type HistoryRecord = {
   burnedCalories?: number;
 };
 
+export type BodyMetricEntry = {
+  id: string;
+  date: string; // ISO string
+  weight: number;
+  unit: 'lb' | 'kg';
+  bodyFat?: number; // percentage
+  chest?: number;
+  waist?: number;
+  arms?: number;
+  thighs?: number;
+  notes?: string;
+};
+
+export type NutritionGoals = {
+  dailyCalories: number;
+  dailyProtein: number;
+  dailyCarbs: number;
+  dailyFats: number;
+  dailyWaterMl: number;
+};
+
+export type CardioLog = {
+  id: string;
+  date: string;
+  activity: string;
+  durationMinutes: number;
+  distanceKm?: number;
+  calories?: number;
+  averageHeartRate?: number;
+  pace?: string;
+  source: 'camera' | 'manual' | 'device';
+  aiSummary?: string;
+};
+
+export type WeeklyAdaptivePlan = {
+  weekOf: string;
+  recoveryScore: number;
+  adjustment: 'increase' | 'maintain' | 'deload';
+  volumeChangePercent: number;
+  recommendation: string;
+  updatedAt: string;
+};
+
+export type ConnectedDevice = {
+  id: string;
+  name: string;
+  provider: 'Apple Health' | 'Google Fit' | 'Wearable';
+  status: 'connected' | 'ready';
+  lastSyncAt?: string;
+};
+
+export type PerformanceInsights = {
+  cardioLogs: CardioLog[];
+  sleepHours?: number;
+  fatigue?: number;
+  adaptivePlan?: WeeklyAdaptivePlan;
+  connectedDevices: ConnectedDevice[];
+};
+
+export const DEFAULT_PERFORMANCE_INSIGHTS: PerformanceInsights = {
+  cardioLogs: [],
+  connectedDevices: []
+};
+
+export type PersonalRecord = {
+  exerciseName: string;
+  maxWeight: number;
+  unit: 'lb' | 'kg';
+  reps: number;
+  estimated1RM: number;
+  date: string;
+};
+
+export const DEFAULT_NUTRITION_GOALS: NutritionGoals = {
+  dailyCalories: 2200,
+  dailyProtein: 150,
+  dailyCarbs: 220,
+  dailyFats: 65,
+  dailyWaterMl: 2500
+};
+
+// CRITICAL: Maximum text length for input validation
+const MAX_TEXT_LENGTH = 500;
+
+// ============================================================================
+// SECURITY: Input Sanitization Functions (XSS Prevention)
+// ============================================================================
+
+export function sanitizeString(input: string): string {
+  if (!input || typeof input !== 'string') return '';
+  
+  // Remove potentially dangerous characters (XSS prevention)
+  let sanitized = input
+    .replace(/[<>]/g, '') // Remove HTML tags
+    .replace(/javascript:/gi, '') // Remove javascript: protocol
+    .replace(/on\w+\s*=/gi, '') // Remove event handlers like onclick=
+    .trim();
+  
+  return sanitized.substring(0, MAX_TEXT_LENGTH);
+}
+
+export function sanitizeNumber(input: unknown): number {
+  if (typeof input !== 'number' || !Number.isFinite(input)) {
+    return 0;
+  }
+  return Math.max(0, Number(input));
+}
+
+export function sanitizeBoolean(input: any): boolean {
+  const trueValues = ['true', '1', 'yes', 'on'];
+  if (typeof input === 'boolean') return input;
+  
+  const strInput = String(input).toLowerCase().trim();
+  return trueValues.includes(strInput);
+}
+
+export function sanitizeArray(input: any): any[] {
+  if (!Array.isArray(input)) return [];
+  
+  return input.filter(item => {
+    if (typeof item === 'object' && item !== null) {
+      // Check for dangerous prototype pollution keys
+      const keys = Object.keys(item);
+      if (keys.includes('__proto__') || keys.includes('constructor')) {
+        console.warn('Sanitizing array item with dangerous prototype key:', item);
+        return false;
+      }
+    }
+    return true;
+  });
+}
+
+// ============================================================================
+// VALIDATION FUNCTIONS (Already existed, kept for reference)
+// ============================================================================
+
+function assertId(value: unknown, entity: string): asserts value is string {
+  if (typeof value !== 'string' || !value.trim() || value.length > 160) {
+    throw new Error(`${entity} must have a valid identifier.`);
+  }
+}
+
+function assertFiniteNonNegative(value: unknown, field: string, maximum = 1_000_000) {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > maximum) {
+    throw new Error(`${field} must be a valid non-negative number.`);
+  }
+}
+
+function assertValidSession(session: WorkoutSession) {
+  assertId(session?.id, 'Workout session');
+  if (!session.title?.trim() || session.title.length > MAX_TEXT_LENGTH) throw new Error('Workout title is required and must be under 500 characters.');
+  if (!session.date || Number.isNaN(Date.parse(session.date))) throw new Error('Workout date is invalid.');
+  assertFiniteNonNegative(session.duration, 'Workout duration', 1_440);
+  if (!Array.isArray(session.exercises)) throw new Error('Workout exercises must be a list.');
+}
+
+function assertValidMeal(meal: MealRecord) {
+  assertId(meal?.id, 'Meal');
+  if (!meal.title?.trim() || meal.title.length > MAX_TEXT_LENGTH) throw new Error('Meal title is required and must be under 500 characters.');
+  if (!meal.date || Number.isNaN(Date.parse(meal.date))) throw new Error('Meal date is invalid.');
+  (['calories', 'protein', 'carbs', 'fats'] as const).forEach(key => assertFiniteNonNegative(meal[key], `Meal ${key}`));
+}
+
+function assertValidGoals(goals: NutritionGoals) {
+  (Object.keys(DEFAULT_NUTRITION_GOALS) as Array<keyof NutritionGoals>).forEach(key => assertFiniteNonNegative(goals?.[key], `Nutrition goal: ${key}`, 100_000));
+}
+
+// ============================================================================
+// BUSINESS LOGIC FUNCTIONS (Already existed, kept for reference)
+// ============================================================================
+
 export type AppData = {
   sessions: WorkoutSession[];
   routines: Routine[];
@@ -96,12 +284,277 @@ export type AppData = {
   history: HistoryRecord[];
   meals: MealRecord[];
   settings: UserSettings;
+  bodyMetrics?: BodyMetricEntry[];
+  nutritionGoals?: NutritionGoals;
+  waterLogs?: Record<string, number>; // dateString (YYYY-MM-DD) -> total ml
+  insights?: PerformanceInsights;
   user?: {
     email: string;
     name: string;
     pfp?: string;
   };
 };
+
+export function calculate1RM(weight: number, reps: number): number {
+  if (!weight || weight <= 0) return 0;
+  if (!reps || reps <= 0) return 0;
+  if (reps === 1) return Math.round(weight);
+  // Epley formula: weight * (1 + reps / 30)
+  return Math.round(weight * (1 + reps / 30));
+}
+
+export function calculateBMR(gender: 'male' | 'female', weightKg: number, heightCm: number, age: number): number {
+  const base = (10 * weightKg) + (6.25 * heightCm) - (5 * age);
+  return Math.round(gender === 'male' ? base + 5 : base - 161);
+}
+
+export function calculateTDEE(bmr: number, activityMultiplier: number, goal: 'cut' | 'maintain' | 'bulk'): {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fats: number;
+} {
+  const maintenance = bmr * activityMultiplier;
+  let targetCalories = maintenance;
+  if (goal === 'cut') targetCalories = maintenance - 500;
+  else if (goal === 'bulk') targetCalories = maintenance + 350;
+
+  const calories = Math.max(1200, Math.round(targetCalories));
+  const protein = Math.round((calories * 0.30) / 4);
+  const fats = Math.round((calories * 0.25) / 9);
+  const carbs = Math.round((calories * 0.45) / 4);
+
+  return { calories, protein, carbs, fats };
+}
+
+export function findPreviousPerformance(
+  exerciseName: string,
+  history: HistoryRecord[],
+  currentSessions: WorkoutSession[] = [],
+  excludeSessionId?: string
+): SessionExercise | null {
+  const normalizedName = (exerciseName || '').trim().toLowerCase();
+  if (!normalizedName) return null;
+
+  const sortedHistory = [...history].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  for (const h of sortedHistory) {
+    if (excludeSessionId && h.sessionId === excludeSessionId) continue;
+    const match = h.snapshot?.exercises?.find(e => (e.name || '').trim().toLowerCase() === normalizedName);
+    if (match && match.sets && match.sets.some(s => s.isCompleted || (s.weight > 0 && (s.repsActual > 0 || s.repsTarget > 0)))) {
+      return match;
+    }
+  }
+
+  const sortedSessions = [...currentSessions]
+    .filter(s => s.isCompleted && (!excludeSessionId || s.id !== excludeSessionId))
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  for (const s of sortedSessions) {
+    const match = s.exercises?.find(e => (e.name || '').trim().toLowerCase() === normalizedName);
+    if (match && match.sets && match.sets.some(s => s.isCompleted || (s.weight > 0 && (s.repsActual > 0 || s.repsTarget > 0)))) {
+      return match;
+    }
+  }
+
+  return null;
+}
+
+export type PreviousPerformanceInfo = {
+  exercise: SessionExercise;
+  date: string;
+  sessionTitle: string;
+  daysAgo: number;
+  totalVolumeKg: number;
+  completedSetsCount: number;
+  maxWeight: number;
+};
+
+export function findPreviousPerformanceWithDetails(
+  exerciseName: string,
+  history: HistoryRecord[],
+  currentSessions: WorkoutSession[] = [],
+  excludeSessionId?: string
+): PreviousPerformanceInfo | null {
+  const normalizedName = (exerciseName || '').trim().toLowerCase();
+  if (!normalizedName) return null;
+
+  const now = new Date();
+  type Candidate = { exercise: SessionExercise; date: string; sessionTitle: string };
+  const candidates: Candidate[] = [];
+
+  for (const h of history) {
+    if (excludeSessionId && h.sessionId === excludeSessionId) continue;
+    const match = h.snapshot?.exercises?.find(e => (e.name || '').trim().toLowerCase() === normalizedName);
+    if (match && match.sets && match.sets.some(s => s.isCompleted || (s.weight > 0 && (s.repsActual > 0 || s.repsTarget > 0)))) {
+      candidates.push({ exercise: match, date: h.date, sessionTitle: h.title });
+    }
+  }
+
+  for (const s of currentSessions) {
+    if (!s.isCompleted || (excludeSessionId && s.id === excludeSessionId)) continue;
+    const match = s.exercises?.find(e => (e.name || '').trim().toLowerCase() === normalizedName);
+    if (match && match.sets && match.sets.some(s => s.isCompleted || (s.weight > 0 && (s.repsActual > 0 || s.repsTarget > 0)))) {
+      candidates.push({ exercise: match, date: s.date, sessionTitle: s.title });
+    }
+  }
+
+  candidates.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  if (candidates.length === 0) return null;
+
+  const chosen = candidates[0];
+  const dateObj = new Date(chosen.date);
+  const diffTime = Math.abs(now.getTime() - dateObj.getTime());
+  const daysAgo = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
+
+  let totalVolumeKg = 0;
+  let completedSetsCount = 0;
+  let maxWeight = 0;
+
+  chosen.exercise.sets?.forEach(s => {
+    const w = s.unit === 'lb' ? s.weight * 0.453592 : s.weight;
+    const r = s.repsActual || s.repsTarget || 0;
+    if (s.isCompleted || (w > 0 && r > 0)) {
+      completedSetsCount++;
+      totalVolumeKg += Math.round(w * r);
+      if (s.weight > maxWeight) maxWeight = s.weight;
+    }
+  });
+
+  return {
+    exercise: chosen.exercise,
+    date: chosen.date,
+    sessionTitle: chosen.sessionTitle,
+    daysAgo,
+    totalVolumeKg,
+    completedSetsCount,
+    maxWeight
+  };
+}
+
+export type OverloadRecommendation = {
+  type: 'weight' | 'reps';
+  suggestedWeightDelta: number; // e.g. 2.5 kg or 5 lb
+  suggestedRepsDelta: number; // e.g. 2
+  suggestedTargetWeight: number;
+  suggestedTargetReps: number;
+  previousMaxWeight: number;
+  previousMaxReps: number;
+  unit: 'kg' | 'lb';
+  titleEn: string;
+  titleAr: string;
+  messageEn: string;
+  messageAr: string;
+  readyForOverload: boolean;
+};
+
+export function calculateProgressiveOverload(
+  _exercise: SessionExercise,
+  previousPerf?: PreviousPerformanceInfo | null,
+  unit: 'kg' | 'lb' = 'kg'
+): OverloadRecommendation | null {
+  if (!previousPerf || !previousPerf.exercise?.sets || previousPerf.exercise.sets.length === 0) {
+    return null;
+  }
+
+  const prevSets = previousPerf.exercise.sets.filter(
+    s => s.isCompleted || (s.weight > 0 && ((s.repsActual || 0) > 0 || (s.repsTarget || 0) > 0))
+  );
+  if (prevSets.length === 0) return null;
+
+  let prevMaxWeight = 0;
+  let prevMaxReps = 0;
+
+  prevSets.forEach(s => {
+    if (s.weight > prevMaxWeight) prevMaxWeight = s.weight;
+    const r = s.repsActual || s.repsTarget || 0;
+    if (r > prevMaxReps) prevMaxReps = r;
+  });
+
+  const weightStep = unit === 'lb' ? 5 : 2.5;
+
+  if (prevMaxWeight > 0) {
+    const suggestedTargetWeight = prevMaxWeight + weightStep;
+    const suggestedTargetReps = prevMaxReps >= 12 ? 8 : prevMaxReps >= 10 ? 8 : Math.max(6, prevMaxReps);
+
+    return {
+      type: 'weight',
+      suggestedWeightDelta: weightStep,
+      suggestedRepsDelta: 0,
+      suggestedTargetWeight,
+      suggestedTargetReps,
+      previousMaxWeight: prevMaxWeight,
+      previousMaxReps: prevMaxReps,
+      unit,
+      titleEn: `Suggested: ${suggestedTargetWeight}${unit} (+${weightStep}${unit})`,
+      titleAr: `الهدف المقترح اليوم: ${suggestedTargetWeight}${unit} (+${weightStep}${unit})`,
+      messageEn: `Last session: achieved ${prevMaxReps} reps at ${prevMaxWeight}${unit}. Increase to ${suggestedTargetWeight}${unit} for ${suggestedTargetReps} reps to progressively overload.`,
+      messageAr: `الأسبوع الماضي: أنجزت ${prevMaxReps} تكرار بوزن ${prevMaxWeight}${unit}. زد الوزن اليوم إلى ${suggestedTargetWeight}${unit} لـ ${suggestedTargetReps} تكرارات لكسر ثبات العضلات.`,
+      readyForOverload: true
+    };
+  } else {
+    const repsStep = 2;
+    const suggestedTargetReps = (prevMaxReps || 10) + repsStep;
+
+    return {
+      type: 'reps',
+      suggestedWeightDelta: 0,
+      suggestedRepsDelta: repsStep,
+      suggestedTargetWeight: 0,
+      suggestedTargetReps,
+      previousMaxWeight: 0,
+      previousMaxReps: prevMaxReps,
+      unit,
+      titleEn: `Suggested: +${repsStep} Reps (${suggestedTargetReps} reps target)`,
+      titleAr: `الهدف المقترح اليوم: +${repsStep} تكرارات (${suggestedTargetReps} تكرار)`,
+      messageEn: `Last session: completed ${prevMaxReps} reps. Add +${repsStep} reps to trigger muscular progression.`,
+      messageAr: `الجلسة السابقة: أنجزت ${prevMaxReps} تكرار. أضف +${repsStep} تكرار لزيادة الحجم التدريجي وتحفيز الألياف.`,
+      readyForOverload: true
+    };
+  }
+}
+
+
+export function computeAllPersonalRecords(history: HistoryRecord[], sessions: WorkoutSession[] = []): Record<string, PersonalRecord> {
+  const records: Record<string, PersonalRecord> = {};
+
+  const checkExerciseSets = (exercise: SessionExercise, dateStr: string) => {
+    const name = (exercise.name || '').trim();
+    if (!name) return;
+    const lower = name.toLowerCase();
+
+    exercise.sets?.forEach(s => {
+      if (!s.isCompleted && !s.weight) return;
+      const weight = s.weight || 0;
+      const reps = s.repsActual || s.repsTarget || 0;
+      if (weight <= 0 || reps <= 0) return;
+
+      const est1RM = calculate1RM(weight, reps);
+      const existing = records[lower];
+
+      if (!existing || est1RM > existing.estimated1RM || (est1RM === existing.estimated1RM && weight > existing.maxWeight)) {
+        records[lower] = {
+          exerciseName: name,
+          maxWeight: weight,
+          unit: s.unit || 'kg',
+          reps,
+          estimated1RM: est1RM,
+          date: dateStr
+        };
+      }
+    });
+  };
+
+  history.forEach(h => {
+    h.snapshot?.exercises?.forEach(e => checkExerciseSets(e, h.date));
+  });
+
+  sessions.filter(s => s.isCompleted).forEach(s => {
+    s.exercises?.forEach(e => checkExerciseSets(e, s.date));
+  });
+
+  return records;
+}
 
 export function estimateWorkoutCalories(session: WorkoutSession): number {
   if (!session) return 0;
@@ -140,21 +593,45 @@ export function estimateWorkoutCalories(session: WorkoutSession): number {
     totalCalories = Math.max(totalCalories, (duration * 5) + setsBonus + volumeBonus);
   }
 
+  // Include explicit cardio calories from manual entry or machine scan
+  if (session.exercises && Array.isArray(session.exercises)) {
+    session.exercises.forEach(ex => {
+      if (ex.targetMuscle === 'Cardio' && ex.caloriesBurned && ex.caloriesBurned > 0) {
+        totalCalories += ex.caloriesBurned;
+      }
+    });
+  }
+
   return Math.round(totalCalories);
 }
 
 import { auth, db } from './firebase';
 import { doc, getDoc, getDocs, setDoc, deleteDoc, collection, writeBatch } from 'firebase/firestore';
 
+const getDefaultLanguage = (): 'en' | 'ar' => {
+  if (typeof window !== 'undefined') {
+    const navLang = (navigator.language || (navigator.languages && navigator.languages[0]) || '').toLowerCase();
+    if (navLang.startsWith('ar')) return 'ar';
+  }
+  return 'en';
+};
+
 const DEFAULT_SETTINGS: UserSettings = {
   weightUnit: 'lb',
   theme: 'dark',
   motion: 'full',
-  weekStartsOn: 'sunday',
+  weekStartsOn: 'saturday',
   restTimerSeconds: 90,
   soundAlerts: true,
   vibrationAlerts: true,
-  language: 'en'
+  language: getDefaultLanguage(),
+  workoutReminderEnabled: true,
+  workoutReminderTime: '18:00',
+  warmTint: 'auto',
+  keepScreenAwake: true,
+  autoCollapseFinishedExercises: true
+,fontScale: 'default',
+highContrast: false
 };
 
 async function migrateLegacyDataIfNeeded(uid: string) {
@@ -165,7 +642,7 @@ async function migrateLegacyDataIfNeeded(uid: string) {
   if (docSnap.exists()) {
     const data = docSnap.data();
     if (!data._migratedToSubcollections) {
-      console.log('Migrating legacy monolithic data to sub-collections...');
+      console.debug('Migrating legacy monolithic data to sub-collections...');
       const batch = writeBatch(db);
       
       const settings = data.settings || DEFAULT_SETTINGS;
@@ -197,7 +674,7 @@ async function migrateLegacyDataIfNeeded(uid: string) {
       }
       
       await batch.commit();
-      console.log('Migration complete.');
+      console.debug('Migration complete.');
     }
   }
 }
@@ -212,6 +689,9 @@ function sanitizeForFirestore<T>(data: T): T {
   if (typeof data === 'object') {
     const cleaned: Record<string, any> = {};
     for (const [key, value] of Object.entries(data as Record<string, any>)) {
+      if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+        continue;
+      }
       if (value !== undefined) {
         cleaned[key] = sanitizeForFirestore(value);
       }
@@ -219,6 +699,48 @@ function sanitizeForFirestore<T>(data: T): T {
     return cleaned as T;
   }
   return data;
+}
+
+function mirrorLocalData(updater: (data: AppData) => void) {
+  try {
+    const raw = localStorage.getItem('gym_data');
+    let data: AppData;
+    if (raw) {
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        data = {
+          sessions: [],
+          routines: [],
+          exercises: [],
+          history: [],
+          meals: [],
+          settings: DEFAULT_SETTINGS,
+          bodyMetrics: [],
+          nutritionGoals: DEFAULT_NUTRITION_GOALS,
+          waterLogs: {},
+          insights: { ...DEFAULT_PERFORMANCE_INSIGHTS }
+        };
+      }
+    } else {
+      data = {
+        sessions: [],
+        routines: [],
+        exercises: [],
+        history: [],
+        meals: [],
+        settings: DEFAULT_SETTINGS,
+        bodyMetrics: [],
+        nutritionGoals: DEFAULT_NUTRITION_GOALS,
+        waterLogs: {},
+        insights: { ...DEFAULT_PERFORMANCE_INSIGHTS }
+      };
+    }
+    updater(data);
+    localStorage.setItem('gym_data', JSON.stringify(data));
+  } catch (e) {
+    console.warn("Failed to update local mirror cache:", e);
+  }
 }
 
 // Data Access Repository
@@ -240,184 +762,461 @@ export const api = {
         const rootData = rootSnap.exists() ? rootSnap.data() : {};
         const settings = rootData.settings || DEFAULT_SETTINGS;
         const user = rootData.user;
+        let bodyMetrics = Array.isArray(rootData.bodyMetrics) ? rootData.bodyMetrics : [];
+        const nutritionGoals = rootData.nutritionGoals || DEFAULT_NUTRITION_GOALS;
+        const waterLogs = rootData.waterLogs || {};
+        const insights = { ...DEFAULT_PERFORMANCE_INSIGHTS, ...(rootData.insights || {}) };
         
-        const sessions = sessionsSnap.docs.map(d => d.data() as WorkoutSession);
-        const routines = routinesSnap.docs.map(d => d.data() as Routine);
-        const history = historySnap.docs.map(d => d.data() as HistoryRecord);
-        const meals = mealsSnap.docs.map(d => d.data() as MealRecord);
+        let sessions = sessionsSnap.docs.map(d => d.data() as WorkoutSession);
+        let routines = routinesSnap.docs.map(d => d.data() as Routine);
+        let history = historySnap.docs.map(d => d.data() as HistoryRecord);
+        let meals = mealsSnap.docs.map(d => d.data() as MealRecord);
 
-        return { sessions, routines, history, meals, exercises: [], settings, user };
+        // Fallback to legacy rootData if subcollections are empty
+        if (sessions.length === 0 && Array.isArray(rootData.sessions) && rootData.sessions.length > 0) {
+          sessions = rootData.sessions;
+        }
+        if (routines.length === 0 && Array.isArray(rootData.routines) && rootData.routines.length > 0) {
+          routines = rootData.routines;
+        }
+        if (history.length === 0 && Array.isArray(rootData.history) && rootData.history.length > 0) {
+          history = rootData.history;
+        }
+        if (meals.length === 0 && Array.isArray(rootData.meals) && rootData.meals.length > 0) {
+          meals = rootData.meals;
+        }
+
+        // CRITICAL: Merge with local cached data so that locally logged or saved items
+        // are NEVER wiped out when refreshing before remote sync or if remote returned empty!
+        const localRaw = localStorage.getItem('gym_data');
+        if (localRaw) {
+          try {
+            const local = JSON.parse(localRaw) as AppData;
+            if (Array.isArray(local.sessions) && local.sessions.length > 0) {
+              const remoteSessionIds = new Set(sessions.map(s => s.id));
+              const missingSessions = local.sessions.filter(s => !remoteSessionIds.has(s.id));
+              if (missingSessions.length > 0) {
+                sessions = [...sessions, ...missingSessions];
+              }
+            }
+            if (Array.isArray(local.history) && local.history.length > 0) {
+              const remoteHistoryIds = new Set(history.map(h => h.id));
+              const missingHistory = local.history.filter(h => !remoteHistoryIds.has(h.id));
+              if (missingHistory.length > 0) {
+                history = [...history, ...missingHistory];
+              }
+            }
+            if (Array.isArray(local.routines) && local.routines.length > 0) {
+              const remoteRoutineIds = new Set(routines.map(r => r.id));
+              const missingRoutines = local.routines.filter(r => !remoteRoutineIds.has(r.id));
+              if (missingRoutines.length > 0) {
+                routines = [...routines, ...missingRoutines];
+              }
+            }
+            if (Array.isArray(local.meals) && local.meals.length > 0) {
+              const remoteMealIds = new Set(meals.map(m => m.id));
+              const missingMeals = local.meals.filter(m => !remoteMealIds.has(m.id));
+              if (missingMeals.length > 0) {
+                meals = [...meals, ...missingMeals];
+              }
+            }
+            if (bodyMetrics.length === 0 && Array.isArray(local.bodyMetrics) && local.bodyMetrics.length > 0) {
+              bodyMetrics = local.bodyMetrics;
+            }
+            if (local.waterLogs && Object.keys(local.waterLogs).length > 0) {
+              Object.assign(waterLogs, local.waterLogs);
+            }
+          } catch (e) {
+            console.warn("Could not merge local cached data:", e);
+          }
+        }
+
+        const result: AppData = { sessions, routines, history, meals, exercises: [], settings, user, bodyMetrics, nutritionGoals, waterLogs, insights };
+        
+        // Cache snapshot locally for offline use
+        try {
+          localStorage.setItem('gym_data', JSON.stringify(result));
+        } catch (e) {}
+
+        return result;
       } catch (err) {
-        console.error("Error fetching from Firestore", err);
+        console.warn("Offline or failed fetching from Firestore, falling back to local mirror:", err);
       }
     }
     
-    // Fallback to local storage (Guest mode)
+    // Fallback to local storage (Offline or Guest mode)
     const stored = localStorage.getItem('gym_data');
     if (stored) {
-      const data = JSON.parse(stored);
-      if (!data.settings) data.settings = DEFAULT_SETTINGS;
-      if (!data.meals) data.meals = [];
-      return data;
+      try {
+        const data = JSON.parse(stored);
+        if (!data.settings) data.settings = DEFAULT_SETTINGS;
+        if (!data.meals) data.meals = [];
+        if (!data.bodyMetrics) data.bodyMetrics = [];
+        if (!data.nutritionGoals) data.nutritionGoals = DEFAULT_NUTRITION_GOALS;
+        if (!data.waterLogs) data.waterLogs = {};
+        if (!data.insights) data.insights = { ...DEFAULT_PERFORMANCE_INSIGHTS };
+        return data;
+      } catch (e) {}
     }
-    return { sessions: [], routines: [], exercises: [], history: [], meals: [], settings: DEFAULT_SETTINGS };
+    return { sessions: [], routines: [], exercises: [], history: [], meals: [], settings: DEFAULT_SETTINGS, bodyMetrics: [], nutritionGoals: DEFAULT_NUTRITION_GOALS, waterLogs: {}, insights: { ...DEFAULT_PERFORMANCE_INSIGHTS } };
   },
 
   async updateRootSettings(settings: UserSettings, user?: AppData['user']) {
-    if (auth?.currentUser && db) {
-      const payload: Record<string, any> = {
-        settings: sanitizeForFirestore(settings)
-      };
-      if (user !== undefined && user !== null) {
-        payload.user = sanitizeForFirestore(user);
-      }
-      await setDoc(doc(db, 'users', auth.currentUser.uid), payload, { merge: true });
-    } else {
-      const local = await this.getData();
+    mirrorLocalData(local => {
       local.settings = settings;
-      if (user !== undefined && user !== null) {
-        local.user = user;
-      } else {
-        delete local.user;
+      if (user !== undefined) {
+        if (user === null) {
+          delete local.user;
+        } else {
+          local.user = user;
+        }
       }
-      localStorage.setItem('gym_data', JSON.stringify(local));
+    });
+
+    if (auth?.currentUser && db) {
+      try {
+        const payload: Record<string, any> = {
+          settings: sanitizeForFirestore(settings)
+        };
+        if (user !== undefined && user !== null) {
+          payload.user = sanitizeForFirestore(user);
+        }
+        await setDoc(doc(db, 'users', auth.currentUser.uid), payload, { merge: true });
+      } catch (err) {
+        console.warn("Could not sync root settings to Firestore (retained in local cache):", err);
+      }
     }
   },
 
   async saveSession(session: WorkoutSession) {
-    if (auth?.currentUser && db) {
-      await setDoc(doc(db, 'users', auth.currentUser.uid, 'sessions', session.id), sanitizeForFirestore(session));
-    } else {
-      const local = await this.getData();
+    assertValidSession(session);
+    mirrorLocalData(local => {
+      if (!local.sessions) local.sessions = [];
       const idx = local.sessions.findIndex(s => s.id === session.id);
       if (idx >= 0) local.sessions[idx] = session;
       else local.sessions.push(session);
-      localStorage.setItem('gym_data', JSON.stringify(local));
+    });
+
+    if (auth?.currentUser && db) {
+      try {
+        await setDoc(doc(db, 'users', auth.currentUser.uid, 'sessions', session.id), sanitizeForFirestore(session));
+      } catch (err) {
+        console.warn("Could not sync session to Firestore (retained in local cache):", err);
+      }
     }
   },
 
   async saveSessions(sessions: WorkoutSession[]) {
-    if (auth?.currentUser && db) {
-      const chunkSize = 450;
-      for (let i = 0; i < sessions.length; i += chunkSize) {
-        const chunk = sessions.slice(i, i + chunkSize);
-        const batch = writeBatch(db);
-        for (const session of chunk) {
-          batch.set(
-            doc(db, 'users', auth.currentUser.uid, 'sessions', session.id),
-            sanitizeForFirestore(session)
-          );
-        }
-        await batch.commit();
-      }
-    } else {
-      const local = await this.getData();
+    if (!Array.isArray(sessions)) throw new Error('Workout sessions must be a list.');
+    sessions.forEach(assertValidSession);
+    mirrorLocalData(local => {
+      if (!local.sessions) local.sessions = [];
       for (const session of sessions) {
         const idx = local.sessions.findIndex(s => s.id === session.id);
         if (idx >= 0) local.sessions[idx] = session;
         else local.sessions.push(session);
       }
-      localStorage.setItem('gym_data', JSON.stringify(local));
+    });
+
+    if (auth?.currentUser && db) {
+      try {
+        const chunkSize = 450;
+        for (let i = 0; i < sessions.length; i += chunkSize) {
+          const chunk = sessions.slice(i, i + chunkSize);
+          const batch = writeBatch(db);
+          for (const session of chunk) {
+            batch.set(
+              doc(db, 'users', auth.currentUser.uid, 'sessions', session.id),
+              sanitizeForFirestore(session)
+            );
+          }
+          await batch.commit();
+        }
+      } catch (err) {
+        console.warn("Could not sync sessions to Firestore (retained in local cache):", err);
+      }
     }
   },
 
   async deleteSession(id: string) {
+    assertId(id, 'Workout session');
+    mirrorLocalData(local => {
+      if (local.sessions) local.sessions = local.sessions.filter(s => s.id !== id);
+    });
+
     if (auth?.currentUser && db) {
-      await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'sessions', id));
-    } else {
-      const local = await this.getData();
-      local.sessions = local.sessions.filter(s => s.id !== id);
-      localStorage.setItem('gym_data', JSON.stringify(local));
+      try {
+        await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'sessions', id));
+      } catch (err) {
+        console.warn("Could not delete session from Firestore (removed from local cache):", err);
+      }
     }
   },
 
   async deleteSessions(ids: string[]) {
     if (!ids || ids.length === 0) return;
+    if (!Array.isArray(ids)) throw new Error('Workout session identifiers must be a list.');
+    ids.forEach(id => assertId(id, 'Workout session'));
+    const idSet = new Set(ids);
+    mirrorLocalData(local => {
+      if (local.sessions) local.sessions = local.sessions.filter(s => !idSet.has(s.id));
+    });
+
     if (auth?.currentUser && db) {
-      const chunkSize = 450;
-      for (let i = 0; i < ids.length; i += chunkSize) {
-        const chunk = ids.slice(i, i + chunkSize);
-        const batch = writeBatch(db);
-        for (const id of chunk) {
-          batch.delete(doc(db, 'users', auth.currentUser.uid, 'sessions', id));
+      try {
+        const chunkSize = 450;
+        for (let i = 0; i < ids.length; i += chunkSize) {
+          const chunk = ids.slice(i, i + chunkSize);
+          const batch = writeBatch(db);
+          for (const id of chunk) {
+            batch.delete(doc(db, 'users', auth.currentUser.uid, 'sessions', id));
+          }
+          await batch.commit();
         }
-        await batch.commit();
+      } catch (err) {
+        console.warn("Could not delete sessions from Firestore:", err);
       }
-    } else {
-      const local = await this.getData();
-      const idSet = new Set(ids);
-      local.sessions = local.sessions.filter(s => !idSet.has(s.id));
-      localStorage.setItem('gym_data', JSON.stringify(local));
     }
   },
 
   async saveRoutine(routine: Routine) {
-    if (auth?.currentUser && db) {
-      await setDoc(doc(db, 'users', auth.currentUser.uid, 'routines', routine.id), sanitizeForFirestore(routine));
-    } else {
-      const local = await this.getData();
+    assertId(routine?.id, 'Routine');
+    if (!routine.name?.trim() || routine.name.length > MAX_TEXT_LENGTH || !Array.isArray(routine.exercises)) throw new Error('Routine requires a valid name and exercise list.');
+    mirrorLocalData(local => {
+      if (!local.routines) local.routines = [];
       const idx = local.routines.findIndex(r => r.id === routine.id);
       if (idx >= 0) local.routines[idx] = routine;
       else local.routines.push(routine);
-      localStorage.setItem('gym_data', JSON.stringify(local));
+    });
+
+    if (auth?.currentUser && db) {
+      try {
+        await setDoc(doc(db, 'users', auth.currentUser.uid, 'routines', routine.id), sanitizeForFirestore(routine));
+      } catch (err) {
+        console.warn("Could not sync routine to Firestore (retained in local cache):", err);
+      }
     }
   },
 
   async deleteRoutine(id: string) {
+    mirrorLocalData(local => {
+      if (local.routines) local.routines = local.routines.filter(r => r.id !== id);
+    });
+
     if (auth?.currentUser && db) {
-      await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'routines', id));
-    } else {
-      const local = await this.getData();
-      local.routines = local.routines.filter(r => r.id !== id);
-      localStorage.setItem('gym_data', JSON.stringify(local));
+      try {
+        await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'routines', id));
+      } catch (err) {
+        console.warn("Could not delete routine from Firestore:", err);
+      }
     }
   },
   
   async saveHistory(record: HistoryRecord) {
-    if (auth?.currentUser && db) {
-      await setDoc(doc(db, 'users', auth.currentUser.uid, 'history', record.id), sanitizeForFirestore(record));
-    } else {
-      const local = await this.getData();
+    assertId(record?.id, 'History record');
+    assertId(record?.sessionId, 'History session');
+    if (!record.snapshot || !record.date || Number.isNaN(Date.parse(record.date))) throw new Error('History record is incomplete.');
+    mirrorLocalData(local => {
       if (!local.history) local.history = [];
       const idx = local.history.findIndex(h => h.id === record.id);
       if (idx >= 0) local.history[idx] = record;
       else local.history.push(record);
-      localStorage.setItem('gym_data', JSON.stringify(local));
+    });
+
+    if (auth?.currentUser && db) {
+      try {
+        await setDoc(doc(db, 'users', auth.currentUser.uid, 'history', record.id), sanitizeForFirestore(record));
+      } catch (err) {
+        console.warn("Could not sync history to Firestore (retained in local cache):", err);
+      }
     }
   },
   
   async deleteHistory(id: string) {
+    mirrorLocalData(local => {
+      if (local.history) local.history = local.history.filter(h => h.id !== id);
+    });
+
     if (auth?.currentUser && db) {
-      await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'history', id));
-    } else {
-      const local = await this.getData();
-      local.history = local.history.filter(h => h.id !== id);
-      localStorage.setItem('gym_data', JSON.stringify(local));
+      try {
+        await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'history', id));
+      } catch (err) {
+        console.warn("Could not delete history from Firestore:", err);
+      }
     }
   },
 
   async saveMeal(meal: MealRecord) {
-    if (auth?.currentUser && db) {
-      await setDoc(doc(db, 'users', auth.currentUser.uid, 'meals', meal.id), sanitizeForFirestore(meal));
-    } else {
-      const local = await this.getData();
+    assertValidMeal(meal);
+    mirrorLocalData(local => {
       if (!local.meals) local.meals = [];
       const idx = local.meals.findIndex(m => m.id === meal.id);
       if (idx >= 0) local.meals[idx] = meal;
       else local.meals.push(meal);
-      localStorage.setItem('gym_data', JSON.stringify(local));
+    });
+
+    if (auth?.currentUser && db) {
+      try {
+        await setDoc(doc(db, 'users', auth.currentUser.uid, 'meals', meal.id), sanitizeForFirestore(meal));
+      } catch (err) {
+        console.warn("Could not sync meal to Firestore (retained in local cache):", err);
+      }
     }
   },
 
   async deleteMeal(id: string) {
+    mirrorLocalData(local => {
+      if (local.meals) local.meals = local.meals.filter(m => m.id !== id);
+    });
+
     if (auth?.currentUser && db) {
-      await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'meals', id));
-    } else {
-      const local = await this.getData();
-      if (!local.meals) local.meals = [];
-      local.meals = local.meals.filter(m => m.id !== id);
-      localStorage.setItem('gym_data', JSON.stringify(local));
+      try {
+        await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'meals', id));
+      } catch (err) {
+        console.warn("Could not delete meal from Firestore:", err);
+      }
     }
+  },
+
+  async saveBodyMetric(entry: BodyMetricEntry) {
+    assertId(entry?.id, 'Body metric');
+    assertFiniteNonNegative(entry.weight, 'Body weight', 1_000);
+    if (!entry.date || Number.isNaN(Date.parse(entry.date))) throw new Error('Body metric date is invalid.');
+    
+    mirrorLocalData(local => {
+      if (!local.bodyMetrics) local.bodyMetrics = [];
+      const idx = local.bodyMetrics.findIndex(m => m.id === entry.id);
+      if (idx >= 0) local.bodyMetrics[idx] = entry;
+      else local.bodyMetrics.unshift(entry);
+    });
+
+    let currentMetrics: BodyMetricEntry[] = [];
+    try {
+      const stored = localStorage.getItem('gym_data');
+      if (stored) {
+        const local = JSON.parse(stored);
+        if (!local.bodyMetrics) local.bodyMetrics = [];
+        const idx = local.bodyMetrics.findIndex((m: BodyMetricEntry) => m.id === entry.id);
+        if (idx >= 0) local.bodyMetrics[idx] = entry;
+        else local.bodyMetrics.unshift(entry);
+        localStorage.setItem('gym_data', JSON.stringify(local));
+        currentMetrics = local.bodyMetrics;
+      }
+    } catch (e) {
+      console.warn("Failed to persist body metric to localStorage:", e);
+    }
+
+    if (auth?.currentUser && db) {
+      try {
+        await setDoc(doc(db, 'users', auth.currentUser.uid), {
+          bodyMetrics: sanitizeForFirestore(currentMetrics)
+        }, { merge: true });
+      } catch (err) {
+        console.warn("Could not sync body metric to Firestore (retained in local cache):", err);
+      }
+    }
+  },
+
+  async deleteBodyMetric(id: string) {
+    mirrorLocalData(local => {
+      if (!local.bodyMetrics) local.bodyMetrics = [];
+      local.bodyMetrics = local.bodyMetrics.filter(m => m.id !== id);
+    });
+
+    let currentMetrics: BodyMetricEntry[] = [];
+    try {
+      const stored = localStorage.getItem('gym_data');
+      if (stored) {
+        const local = JSON.parse(stored);
+        if (local.bodyMetrics) {
+          local.bodyMetrics = local.bodyMetrics.filter((m: BodyMetricEntry) => m.id !== id);
+          localStorage.setItem('gym_data', JSON.stringify(local));
+          currentMetrics = local.bodyMetrics;
+        }
+      }
+    } catch (e) {}
+
+    if (auth?.currentUser && db) {
+      try {
+        await setDoc(doc(db, 'users', auth.currentUser.uid), {
+          bodyMetrics: sanitizeForFirestore(currentMetrics)
+        }, { merge: true });
+      } catch (err) {
+        console.warn("Could not sync body metric deletion to Firestore (retained in local cache):", err);
+      }
+    }
+  },
+
+  async updateNutritionGoals(goals: NutritionGoals) {
+    assertValidGoals(goals);
+    mirrorLocalData(local => {
+      local.nutritionGoals = goals;
+    });
+
+    try {
+      const stored = localStorage.getItem('gym_data');
+      if (stored) {
+        const local = JSON.parse(stored);
+        local.nutritionGoals = goals;
+        localStorage.setItem('gym_data', JSON.stringify(local));
+      }
+    } catch (e) {}
+
+    if (auth?.currentUser && db) {
+      try {
+        await setDoc(doc(db, 'users', auth.currentUser.uid), {
+          nutritionGoals: sanitizeForFirestore(goals)
+        }, { merge: true });
+      } catch (err) {
+        console.warn("Could not sync nutrition goals to Firestore (retained in local cache):", err);
+      }
+    }
+  },
+
+  async logWater(dateKey: string, totalMl: number) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) throw new Error('Water log date must use YYYY-MM-DD.');
+    assertFiniteNonNegative(totalMl, 'Water total', 20_000);
+
+    // 1. Immediately persist to localStorage synchronously
+    mirrorLocalData(local => {
+      if (!local.waterLogs) local.waterLogs = {};
+      local.waterLogs[dateKey] = Math.max(0, totalMl);
+    });
+
+    let updatedLogs: Record<string, number> = { [dateKey]: Math.max(0, totalMl) };
+    try {
+      const stored = localStorage.getItem('gym_data');
+      if (stored) {
+        const local = JSON.parse(stored);
+        if (!local.waterLogs) local.waterLogs = {};
+        local.waterLogs[dateKey] = Math.max(0, totalMl);
+        localStorage.setItem('gym_data', JSON.stringify(local));
+        updatedLogs = local.waterLogs;
+      }
+    } catch (e) {
+      console.warn("Direct localStorage write failed:", e);
+    }
+
+    // 2. Safely sync to Firestore without blocking or crashing local updates
+    if (auth?.currentUser && db) {
+      try {
+        await setDoc(doc(db, 'users', auth.currentUser.uid), {
+          waterLogs: sanitizeForFirestore(updatedLogs)
+        }, { merge: true });
+      } catch (firestoreErr) {
+        console.warn("Could not sync waterLogs to Firestore (retained safely in local storage):", firestoreErr);
+      }
+    }
+  },
+
+  async saveInsights(insights: PerformanceInsights) {
+    const cleanInsights = sanitizeForFirestore({ ...DEFAULT_PERFORMANCE_INSIGHTS, ...insights });
+    if (auth?.currentUser && db) {
+      await setDoc(doc(db, 'users', auth.currentUser.uid), { insights: cleanInsights }, { merge: true });
+    }
+    const local = await this.getData();
+    local.insights = cleanInsights;
+    localStorage.setItem('gym_data', JSON.stringify(local));
   },
 
   async importAllData(imported: AppData): Promise<AppData> {
@@ -425,26 +1224,45 @@ export const api = {
       throw new Error('Invalid backup file format');
     }
 
-    const validSessions = Array.isArray(imported.sessions) ? imported.sessions : [];
+    const validSessions = Array.isArray(imported.sessions) ? imported.sessions.filter(item => {
+      try { assertValidSession(item); return true; } catch { return false; }
+    }) : [];
     const validRoutines = Array.isArray(imported.routines) ? imported.routines : [];
     const validExercises = Array.isArray(imported.exercises) ? imported.exercises : [];
     const validHistory = Array.isArray(imported.history) ? imported.history : [];
-    const validMeals = Array.isArray(imported.meals) ? imported.meals : [];
+    const validMeals = Array.isArray(imported.meals) ? imported.meals.filter(item => {
+      try { assertValidMeal(item); return true; } catch { return false; }
+    }) : [];
+    const validMetrics = Array.isArray(imported.bodyMetrics) ? imported.bodyMetrics : [];
+    const validGoals = imported.nutritionGoals ? { ...DEFAULT_NUTRITION_GOALS, ...imported.nutritionGoals } : DEFAULT_NUTRITION_GOALS;
+    assertValidGoals(validGoals);
+    const validWater = imported.waterLogs && typeof imported.waterLogs === 'object' ? imported.waterLogs : {};
     const validSettings = imported.settings ? { ...DEFAULT_SETTINGS, ...imported.settings } : DEFAULT_SETTINGS;
 
     const fullData: AppData = {
-      user: imported.user || { name: 'Athlete', email: 'guest@mygym.app' },
+      user: imported.user || { name: 'Athlete', email: 'guest@forma.app' },
       settings: validSettings,
       sessions: validSessions,
       routines: validRoutines,
       exercises: validExercises,
       history: validHistory,
-      meals: validMeals
+      meals: validMeals,
+      bodyMetrics: validMetrics,
+      nutritionGoals: validGoals,
+      waterLogs: validWater,
+      insights: { ...DEFAULT_PERFORMANCE_INSIGHTS, ...(imported.insights || {}) }
     };
 
     if (auth?.currentUser && db) {
       const uid = auth.currentUser.uid;
-      await this.updateRootSettings(validSettings, fullData.user);
+      await setDoc(doc(db, 'users', uid), {
+        settings: sanitizeForFirestore(validSettings),
+        user: sanitizeForFirestore(fullData.user),
+        bodyMetrics: sanitizeForFirestore(validMetrics),
+        nutritionGoals: sanitizeForFirestore(validGoals),
+        waterLogs: sanitizeForFirestore(validWater),
+        insights: sanitizeForFirestore(fullData.insights)
+      }, { merge: true });
       
       const itemsToBatch: { ref: any; data: any }[] = [];
       for (const s of validSessions) {
@@ -475,3 +1293,4 @@ export const api = {
     return fullData;
   }
 };
+

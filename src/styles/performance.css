@@ -1,0 +1,67 @@
+@layer components {
+  .forma-performance-ledger {
+    display: grid;
+    gap: 0.85rem;
+    margin: 0 0 1.5rem;
+    padding: 1rem;
+    border: 1px solid var(--premium-line);
+    border-radius: 0.95rem;
+    background: color-mix(in srgb, var(--bg-secondary) 66%, transparent);
+  }
+
+  .forma-ledger-section-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--premium-line);
+  }
+
+  .forma-ledger-section-header h2 { margin: 0.25rem 0 0; font-size: 1.05rem; }
+  .forma-performance-ledger-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 0.85rem; align-items: start; }
+  .forma-ledger-panel { align-self: start; min-width: 0; overflow: hidden; border: 1px solid var(--premium-line); border-radius: 0.75rem; background: color-mix(in srgb, var(--bg-primary) 30%, transparent); }
+  .forma-record-table-wrap { overflow-x: auto; }
+  .forma-record-table { width: 100%; min-width: 34rem; border-collapse: collapse; font-size: 0.75rem; }
+  .forma-record-table th, .forma-record-table td { padding: 0.8rem 0.75rem; border-bottom: 1px solid var(--premium-line); text-align: start; white-space: nowrap; }
+  .forma-record-table tr > :first-child { position: sticky; inset-inline-start: 0; z-index: 1; background: var(--bg-secondary); }
+  .forma-record-table thead th { color: var(--text-muted); font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase; }
+  .forma-record-table tbody th { color: var(--text-primary); font-weight: 750; }
+  .forma-record-table tbody td { color: var(--text-secondary); }
+  .forma-record-table tbody tr:last-child th, .forma-record-table tbody tr:last-child td { border-bottom: 0; }
+
+  .forma-ledger-empty { display: grid; gap: 0.3rem; padding: 1.2rem; color: var(--text-muted); font-size: 0.72rem; }
+  .forma-ledger-empty strong { color: var(--text-primary); font-size: 0.8rem; }
+  .forma-ledger-plots { display: grid; gap: 0.85rem; min-width: 0; }
+  .forma-data-plot { min-width: 0; padding: 0.85rem; border: 1px solid var(--premium-line); border-radius: 0.75rem; background: color-mix(in srgb, var(--bg-primary) 30%, transparent); }
+  .forma-data-plot-header { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.75rem; }
+  .forma-data-plot-header div { display: flex; align-items: baseline; gap: 0.4rem; }
+  .forma-data-plot-header span { color: var(--text-primary); font-size: 0.78rem; font-weight: 750; }
+  .forma-data-plot-header strong, .forma-data-plot-header small { color: var(--text-muted); font-size: 0.65rem; }
+  .forma-data-bars { display: flex; align-items: end; gap: 0.3rem; height: 7.2rem; padding-top: 0.5rem; border-bottom: 1px solid var(--premium-line); }
+  .forma-data-bar-group { display: grid; flex: 1; align-items: end; justify-items: center; gap: 0.35rem; height: 100%; min-width: 0; }
+  .forma-data-bar { display: block; width: min(1.1rem, 100%); min-height: 0.35rem; border-radius: 0.25rem 0.25rem 0 0; background: linear-gradient(180deg, var(--accent-cyan), color-mix(in srgb, var(--accent-cyan) 24%, transparent)); }
+  .forma-data-bar-group small { color: var(--text-muted); font-size: 0.58rem; }
+  .forma-plot-empty { min-height: 7rem; place-content: center; padding: 0.75rem; text-align: center; }
+
+  .forma-adaptive-callout { display: grid; gap: 0.75rem; padding: 0.9rem; border: 1px solid color-mix(in srgb, var(--accent-cyan) 28%, transparent); border-radius: 0.75rem; background: color-mix(in srgb, var(--accent-cyan) 6%, transparent); }
+  .forma-adaptive-callout.is-empty { color: var(--text-muted); font-size: 0.72rem; }
+  .forma-adaptive-chain { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: center; gap: 0.55rem; }
+  .forma-adaptive-chain span { display: grid; gap: 0.2rem; }
+  .forma-adaptive-chain small { color: var(--text-muted); font-size: 0.62rem; }
+  .forma-adaptive-chain strong { color: var(--accent-cyan); font-size: 0.86rem; text-transform: capitalize; }
+  .forma-adaptive-chain i { color: var(--text-muted); font-style: normal; }
+  .forma-adaptive-callout p { margin: 0; color: var(--text-secondary); font-size: 0.76rem; line-height: 1.5; }
+  .forma-adaptive-updated { color: var(--text-muted); font-size: 0.62rem; }
+  .forma-recovery-not-logged { margin-bottom: 1rem; padding: 0.85rem 0.95rem; border: 1px solid var(--premium-line); border-inline-start: 2px solid var(--accent-amber); border-radius: 0.6rem; color: var(--text-secondary); font-size: 0.74rem; line-height: 1.5; background: color-mix(in srgb, var(--accent-amber) 5%, transparent); }
+
+  @media (max-width: 800px) {
+    .forma-performance-ledger-grid { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 480px) {
+    .forma-adaptive-chain { gap: 0.35rem; }
+    .forma-adaptive-chain i { font-size: 0.7rem; }
+    .forma-adaptive-chain strong { font-size: 0.75rem; }
+  }
+}

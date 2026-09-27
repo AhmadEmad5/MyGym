@@ -1,0 +1,12 @@
+rules_version = '2';
+
+// FORMA Cloud Storage Security Rules
+// Cloud Storage is not used by the web client.
+// All unauthorized read/write attempts are strictly rejected.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

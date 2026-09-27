@@ -1,0 +1,140 @@
+/* Now Playing Music Widget Styles */
+.now-playing-glass {
+  background: linear-gradient(145deg, rgba(17, 26, 44, 0.94) 0%, rgba(8, 12, 20, 0.98) 100%);
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  box-shadow: 0 24px 64px -12px rgba(0, 0, 0, 0.8), 0 0 24px rgba(56, 189, 248, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+}
+
+.now-playing-pill-glass {
+  background: linear-gradient(145deg, rgba(17, 26, 44, 0.92) 0%, rgba(8, 12, 20, 0.96) 100%);
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  border: 1px solid rgba(56, 189, 248, 0.24);
+  box-shadow: 0 12px 36px -6px rgba(0, 0, 0, 0.75), 0 0 20px rgba(198, 244, 50, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+}
+
+/* Range input slider styling */
+.now-playing-range {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  height: 18px;
+  margin: 0;
+  display: block;
+}
+
+.now-playing-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 99px;
+  background: rgba(51, 65, 85, 0.75);
+}
+
+.now-playing-range::-moz-range-track {
+  height: 4px;
+  border-radius: 99px;
+  background: rgba(51, 65, 85, 0.75);
+}
+
+.now-playing-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #c6f432;
+  margin-top: -4.5px;
+  box-shadow: 0 0 8px rgba(198, 244, 50, 0.65);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  border: 2px solid #0f172a;
+}
+
+.now-playing-range::-moz-range-thumb {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #c6f432;
+  border: 2px solid #0f172a;
+  box-shadow: 0 0 8px rgba(198, 244, 50, 0.65);
+}
+
+.now-playing-range:hover::-webkit-slider-thumb {
+  transform: scale(1.3);
+  box-shadow: 0 0 14px rgba(198, 244, 50, 0.9);
+}
+
+.now-playing-range:focus {
+  outline: none;
+}
+
+/* Smooth spinning album art */
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin-slow {
+  animation: spin-slow 10s linear infinite;
+  animation-play-state: paused;
+}
+
+.spin-slow.playing {
+  animation-play-state: running;
+}
+
+/* Subtle glowing pulse */
+@keyframes music-pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(198, 244, 50, 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(198, 244, 50, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(198, 244, 50, 0);
+  }
+}
+
+.music-pulse-play {
+  animation: music-pulse-ring 2.2s ease-out infinite;
+}
+
+/* Animated Equalizer Bars for Nav button */
+.equalizer-bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 14px;
+  width: 14px;
+}
+
+.equalizer-bar {
+  width: 2.5px;
+  background: #c6f432;
+  border-radius: 1px;
+  height: 4px;
+}
+
+.equalizer-bars.is-playing .equalizer-bar:nth-child(1) {
+  animation: eq-bounce 0.8s ease-in-out infinite alternate;
+}
+.equalizer-bars.is-playing .equalizer-bar:nth-child(2) {
+  animation: eq-bounce 1.1s ease-in-out infinite alternate 0.2s;
+}
+.equalizer-bars.is-playing .equalizer-bar:nth-child(3) {
+  animation: eq-bounce 0.9s ease-in-out infinite alternate 0.4s;
+}
+
+@keyframes eq-bounce {
+  0% {
+    height: 3px;
+  }
+  100% {
+    height: 14px;
+  }
+}

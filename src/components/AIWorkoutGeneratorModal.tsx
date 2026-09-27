@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { 
   Sparkles, X, Dumbbell, Calendar, CheckCircle2, RefreshCw, Clock
 } from 'lucide-react';
-import { GoogleGenAI } from '@google/genai';
+import { generateGeminiJson } from '../lib/gemini';
 import { addDays, startOfWeek } from 'date-fns';
 import { useData } from '../hooks/useData';
 import { WorkoutSession, SessionExercise, Routine } from '../lib/api';
@@ -79,6 +80,21 @@ export function AIWorkoutGeneratorModal({ isOpen, onClose, onRoutineScheduled }:
   const [appliedSuccess, setAppliedSuccess] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    document.body.classList.add('modal-open');
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.classList.remove('modal-open');
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleGenerate = async () => {
@@ -110,6 +126,8 @@ Design an optimal, science-backed workout program customized for the following a
 - Desired Frequency: ${daysCount} days per week
 - Available Equipment: ${eqObj?.titleEn} (${eqObj?.descEn})
 - Specific Focus & Constraints: "${customFocus.trim() || 'Balanced full development, optimal stimulus-to-fatigue ratio'}"
+- Crucial Schedule Rule: The gym is strictly closed every Friday. Athletes NEVER train on Friday. Friday must ALWAYS remain an off-day / complete recovery day.
+- Crucial Warm-up Rule: Every single workout session MUST start with an aerobic warm-up & cardio exercise as its very first exercise (Exercise 1: "Treadmill Warm-up & Cardio" with targetMuscle: "Cardio", sets: 1, reps: "5-10 min", restSeconds: 60, coachingCue: "Light aerobic warm-up to elevate core temperature and lubricate joints before lifting.").
 
 Structure exactly ${daysCount} training sessions (e.g. Push, Pull, Legs, Upper, Lower, or Full Body depending on frequency).
 For each session, provide 4 to 6 biomechanically sound exercises with proper set volumes, target rep ranges, rest times, and coaching cues.
@@ -142,26 +160,8 @@ Output strictly valid JSON with NO markdown code fences, using this schema:
 }`;
 
     try {
-      const aiClient = new GoogleGenAI({ apiKey });
+      const parsed = await generateGeminiJson<GeneratedPlan>({ prompt });
 
-      let response;
-      try {
-        response = await aiClient.models.generateContent({
-          model: 'gemini-3.6-flash',
-          contents: prompt,
-        });
-      } catch (firstErr) {
-        console.warn('gemini-3.6-flash failed in generator, trying gemini-flash-latest:', firstErr);
-        response = await aiClient.models.generateContent({
-          model: 'gemini-flash-latest',
-          contents: prompt,
-        });
-      }
-
-      let text = response.text || '';
-      text = text.replace(/```json/gi, '').replace(/```/g, '').trim();
-
-      const parsed: GeneratedPlan = JSON.parse(text);
       if (!parsed.sessions || parsed.sessions.length === 0) {
         throw new Error('AI returned an incomplete routine format.');
       }
@@ -170,7 +170,12 @@ Output strictly valid JSON with NO markdown code fences, using this schema:
       setSelectedSessionTab(0);
     } catch (err: any) {
       console.error('AI Routine Generation Error:', err);
-      setErrorMessage(err.message || 'Failed to generate routine. Please check your internet connection or try again.');
+      const isBusy = err?.message?.includes('503') || err?.message?.includes('high demand');
+      setErrorMessage(
+        isBusy 
+          ? (isRTL ? 'الخوادم تشهد ضغطاً مؤقتاً، يرجى المحاولة مرة أخرى بعد ثوانٍ قليلة.' : 'AI servers are experiencing temporary high demand, please try again in a few moments.')
+          : (err.message || (isRTL ? 'تعذر إنشاء الجدول. يرجى التحقق من الاتصال والمحاولة مجدداً.' : 'Failed to generate routine. Please check your internet connection or try again.'))
+      );
     } finally {
       setIsGenerating(false);
     }
@@ -188,7 +193,7 @@ Output strictly valid JSON with NO markdown code fences, using this schema:
       const newSessions: WorkoutSession[] = [];
 
       // Map sessions to appropriate days evenly spaced across the week
-      // NOTE: Friday (day 5) is strictly a rest day in MyGym!
+      // NOTE: Friday (day 5) is strictly a rest day in FORMA!
       const daySpacingMap: Record<number, number[]> = {
         2: [1, 4], // Mon, Thu
         3: [0, 2, 4], // Sun, Tue, Thu
@@ -212,8 +217,8 @@ Output strictly valid JSON with NO markdown code fences, using this schema:
           const sessionDate = addDays(weekStart, week * 7 + dayOffset);
           sessionDate.setHours(18, 0, 0, 0);
 
-          // CRITICAL: NEVER schedule workouts on past days!
-          if (sessionDate < today) {
+          // CRITICAL: NEVER schedule workouts on past days or on Friday (gym closed)!
+          if (sessionDate < today || sessionDate.getDay() === 5) {
             return;
           }
 
@@ -237,6 +242,32 @@ Output strictly valid JSON with NO markdown code fences, using this schema:
               sets: setsArr,
             };
           });
+
+          // Ensure workout strictly starts with cardio warm-up
+          const startsWithCardio = formattedExercises.length > 0 && (
+            formattedExercises[0].targetMuscle.toLowerCase() === 'cardio' ||
+            formattedExercises[0].name.toLowerCase().includes('cardio') ||
+            formattedExercises[0].name.toLowerCase().includes('treadmill')
+          );
+
+          if (!startsWithCardio) {
+            formattedExercises.unshift({
+              id: `${Date.now()}-${sIndex}-cardio-warmup`,
+              name: 'Treadmill Warm-up & Cardio (إحماء وكارديو جهاز المشي)',
+              targetMuscle: 'Cardio',
+              restTime: 60,
+              notes: '5-10 minutes of light aerobic warm-up to prepare joints and elevate core temperature.',
+              duration: 10,
+              sets: [{
+                id: `${Date.now()}-${sIndex}-cardio-s0`,
+                weight: 0,
+                repsTarget: 10,
+                repsActual: 10,
+                unit: data.settings?.weightUnit || 'lb',
+                isCompleted: false,
+              }]
+            });
+          }
 
           newSessions.push({
             id: `ai-${Date.now()}-${week}-${sIndex}`,
@@ -299,19 +330,9 @@ Output strictly valid JSON with NO markdown code fences, using this schema:
     }
   };
 
-  return (
+  return createPortal(
     <div 
-      style={{
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.75)',
-        backdropFilter: 'blur(8px)',
-        zIndex: 1000,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '1rem',
-      }}
+      className="portal-modal-backdrop"
       dir={isRTL ? 'rtl' : 'ltr'}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
@@ -321,21 +342,17 @@ Output strictly valid JSON with NO markdown code fences, using this schema:
         initial={{ opacity: 0, scale: 0.95, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 15 }}
-        className="card"
+        className="card modal-card ai-generator-modal-card"
         style={{
-          width: '100%',
           maxWidth: '750px',
-          maxHeight: '90vh',
-          display: 'flex',
-          flexDirection: 'column',
           padding: 0,
           overflow: 'hidden',
           backgroundColor: 'var(--bg-secondary)',
           border: '1px solid var(--border-highlight)',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
           textAlign: isRTL ? 'right' : 'left'
         }}
       >
+        <div className="modal-drag-handle" />
         {/* Header */}
         <div style={{
           padding: '1.25rem 1.5rem',
@@ -793,7 +810,8 @@ Output strictly valid JSON with NO markdown code fences, using this schema:
           )}
         </div>
       </motion.div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

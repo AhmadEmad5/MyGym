@@ -1,0 +1,18 @@
+@layer components {
+  .today-recovery-empty {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    min-height: 5.2rem;
+    padding: 1rem 1.1rem;
+    border: 1px solid var(--premium-line);
+    border-inline-start: 2px solid var(--text-muted);
+    border-radius: 0.75rem;
+    color: var(--text-muted);
+    background: color-mix(in srgb, var(--bg-secondary) 60%, transparent);
+  }
+
+  .today-recovery-empty > div { display: grid; gap: 0.2rem; }
+  .today-recovery-empty strong { color: var(--text-primary); font-size: 0.8rem; }
+  .today-recovery-empty span { color: var(--text-secondary); font-size: 0.72rem; }
+}

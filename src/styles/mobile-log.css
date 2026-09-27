@@ -1,0 +1,25 @@
+@layer components {
+  .mobile-log-actions {
+    display: grid;
+    gap: 0.65rem;
+    padding-bottom: 0.6rem;
+  }
+
+  .mobile-log-actions p {
+    margin: 0 0 0.35rem;
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+
+  .mobile-log-actions > button {
+    width: 100%;
+    min-height: 48px;
+    justify-content: flex-start;
+    padding-inline: 0.9rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mobile-log-actions > button { transition: none; }
+  }
+}

@@ -1,83 +1,166 @@
 rules_version = '2';
 
+// ===============================================================
+// FORMA Production Security Rules
+// Data Models:
+// - /users/{userId}: Root document containing settings, user profile,
+//   body metrics, nutrition goals, water logs, and performance insights.
+// - /users/{userId}/sessions/{sessionId}: Individual workout sessions.
+// - /users/{userId}/routines/{routineId}: Workout routines.
+// - /users/{userId}/history/{historyId}: Completed workout history logs.
+// - /users/{userId}/meals/{mealId}: Nutrition meal records.
+// ===============================================================
+
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Check if the user is authenticated
+    // --- Authentication & Identity Verification ---
     function isAuthenticated() {
       return request.auth != null;
     }
     
-    // Check if the user is accessing their own data
     function isOwner(uid) {
       return isAuthenticated() && request.auth.uid == uid;
     }
 
-    // Validation helper for sessions
-    function isValidSession() {
+    // Admin operations require an explicit custom claim set via Firebase Admin SDK.
+    function isAdmin() {
+      return isAuthenticated()
+        && request.auth.token.get('admin', false) == true;
+    }
+
+    // --- General Field & Resource Constraints ---
+    function validString(text, minLen, maxLen) {
+      return text is string && text.size() >= minLen && text.size() <= maxLen;
+    }
+
+    function validNumber(num, minVal, maxVal) {
+      return num is number && num >= minVal && num <= maxVal;
+    }
+
+    // --- Root Document Validator (/users/{userId}) ---
+    function isValidRootUser() {
+      let data = request.resource.data;
+      let allowedKeys = [
+        'settings', 'user', 'bodyMetrics', 'nutritionGoals', 
+        'waterLogs', 'insights', '_migratedToSubcollections',
+        'sessions', 'routines', 'history', 'meals', 'exercises', 'createdAt', 'updatedAt', 'id'
+      ];
+      return data.keys().hasOnly(allowedKeys)
+        && (!('settings' in data) || data.settings is map)
+        && (!('user' in data) || data.user is map || data.user == null)
+        && (!('bodyMetrics' in data) || (data.bodyMetrics is list && data.bodyMetrics.size() <= 500))
+        && (!('nutritionGoals' in data) || data.nutritionGoals is map)
+        && (!('waterLogs' in data) || data.waterLogs is map)
+        && (!('insights' in data) || data.insights is map)
+        && (!('_migratedToSubcollections' in data) || data._migratedToSubcollections is bool)
+        && (!('sessions' in data) || data.sessions is list)
+        && (!('routines' in data) || data.routines is list)
+        && (!('history' in data) || data.history is list)
+        && (!('meals' in data) || data.meals is list)
+        && (!('exercises' in data) || data.exercises is list);
+    }
+
+    // --- Session Validator (/users/{userId}/sessions/{sessionId}) ---
+    function isValidSession(docId) {
       let data = request.resource.data;
       return data.keys().hasAll(['id', 'title', 'date', 'duration', 'type', 'isCompleted'])
-        && data.title is string && data.title.size() > 0 && data.title.size() <= 120
-        && data.date is string
-        && data.duration is number && data.duration >= 0 && data.duration <= 1440
-        && data.isCompleted is bool;
+        && data.id == docId
+        && validString(data.title, 1, 150)
+        && validString(data.date, 8, 35)
+        && validNumber(data.duration, 0, 1440)
+        && data.type is string && data.type.size() <= 50
+        && data.isCompleted is bool
+        && (!('notes' in data) || data.notes == null || (data.notes is string && data.notes.size() <= 3000))
+        && (!('exercises' in data) || (data.exercises is list && data.exercises.size() <= 60));
     }
 
-    // Validation helper for routines
-    function isValidRoutine() {
+    // --- Routine Validator (/users/{userId}/routines/{routineId}) ---
+    function isValidRoutine(docId) {
       let data = request.resource.data;
       return data.keys().hasAll(['id', 'name'])
-        && data.name is string && data.name.size() > 0 && data.name.size() <= 120;
+        && data.id == docId
+        && validString(data.name, 1, 150)
+        && (!('category' in data) || (data.category is string && data.category.size() <= 80))
+        && (!('description' in data) || (data.description is string && data.description.size() <= 2000))
+        && (!('daysRequired' in data) || validNumber(data.daysRequired, 1, 7))
+        && (!('days' in data) || (data.days is list && data.days.size() <= 14));
     }
 
-    // Validation helper for history records
-    function isValidHistory() {
+    // --- History Validator (/users/{userId}/history/{historyId}) ---
+    function isValidHistory(docId) {
       let data = request.resource.data;
       return data.keys().hasAll(['id', 'sessionId', 'date', 'title'])
-        && data.title is string && data.title.size() > 0 && data.title.size() <= 120
-        && data.date is string;
+        && data.id == docId
+        && validString(data.sessionId, 1, 100)
+        && validString(data.title, 1, 150)
+        && validString(data.date, 8, 35)
+        && (!('duration' in data) || validNumber(data.duration, 0, 1440))
+        && (!('snapshot' in data) || data.snapshot is map);
     }
 
-    // Validation helper for meal records
-    function isValidMeal() {
+    // --- Meal Validator (/users/{userId}/meals/{mealId}) ---
+    function isValidMeal(docId) {
       let data = request.resource.data;
       return data.keys().hasAll(['id', 'date', 'mealType', 'title', 'calories'])
-        && data.title is string && data.title.size() > 0 && data.title.size() <= 150
-        && data.date is string
-        && data.mealType is string
-        && data.calories is number && data.calories >= 0;
+        && data.id == docId
+        && validString(data.title, 1, 150)
+        && validString(data.date, 8, 35)
+        && data.mealType in ['breakfast', 'lunch', 'dinner', 'snack']
+        && validNumber(data.calories, 0, 25000)
+        && (!('protein' in data) || validNumber(data.protein, 0, 1000))
+        && (!('carbs' in data) || validNumber(data.carbs, 0, 2000))
+        && (!('fats' in data) || validNumber(data.fats, 0, 1000));
     }
 
-    // User root profile & settings
+    // --- Collection Rules Scoped to Owner and Admin ---
     match /users/{userId} {
-      allow read, write: if isOwner(userId);
+      allow read: if isOwner(userId) || isAdmin();
+      allow delete: if isOwner(userId) || isAdmin();
+      allow create, update: if isOwner(userId) && request.auth.uid == userId && isValidRootUser();
 
       // Sessions subcollection
       match /sessions/{sessionId} {
-        allow read, delete: if isOwner(userId);
-        allow create, update: if isOwner(userId) && isValidSession();
+        allow read: if isOwner(userId) || isAdmin();
+        allow delete: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidSession(sessionId);
+        allow update: if isOwner(userId) 
+          && isValidSession(sessionId) 
+          && request.resource.data.id == resource.data.id;
       }
 
       // Routines subcollection
       match /routines/{routineId} {
-        allow read, delete: if isOwner(userId);
-        allow create, update: if isOwner(userId) && isValidRoutine();
+        allow read: if isOwner(userId) || isAdmin();
+        allow delete: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidRoutine(routineId);
+        allow update: if isOwner(userId) 
+          && isValidRoutine(routineId)
+          && request.resource.data.id == resource.data.id;
       }
 
       // History subcollection
       match /history/{historyId} {
-        allow read, delete: if isOwner(userId);
-        allow create, update: if isOwner(userId) && isValidHistory();
+        allow read: if isOwner(userId) || isAdmin();
+        allow delete: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidHistory(historyId);
+        allow update: if isOwner(userId) 
+          && isValidHistory(historyId)
+          && request.resource.data.id == resource.data.id;
       }
 
       // Meals subcollection
       match /meals/{mealId} {
-        allow read, delete: if isOwner(userId);
-        allow create, update: if isOwner(userId) && isValidMeal();
+        allow read: if isOwner(userId) || isAdmin();
+        allow delete: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidMeal(mealId);
+        allow update: if isOwner(userId) 
+          && isValidMeal(mealId)
+          && request.resource.data.id == resource.data.id;
       }
     }
     
-    // Deny access to all other collections by default
+    // Explicit Default Deny for all other collections and documents
     match /{document=**} {
       allow read, write: if false;
     }

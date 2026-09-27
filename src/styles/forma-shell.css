@@ -1,0 +1,413 @@
+@layer components {
+  .forma-page-frame {
+    position: relative;
+    width: 100%;
+    max-width: min(1240px, 100%);
+    margin: 0 auto;
+    padding: clamp(1rem, 2vw, 2rem) 0 3rem;
+    overflow-x: clip;
+    overflow-x: hidden;
+  }
+
+  .forma-page-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: clamp(1rem, 2vw, 2rem);
+  }
+
+  .forma-page-main {
+    min-width: 0;
+  }
+
+  .forma-page-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1.25rem;
+    margin-bottom: clamp(1.35rem, 3vw, 2.35rem);
+  }
+
+  .forma-page-header h1 {
+    margin: 0;
+    font-size: clamp(1.85rem, 4vw, 3.4rem);
+    line-height: 1.05;
+    letter-spacing: -0.04em;
+    font-weight: 900;
+    color: var(--text-primary);
+  }
+
+  .forma-page-header p {
+    max-width: 44rem;
+    margin: 0.65rem 0 0;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.55;
+  }
+
+  .forma-page-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.65rem;
+    color: var(--accent-cyan);
+    font-size: 0.74rem;
+    font-weight: 750;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .forma-page-eyebrow::before {
+    content: '';
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 999px;
+    background: var(--accent-cyan);
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25), 0 0 12px var(--accent-cyan);
+  }
+
+  .forma-page-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+  }
+
+  .northline-rail {
+    position: relative;
+    display: grid;
+    gap: 1.1rem;
+    min-width: 0;
+  }
+
+  .northline-rail-vertical {
+    align-content: start;
+    width: min(15rem, 100%);
+    padding: 0.4rem 0 0.4rem 1rem;
+  }
+
+  .northline-rail-line {
+    position: absolute;
+    inset-inline-start: 0.28rem;
+    top: 0.7rem;
+    bottom: 0.7rem;
+    width: 1px;
+    background: linear-gradient(180deg, transparent, var(--premium-line) 8%, var(--accent-cyan) 50%, var(--premium-line) 92%, transparent);
+  }
+
+  .northline-rail-horizontal {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(8rem, 1fr);
+    gap: 0;
+    overflow-x: auto;
+    padding: 0.4rem 0 0.9rem;
+  }
+
+  .northline-rail-horizontal .northline-rail-line {
+    inset-inline: 0.7rem;
+    inset-block-start: 0.8rem;
+    bottom: auto;
+    width: auto;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--premium-line) 8%, var(--accent-cyan) 50%, var(--premium-line) 92%, transparent);
+  }
+
+  .northline-rail-item {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+    min-width: 0;
+  }
+
+  .northline-rail-horizontal .northline-rail-item {
+    display: grid;
+    justify-items: center;
+    gap: 0.5rem;
+    padding: 0 0.5rem;
+    text-align: center;
+  }
+
+  .northline-rail-marker {
+    position: relative;
+    z-index: 1;
+    flex: 0 0 auto;
+    width: 0.62rem;
+    height: 0.62rem;
+    margin-top: 0.25rem;
+    border: 2px solid var(--text-muted);
+    border-radius: 999px;
+    background: var(--bg-primary);
+  }
+
+  .northline-status-current .northline-rail-marker {
+    border-color: var(--accent-cyan);
+    background: var(--accent-cyan);
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent-cyan) 13%, transparent), 0 0 14px var(--accent-cyan);
+  }
+
+  .northline-status-complete .northline-rail-marker {
+    border-color: var(--accent-green);
+    background: var(--accent-green);
+  }
+
+  .northline-status-attention .northline-rail-marker {
+    border-color: var(--warning);
+    background: var(--warning);
+  }
+
+  .northline-rail-copy {
+    display: grid;
+    gap: 0.12rem;
+    min-width: 0;
+  }
+
+  .northline-rail-copy strong {
+    overflow: hidden;
+    color: var(--text-primary);
+    font-size: 0.76rem;
+    font-weight: 750;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .northline-rail-copy small {
+    color: var(--text-muted);
+    font-size: 0.68rem;
+  }
+
+  .forma-metric-pair {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: baseline;
+    column-gap: 0.45rem;
+    row-gap: 0.15rem;
+    min-width: 0;
+  }
+
+  .forma-metric-pair > span {
+    grid-column: 1 / -1;
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .forma-metric-pair strong {
+    color: var(--text-primary);
+    font-size: 1.2rem;
+    font-weight: 850;
+  }
+
+  .forma-metric-pair small {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+  }
+
+  .forma-metric-cyan strong { color: var(--accent-cyan); }
+  .forma-metric-emerald strong { color: var(--accent-green); }
+  .forma-metric-amber strong { color: var(--warning); }
+  .forma-metric-lime strong { color: var(--gym-lime); }
+
+  .forma-primary-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 2.75rem;
+    padding: 0.72rem 1rem;
+    border: 1px solid transparent;
+    border-radius: 0.78rem;
+    color: #06121a;
+    background: var(--accent-cyan);
+    box-shadow: 0 10px 24px color-mix(in srgb, var(--accent-cyan) 18%, transparent);
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: transform 160ms ease, filter 160ms ease, box-shadow 160ms ease;
+  }
+
+  .forma-primary-button:hover { filter: brightness(1.06); transform: translateY(-1px); }
+  .forma-primary-button:active { transform: translateY(0) scale(0.98); }
+  .forma-primary-button:disabled { cursor: not-allowed; opacity: 0.55; transform: none; }
+
+  .forma-quiet-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    font-weight: 750;
+    text-decoration: none;
+    transition: color 160ms ease, gap 160ms ease;
+  }
+
+  .forma-quiet-action:hover { gap: 0.55rem; color: var(--accent-cyan); }
+
+  .forma-empty-state {
+    display: grid;
+    justify-items: center;
+    gap: 0.65rem;
+    min-height: 15rem;
+    padding: 2.5rem 1.25rem;
+    border: 1px dashed var(--premium-line);
+    border-radius: 1rem;
+    background: color-mix(in srgb, var(--bg-secondary) 78%, transparent);
+    text-align: center;
+  }
+
+  .forma-empty-icon {
+    display: grid;
+    place-items: center;
+    width: 3.25rem;
+    height: 3.25rem;
+    margin-bottom: 0.25rem;
+    border: 1px solid color-mix(in srgb, var(--accent-cyan) 28%, transparent);
+    border-radius: 0.9rem;
+    color: var(--accent-cyan);
+    background: color-mix(in srgb, var(--accent-cyan) 10%, transparent);
+  }
+
+  .forma-empty-state h2 { margin: 0; font-size: 1.1rem; }
+  .forma-empty-state p { max-width: 28rem; margin: 0; font-size: 0.82rem; }
+  .forma-empty-action { margin-top: 0.5rem; }
+
+  .forma-page-skeleton {
+    display: grid;
+    gap: 0.75rem;
+    padding: 1rem 0;
+  }
+
+  .forma-skeleton-heading,
+  .forma-skeleton-row {
+    display: block;
+    border-radius: 0.5rem;
+    background: linear-gradient(90deg, var(--bg-secondary), color-mix(in srgb, var(--accent-cyan) 8%, var(--bg-secondary)), var(--bg-secondary));
+    background-size: 220% 100%;
+    animation: forma-skeleton-shimmer 1.4s ease-in-out infinite;
+  }
+
+  .forma-skeleton-heading { width: min(20rem, 55%); height: 2.3rem; }
+  .forma-skeleton-row { width: 100%; height: 5.25rem; }
+
+  .forma-save-status {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.4rem;
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    font-weight: 700;
+  }
+
+  .forma-save-status.is-saved { color: var(--accent-green); }
+  .forma-save-status.is-error { color: var(--danger); }
+  .forma-save-status.is-saving { color: var(--accent-cyan); }
+
+  .forma-sheet-backdrop {
+    position: fixed;
+    z-index: 1195;
+    inset: 0;
+    background: rgb(2 6 23 / 66%);
+    backdrop-filter: blur(8px);
+  }
+
+  .forma-mobile-sheet {
+    position: fixed;
+    z-index: 1200;
+    inset-inline: 0;
+    bottom: 0;
+    max-height: min(88dvh, 44rem);
+    overflow: auto;
+    padding: 0.7rem 1rem calc(1rem + env(safe-area-inset-bottom, 0px));
+    border: 1px solid var(--premium-line);
+    border-bottom: 0;
+    border-radius: 1.35rem 1.35rem 0 0;
+    color: var(--text-primary);
+    background: var(--premium-surface);
+    box-shadow: 0 -22px 60px rgb(0 0 0 / 44%);
+  }
+
+  .forma-sheet-handle {
+    width: 2.5rem;
+    height: 0.25rem;
+    margin: 0 auto 0.7rem;
+    border-radius: 999px;
+    background: var(--border-highlight);
+  }
+
+  .forma-sheet-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .forma-sheet-header h2 { margin: 0; font-size: 1rem; }
+  .forma-sheet-body { min-height: 4rem; }
+
+  .tabular-nums { font-variant-numeric: tabular-nums; }
+
+  @keyframes forma-skeleton-shimmer {
+    0% { background-position: 180% 0; }
+    100% { background-position: -40% 0; }
+  }
+
+  @media (min-width: 900px) {
+    .forma-page-grid:has(> .northline-rail-vertical) {
+      grid-template-columns: minmax(10rem, 15rem) minmax(0, 1fr);
+      align-items: start;
+    }
+
+    .forma-page-grid > .northline-rail-vertical {
+      position: sticky;
+      top: 1.5rem;
+    }
+  }
+
+  @media (max-width: 700px) {
+    .forma-page-header {
+      align-items: stretch;
+      flex-direction: column;
+      gap: 0.65rem;
+      margin-bottom: 0.85rem !important;
+    }
+
+    .forma-page-actions {
+      width: 100%;
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .forma-page-actions > * {
+      flex: 1 1 auto;
+      min-height: 40px;
+      justify-content: center;
+    }
+
+    .forma-page-header h1 {
+      font-size: 1.65rem;
+      letter-spacing: -0.03em;
+    }
+
+    .forma-page-header p {
+      margin-top: 0.25rem;
+      font-size: 0.82rem;
+      line-height: 1.4;
+    }
+
+    .forma-page-frame {
+      padding-top: calc(0.35rem + env(safe-area-inset-top, 0px));
+      padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .forma-skeleton-heading,
+    .forma-skeleton-row { animation: none; }
+    .forma-primary-button,
+    .forma-quiet-action { transition: none; }
+  }
+}
