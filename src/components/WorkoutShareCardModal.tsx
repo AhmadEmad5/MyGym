@@ -1,9 +1,10 @@
 import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Download, Share2, Dumbbell, Trophy, Flame, Clock3, Sparkles, Check, CheckCircle2, Award, Camera } from 'lucide-react';
-import { createPortal } from 'react-dom';
+import { Download, Share2, Dumbbell, Trophy, Flame, Clock3, Sparkles, Check, CheckCircle2, Award, Camera, Trash2, AlertCircle } from 'lucide-react';
 import { useTranslation } from '../lib/i18n';
 import type { WorkoutSession, PersonalRecord } from '../lib/api';
+import { validateClientFile, MAX_IMAGE_UPLOAD_BYTES, ALLOWED_IMAGE_MIME_TYPES } from '../lib/fileValidation';
+import { ModalShell, PrimaryAction, SecondaryAction, StatusCallout } from './AIMealVisionModal';
 
 interface WorkoutShareCardModalProps {
   isOpen: boolean;
@@ -30,6 +31,7 @@ export function WorkoutShareCardModal({
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [workoutPhoto, setWorkoutPhoto] = useState<string | null>(null);
   const [cachedPhotoImg, setCachedPhotoImg] = useState<HTMLImageElement | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!workoutPhoto) {
@@ -39,16 +41,26 @@ export function WorkoutShareCardModal({
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => setCachedPhotoImg(img);
+    img.onerror = () => setPhotoError(isRTL ? 'تعذّر قراءة الصورة المرفقة' : 'Could not read the attached photo');
     img.src = workoutPhoto;
-  }, [workoutPhoto]);
+  }, [workoutPhoto, isRTL]);
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
     if (!file) return;
+    const validation = validateClientFile(file, {
+      maxSizeBytes: MAX_IMAGE_UPLOAD_BYTES,
+      allowedMimeTypes: ALLOWED_IMAGE_MIME_TYPES
+    });
+    if (!validation.valid) {
+      setPhotoError(validation.error ?? null);
+      return;
+    }
+    setPhotoError(null);
     const reader = new FileReader();
-    reader.onload = (event) => {
-      setWorkoutPhoto(event.target?.result as string);
-    };
+    reader.onload = e => setWorkoutPhoto(e.target?.result as string);
+    reader.onerror = () => setPhotoError(isRTL ? 'تعذّرت قراءة الملف' : 'Could not read that file');
     reader.readAsDataURL(file);
   };
 
@@ -484,424 +496,222 @@ export function WorkoutShareCardModal({
     }
   };
 
-  if (!isOpen) return null;
-
-  return createPortal(
-    <AnimatePresence>
-      <div 
-        style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(0, 0, 0, 0.88)',
-          backdropFilter: 'blur(14px)',
-          WebkitBackdropFilter: 'blur(14px)',
-          zIndex: 10002,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '0.85rem',
-          direction: isRTL ? 'rtl' : 'ltr'
-        }}
-        onClick={onClose}
-      >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.94, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.94, y: 20 }}
-          onClick={e => e.stopPropagation()}
+  const aspectSwitch = (
+    <div role="radiogroup" aria-label={isRTL ? 'أبعاد البطاقة' : 'Card aspect ratio'} style={{ display: 'inline-flex', gap: '2px', padding: '2px', borderRadius: '999px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)' }}>
+      {([
+        { value: 'story' as const, label: '9:16' },
+        { value: 'square' as const, label: '1:1' }
+      ]).map(option => (
+        <button
+          key={option.value}
+          type="button"
+          role="radio"
+          aria-checked={aspectRatio === option.value}
+          onClick={() => setAspectRatio(option.value)}
           style={{
-            background: 'var(--bg-secondary, #0c111d)',
-            border: '1px solid rgba(255, 255, 255, 0.14)',
-            borderRadius: '24px',
-            width: '100%',
-            maxWidth: '480px',
-            maxHeight: '94vh',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-            boxShadow: '0 30px 60px -15px rgba(0, 0, 0, 0.9), 0 0 30px rgba(56, 189, 248, 0.15)'
+            padding: '0.25rem 0.6rem',
+            borderRadius: '999px',
+            border: 'none',
+            background: aspectRatio === option.value ? '#facc15' : 'transparent',
+            color: aspectRatio === option.value ? '#0f172a' : 'var(--text-muted)',
+            fontSize: '0.7rem',
+            fontWeight: 850,
+            cursor: 'pointer',
+            minHeight: 28
           }}
         >
-          {/* Header */}
-          <div style={{
-            padding: '1rem 1.25rem',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-              <div style={{
-                padding: '0.45rem',
-                borderRadius: '12px',
-                background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.25), rgba(249, 115, 22, 0.25))',
-                color: '#facc15',
-                display: 'flex'
-              }}>
-                <Sparkles size={20} />
-              </div>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#ffffff' }}>
-                  {t('cinematicStoryCard')}
-                </h3>
-                <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                  {t('cinematicStorySubtitle')}
-                </span>
-              </div>
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+
+  const photoPicker = (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+      <label
+        style={{
+          cursor: 'pointer',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.3rem',
+          padding: '0.35rem 0.6rem',
+          borderRadius: '10px',
+          background: workoutPhoto ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.06)',
+          border: workoutPhoto ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.12)',
+          color: workoutPhoto ? '#38bdf8' : 'var(--text-secondary)',
+          fontSize: '0.72rem',
+          fontWeight: 750,
+          minHeight: 32
+        }}
+      >
+        <Camera size={13} />
+        <span>{workoutPhoto ? (isRTL ? 'تغيير' : 'Change') : (isRTL ? 'صورة' : 'Photo')}</span>
+        <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoUpload} aria-label={isRTL ? 'إرفاق صورة التمرين' : 'Attach workout photo'} />
+      </label>
+      {workoutPhoto && (
+        <button
+          type="button"
+          onClick={() => { setWorkoutPhoto(null); setPhotoError(null); }}
+          aria-label={isRTL ? 'إزالة الصورة' : 'Remove photo'}
+          style={{ background: 'transparent', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', borderRadius: '9px', padding: '0.3rem 0.45rem', cursor: 'pointer', display: 'inline-flex', minHeight: 32, minWidth: 32, alignItems: 'center', justifyContent: 'center' }}
+        >
+          <Trash2 size={13} />
+        </button>
+      )}
+    </span>
+  );
+
+  return (
+    <ModalShell
+      isOpen={isOpen}
+      onClose={onClose}
+      titleId="share-card-title"
+      title={t('cinematicStoryCard')}
+      subtitle={t('cinematicStorySubtitle')}
+      icon={<Sparkles size={19} />}
+      accent="#facc15"
+      maxWidth={480}
+      headerAccessory={
+        <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          {aspectSwitch}
+          {photoPicker}
+        </span>
+      }
+      footer={
+        <>
+          <SecondaryAction onClick={handleDownload} disabled={isGenerating} icon={savedSuccess ? <Check size={16} color="#34d399" /> : <Download size={16} />}>
+            {savedSuccess ? (isRTL ? 'تم الحفظ!' : 'Saved to gallery!') : t('saveToPhotos')}
+          </SecondaryAction>
+          <PrimaryAction onClick={() => void handleShare()} loading={isGenerating} accent="linear-gradient(135deg, #0284c7, #38bdf8)" icon={<Share2 size={16} />}>
+            {isGenerating ? t('sharing') : t('shareToSocial')}
+          </PrimaryAction>
+        </>
+      }
+    >
+      <AnimatePresence>
+        {savedSuccess && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div style={{ background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.2))', border: '1px solid rgba(16, 185, 129, 0.35)', borderRadius: '12px', padding: '0.6rem 0.85rem', display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#34d399', fontSize: '0.8rem', fontWeight: 750 }}>
+              <CheckCircle2 size={15} />
+              <span>{t('saveSuccess')}</span>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
-              {/* Aspect Ratio Toggle (9:16 Story vs 1:1 Post) */}
-              <div className="segmented" style={{ transform: 'scale(0.85)' }}>
-                <button
-                  type="button"
-                  className={aspectRatio === 'story' ? 'active' : ''}
-                  onClick={() => setAspectRatio('story')}
-                >
-                  9:16
-                </button>
-                <button
-                  type="button"
-                  className={aspectRatio === 'square' ? 'active' : ''}
-                  onClick={() => setAspectRatio('square')}
-                >
-                  1:1
-                </button>
-              </div>
+      {photoError && (
+        <StatusCallout tone="error" title={isRTL ? 'الصورة المرفقة غير صالحة' : 'Attached photo rejected'} icon={<AlertCircle size={15} />}>
+          {photoError}
+        </StatusCallout>
+      )}
 
-              {/* Workout Photo / Selfie Upload */}
-              <label style={{
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-                padding: '0.32rem 0.6rem',
-                borderRadius: '10px',
-                background: workoutPhoto ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.06)',
-                border: workoutPhoto ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.12)',
-                color: workoutPhoto ? '#38bdf8' : 'var(--text-secondary)',
-                fontSize: '0.74rem',
-                fontWeight: 700
-              }}>
-                <Camera size={14} />
-                <span>{workoutPhoto ? (isRTL ? 'تغيير الصورة' : 'Change Photo') : (isRTL ? 'إرفاق صورة 📸' : 'Add Photo 📸')}</span>
-                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoUpload} />
-              </label>
+      <div
+        aria-label={isRTL ? 'معاينة بطاقة التمرين' : 'Workout card preview'}
+        style={{
+          width: '100%',
+          maxWidth: aspectRatio === 'story' ? '290px' : '330px',
+          margin: '0 auto',
+          aspectRatio: aspectRatio === 'story' ? '9/16' : '1/1',
+          borderRadius: '24px',
+          background: workoutPhoto
+            ? `linear-gradient(180deg, rgba(6,9,19,0.72) 0%, rgba(6,9,19,0.9) 100%), url(${workoutPhoto}) center/cover no-repeat`
+            : 'linear-gradient(145deg, #060913 0%, #0c1322 50%, #05070e 100%)',
+          border: '1.5px solid rgba(255, 255, 255, 0.14)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.85), 0 0 35px rgba(56, 189, 248, 0.18)',
+          padding: '1.1rem',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
+        <span aria-hidden="true" style={{ position: 'absolute', top: '-40px', insetInlineEnd: '-40px', width: '130px', height: '130px', background: 'radial-gradient(circle, rgba(56, 189, 248, 0.35) 0%, transparent 70%)', filter: 'blur(25px)' }} />
+        <span aria-hidden="true" style={{ position: 'absolute', bottom: '-40px', insetInlineStart: '-40px', width: '130px', height: '130px', background: 'radial-gradient(circle, rgba(139, 92, 246, 0.3) 0%, transparent 70%)', filter: 'blur(25px)' }} />
 
-              {workoutPhoto && (
-                <button
-                  type="button"
-                  onClick={() => setWorkoutPhoto(null)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#ef4444',
-                    fontSize: '0.72rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    padding: '0.2rem 0.4rem'
-                  }}
-                >
-                  {isRTL ? 'إزالة' : 'Remove'}
-                </button>
-              )}
-
-              <button
-                type="button"
-                className="btn-icon btn-ghost"
-                onClick={onClose}
-                style={{ color: 'var(--text-muted)' }}
-              >
-                <X size={20} />
-              </button>
-            </div>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.3rem', gap: '0.4rem' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#38bdf8', fontWeight: 850, fontSize: '0.75rem' }}>
+              <Dumbbell size={13} />
+              <span>FORMA ELITE</span>
+            </span>
+            <span style={{ fontSize: '0.64rem', color: '#94a3b8' }}>{formatDate(new Date(session.date || new Date()), 'd MMM yyyy')}</span>
           </div>
 
-          {/* Success Toast */}
-          <AnimatePresence>
-            {savedSuccess && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                style={{
-                  background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.2))',
-                  borderBottom: '1px solid rgba(16, 185, 129, 0.35)',
-                  padding: '0.65rem 1rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.5rem',
-                  color: '#34d399',
-                  fontSize: '0.82rem',
-                  fontWeight: 750
-                }}
-              >
-                <CheckCircle2 size={16} />
-                <span>{t('saveSuccess')}</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 900, color: '#ffffff', letterSpacing: '-0.02em', lineHeight: 1.25 }}>
+            {tTitle(session.title || 'Daily Workout')}
+          </h4>
+          <span style={{ fontSize: '0.66rem', color: '#facc15', fontWeight: 700 }}>ATHLETE: {userName.toUpperCase()}</span>
+        </div>
 
-          {/* Live Mobile Story Mockup Frame */}
-          <div style={{
-            padding: '1rem 1.25rem',
-            overflowY: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '0.85rem'
-          }}>
-            {/* Story Card Container */}
-            <div style={{
-              width: '100%',
-              maxWidth: aspectRatio === 'story' ? '290px' : '330px',
-              aspectRatio: aspectRatio === 'story' ? '9/16' : '1/1',
-              borderRadius: '24px',
-              background: workoutPhoto 
-                ? `linear-gradient(180deg, rgba(6,9,19,0.72) 0%, rgba(6,9,19,0.9) 100%), url(${workoutPhoto}) center/cover no-repeat`
-                : 'linear-gradient(145deg, #060913 0%, #0c1322 50%, #05070e 100%)',
-              border: '1.5px solid rgba(255, 255, 255, 0.14)',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.85), 0 0 35px rgba(56, 189, 248, 0.18)',
-              padding: '1.15rem',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              position: 'relative',
-              overflow: 'hidden'
-            }}>
-              {/* Top ambient glow */}
-              <div style={{
-                position: 'absolute',
-                top: '-40px',
-                right: '-40px',
-                width: '130px',
-                height: '130px',
-                background: 'radial-gradient(circle, rgba(56, 189, 248, 0.35) 0%, transparent 70%)',
-                filter: 'blur(25px)',
-                pointerEvents: 'none'
-              }} />
+        <div style={{ borderRadius: '16px', background: 'linear-gradient(135deg, rgba(250, 204, 21, 0.12), rgba(56, 189, 248, 0.08))', border: '1.5px solid rgba(250, 204, 21, 0.4)', padding: '0.6rem', textAlign: 'center' }}>
+          <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#facc15', display: 'block' }}>
+            {isRTL ? 'إجمالي الحجم المرفوع' : 'TOTAL VOLUME'}
+          </span>
+          <strong style={{ fontSize: '1.2rem', fontWeight: 950, color: '#ffffff', display: 'block', lineHeight: 1.15 }}>
+            {totalVol >= 1000
+              ? (isRTL ? `رفع ${tonnes} أطنان اليوم` : `Lifted ${tonnes} Tons Today`)
+              : (isRTL ? `رفع ${totalVol.toLocaleString()} كغ` : `Lifted ${totalVol.toLocaleString()} KG`)}
+          </strong>
+          <span style={{ fontSize: '0.6rem', color: '#38bdf8', fontWeight: 700 }}>{totalVol.toLocaleString()} kg total</span>
+        </div>
 
-              {/* Bottom ambient glow */}
-              <div style={{
-                position: 'absolute',
-                bottom: '-40px',
-                left: '-40px',
-                width: '130px',
-                height: '130px',
-                background: 'radial-gradient(circle, rgba(139, 92, 246, 0.3) 0%, transparent 70%)',
-                filter: 'blur(25px)',
-                pointerEvents: 'none'
-              }} />
-
-              {/* Top Brand & Date */}
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#38bdf8', fontWeight: 850, fontSize: '0.78rem' }}>
-                    <Dumbbell size={14} />
-                    <span>FORMA ELITE</span>
-                  </div>
-                  <span style={{ fontSize: '0.66rem', color: '#94a3b8' }}>
-                    {formatDate(new Date(session.date || new Date()), 'd MMM yyyy')}
-                  </span>
-                </div>
-
-                <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: '#ffffff', letterSpacing: '-0.02em', lineHeight: 1.25 }}>
-                  {tTitle(session.title || 'Daily Workout')}
-                </h4>
-                <span style={{ fontSize: '0.68rem', color: '#facc15', fontWeight: 700 }}>
-                  ATHLETE: {userName.toUpperCase()}
-                </span>
-              </div>
-
-              {/* HERO TONNAGE LIFTED BADGE */}
-              <div style={{
-                borderRadius: '16px',
-                background: 'linear-gradient(135deg, rgba(250, 204, 21, 0.12), rgba(56, 189, 248, 0.08))',
-                border: '1.5px solid rgba(250, 204, 21, 0.4)',
-                padding: '0.65rem',
-                textAlign: 'center'
-              }}>
-                <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#facc15', display: 'block', marginBottom: '0.15rem' }}>
-                  {isRTL ? '🏋️‍♂️ إجمالي الحجم المرفوع' : '🏋️‍♂️ TOTAL VOLUME'}
-                </span>
-                <strong style={{
-                  fontSize: '1.25rem',
-                  fontWeight: 950,
-                  color: '#ffffff',
-                  display: 'block',
-                  lineHeight: 1.1
-                }}>
-                  {totalVol >= 1000
-                    ? (isRTL ? `رفع ${tonnes} أطنان اليوم` : `Lifted ${tonnes} Tons Today`)
-                    : (isRTL ? `رفع ${totalVol.toLocaleString()} كغ` : `Lifted ${totalVol.toLocaleString()} KG`)}
-                </strong>
-                <span style={{ fontSize: '0.62rem', color: '#38bdf8', fontWeight: 700 }}>
-                  {totalVol.toLocaleString()} kg total
-                </span>
-              </div>
-
-              {/* PR / Peak Lift Highlight */}
-              <div style={{
-                borderRadius: '12px',
-                background: 'rgba(245, 158, 11, 0.1)',
-                border: '1px solid rgba(250, 204, 21, 0.35)',
-                padding: '0.45rem 0.6rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.45rem'
-              }}>
-                <div style={{
-                  width: '28px',
-                  height: '28px',
-                  borderRadius: '8px',
-                  background: 'rgba(250, 204, 21, 0.2)',
-                  color: '#facc15',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0
-                }}>
-                  <Trophy size={14} />
-                </div>
-                <div style={{ minWidth: 0, flex: 1, textAlign: isRTL ? 'right' : 'left' }}>
-                  <span style={{ display: 'block', fontSize: '0.62rem', color: '#facc15', fontWeight: 800 }}>
-                    {topPR ? (isRTL ? 'رقم قياسي تم تحطيمه! 🔥' : 'PR Record Crushed! 🔥') : (isRTL ? 'أعلى رفعة مسجلة ⚡' : 'Peak Lift Today ⚡')}
-                  </span>
-                  <span style={{ display: 'block', fontSize: '0.72rem', color: '#ffffff', fontWeight: 750, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {topPR 
-                      ? `${tExercise(topPR.exerciseName)}: ${topPR.maxWeight}${topPR.unit}`
-                      : topLifts[0] ? `${tExercise(topLifts[0].name)}: ${topLifts[0].weight}${topLifts[0].unit}` : tTitle(session.title)}
-                  </span>
-                </div>
-              </div>
-
-              {/* 4 Stats Grid */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(2, 1fr)',
-                gap: '0.45rem'
-              }}>
-                <div style={{ padding: '0.45rem', borderRadius: '10px', background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--text-muted)', fontSize: '0.62rem' }}>
-                    <Clock3 size={11} /> <span>{isRTL ? 'المدة' : 'TIME'}</span>
-                  </div>
-                  <strong style={{ fontSize: '0.9rem', color: '#38bdf8' }}>{sessionDuration}m</strong>
-                </div>
-
-                <div style={{ padding: '0.45rem', borderRadius: '10px', background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--text-muted)', fontSize: '0.62rem' }}>
-                    <Flame size={11} /> <span>{isRTL ? 'السعرات' : 'CALORIES'}</span>
-                  </div>
-                  <strong style={{ fontSize: '0.9rem', color: '#f87171' }}>{calories} kcal</strong>
-                </div>
-
-                <div style={{ padding: '0.45rem', borderRadius: '10px', background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--text-muted)', fontSize: '0.62rem' }}>
-                    <CheckCircle2 size={11} /> <span>{isRTL ? 'الجولات' : 'SETS'}</span>
-                  </div>
-                  <strong style={{ fontSize: '0.9rem', color: '#34d399' }}>{completedSets} sets</strong>
-                </div>
-
-                <div style={{ padding: '0.45rem', borderRadius: '10px', background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--text-muted)', fontSize: '0.62rem' }}>
-                    <Award size={11} /> <span>{isRTL ? 'التكرارات' : 'REPS'}</span>
-                  </div>
-                  <strong style={{ fontSize: '0.9rem', color: '#c084fc' }}>{totalReps} reps</strong>
-                </div>
-              </div>
-
-              {/* Top Lifts list preview */}
-              {topLifts.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                  {topLifts.slice(0, aspectRatio === 'story' ? 2 : 1).map((l, idx) => (
-                    <div
-                      key={idx}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '0.3rem 0.55rem',
-                        borderRadius: '8px',
-                        background: 'rgba(255, 255, 255, 0.03)',
-                        border: '1px solid rgba(255, 255, 255, 0.06)',
-                        fontSize: '0.68rem'
-                      }}
-                    >
-                      <span style={{ color: '#cbd5e1', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>
-                        {tExercise(l.name)}
-                      </span>
-                      <strong style={{ color: '#38bdf8' }}>
-                        {l.weight}{l.unit} × {l.reps}
-                      </strong>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Footer text */}
-              <div style={{ textAlign: 'center', marginTop: '0.25rem' }}>
-                <span style={{ fontSize: '0.6rem', color: '#64748b' }}>
-                  FORMA · OWN YOUR MOMENT
-                </span>
-              </div>
-            </div>
-
-            {/* 1-Tap Action Buttons */}
-            <div style={{ display: 'flex', gap: '0.65rem', width: '100%', marginTop: '0.4rem' }}>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={handleDownload}
-                disabled={isGenerating}
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.45rem',
-                  padding: '0.8rem 0.5rem',
-                  fontSize: '0.86rem',
-                  fontWeight: 750,
-                  borderRadius: '14px',
-                  background: 'rgba(255, 255, 255, 0.07)',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                  color: '#ffffff'
-                }}
-              >
-                {savedSuccess ? <Check size={16} color="#34d399" /> : <Download size={16} />}
-                <span>{savedSuccess ? (isRTL ? 'تم الحفظ بنجاح!' : 'Saved to Gallery!') : t('saveToPhotos')}</span>
-              </button>
-
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={handleShare}
-                disabled={isGenerating}
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.45rem',
-                  padding: '0.8rem 0.5rem',
-                  fontSize: '0.86rem',
-                  fontWeight: 850,
-                  borderRadius: '14px',
-                  background: 'linear-gradient(135deg, #0284c7, #38bdf8)',
-                  border: 'none',
-                  color: '#04101e',
-                  boxShadow: '0 8px 20px -4px rgba(56, 189, 248, 0.4)'
-                }}
-              >
-                <Share2 size={16} />
-                <span>{isGenerating ? t('sharing') : t('shareToSocial')}</span>
-              </button>
-            </div>
+        <div style={{ borderRadius: '12px', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(250, 204, 21, 0.35)', padding: '0.45rem 0.6rem', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+          <span aria-hidden="true" style={{ width: 26, height: 26, borderRadius: '8px', background: 'rgba(250, 204, 21, 0.2)', color: '#facc15', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Trophy size={13} />
+          </span>
+          <div style={{ minWidth: 0, flex: 1, textAlign: 'start' }}>
+            <span style={{ display: 'block', fontSize: '0.6rem', color: '#facc15', fontWeight: 800 }}>
+              {topPR ? (isRTL ? 'رقم قياسي محطم!' : 'PR record crushed!') : (isRTL ? 'أعلى رفعة اليوم' : 'Peak lift today')}
+            </span>
+            <span style={{ display: 'block', fontSize: '0.7rem', color: '#ffffff', fontWeight: 750, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {topPR
+                ? `${tExercise(topPR.exerciseName)}: ${topPR.maxWeight}${topPR.unit}`
+                : topLifts[0] ? `${tExercise(topLifts[0].name)}: ${topLifts[0].weight}${topLifts[0].unit}` : tTitle(session.title)}
+            </span>
           </div>
-        </motion.div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.4rem' }}>
+          {([
+            { label: isRTL ? 'المدة' : 'Time', value: `${sessionDuration}m`, icon: <Clock3 size={10} />, color: '#38bdf8' },
+            { label: isRTL ? 'السعرات' : 'Calories', value: `${calories} kcal`, icon: <Flame size={10} />, color: '#f87171' },
+            { label: isRTL ? 'الجولات' : 'Sets', value: `${completedSets} sets`, icon: <CheckCircle2 size={10} />, color: '#34d399' },
+            { label: isRTL ? 'التكرارات' : 'Reps', value: `${totalReps} reps`, icon: <Award size={10} />, color: '#c084fc' }
+          ]).map(tile => (
+            <div key={tile.label} style={{ padding: '0.4rem', borderRadius: '10px', background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--text-muted)', fontSize: '0.6rem' }}>
+                {tile.icon}
+                <span>{tile.label}</span>
+              </div>
+              <strong style={{ fontSize: '0.86rem', color: tile.color, fontVariantNumeric: 'tabular-nums' }}>{tile.value}</strong>
+            </div>
+          ))}
+        </div>
+
+        {topLifts.length > 0 && (
+          <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '0.28rem' }}>
+            {topLifts.slice(0, aspectRatio === 'story' ? 2 : 1).map((lift, idx) => (
+              <li key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', padding: '0.28rem 0.5rem', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.06)', fontSize: '0.66rem' }}>
+                <span style={{ color: '#cbd5e1', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '60%' }}>
+                  {tExercise(lift.name)}
+                </span>
+                <strong style={{ color: '#38bdf8', fontVariantNumeric: 'tabular-nums' }}>{lift.weight}{lift.unit} × {lift.reps}</strong>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div style={{ textAlign: 'center' }}>
+          <span style={{ fontSize: '0.58rem', color: '#64748b' }}>FORMA · OWN YOUR MOMENT</span>
+        </div>
       </div>
-    </AnimatePresence>,
-    document.body
+    </ModalShell>
   );
 }
+

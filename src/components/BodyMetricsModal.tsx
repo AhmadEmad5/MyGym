@@ -1,46 +1,37 @@
-import { useState, useMemo, useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Scale, Plus, Trash2, X, TrendingUp, TrendingDown } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Scale, Plus, Trash2, TrendingUp, TrendingDown, Ruler } from 'lucide-react';
 import { useData } from '../hooks/useData';
 import { useTranslation } from '../lib/i18n';
 import { BodyMetricEntry } from '../lib/api';
+import { ModalShell, InlineNumberField, FieldError, PrimaryAction, SecondaryAction } from './AIMealVisionModal';
 
 interface BodyMetricsModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+interface MetricField {
+  key: 'weight' | 'bodyFat' | 'chest' | 'waist' | 'arms' | 'thighs';
+  labelKey: 'currentWeight' | 'bodyFat' | 'chest' | 'waist' | 'arms' | 'thighs';
+  required?: boolean;
+  max: number;
+}
+
 export function BodyMetricsModal({ isOpen, onClose }: BodyMetricsModalProps) {
   const { data, saveBodyMetric, deleteBodyMetric } = useData();
   const { t, isRTL, formatDate } = useTranslation();
 
-  useEffect(() => {
-    if (!isOpen) return;
-    document.body.classList.add('modal-open');
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.body.classList.remove('modal-open');
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen, onClose]);
-
   const weightUnit = data?.settings?.weightUnit || 'kg';
 
-  const [weightInput, setWeightInput] = useState<string>('');
-  const [bodyFatInput, setBodyFatInput] = useState<string>('');
-  const [chestInput, setChestInput] = useState<string>('');
-  const [waistInput, setWaistInput] = useState<string>('');
-  const [armsInput, setArmsInput] = useState<string>('');
-  const [thighsInput, setThighsInput] = useState<string>('');
+  const [weightInput, setWeightInput] = useState('');
+  const [bodyFatInput, setBodyFatInput] = useState('');
+  const [chestInput, setChestInput] = useState('');
+  const [waistInput, setWaistInput] = useState('');
+  const [armsInput, setArmsInput] = useState('');
+  const [thighsInput, setThighsInput] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [weightError, setWeightError] = useState<string | null>(null);
 
-  // Sort metrics chronologically ascending for chart, descending for list
   const metricsAscending = useMemo(() => {
     return (data?.bodyMetrics || []).slice().sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [data?.bodyMetrics]);
@@ -50,39 +41,70 @@ export function BodyMetricsModal({ isOpen, onClose }: BodyMetricsModalProps) {
 
   const totalDelta = useMemo(() => {
     if (!latestEntry || !firstEntry || metricsAscending.length < 2) return null;
-    const diff = latestEntry.weight - firstEntry.weight;
-    return Math.round(diff * 10) / 10;
+    return Math.round((latestEntry.weight - firstEntry.weight) * 10) / 10;
   }, [latestEntry, firstEntry, metricsAscending.length]);
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const w = parseFloat(weightInput);
-    if (isNaN(w) || w <= 0) return;
+  const advancedFields: MetricField[] = useMemo(() => ([
+    { key: 'chest', labelKey: 'chest', max: 300 },
+    { key: 'waist', labelKey: 'waist', max: 300 },
+    { key: 'arms', labelKey: 'arms', max: 150 },
+    { key: 'thighs', labelKey: 'thighs', max: 200 }
+  ]), []);
 
-    const newEntry: BodyMetricEntry = {
-      id: Date.now().toString(),
-      date: new Date().toISOString(),
-      weight: w,
-      unit: weightUnit,
-      bodyFat: bodyFatInput ? parseFloat(bodyFatInput) : undefined,
-      chest: chestInput ? parseFloat(chestInput) : undefined,
-      waist: waistInput ? parseFloat(waistInput) : undefined,
-      arms: armsInput ? parseFloat(armsInput) : undefined,
-      thighs: thighsInput ? parseFloat(thighsInput) : undefined
-    };
+  const advancedValue: Record<string, string> = {
+    chest: chestInput,
+    waist: waistInput,
+    arms: armsInput,
+    thighs: thighsInput
+  };
+  const advancedSetter: Record<string, (value: string) => void> = {
+    chest: setChestInput,
+    waist: setWaistInput,
+    arms: setArmsInput,
+    thighs: setThighsInput
+  };
 
-    await saveBodyMetric(newEntry);
+  const clearForm = () => {
     setWeightInput('');
     setBodyFatInput('');
     setChestInput('');
     setWaistInput('');
     setArmsInput('');
     setThighsInput('');
+    setWeightError(null);
   };
 
-  if (!isOpen) return null;
+  const handleSave = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const w = Number(weightInput);
+    if (!weightInput || Number.isNaN(w) || w <= 0) {
+      setWeightError(isRTL ? 'أدخل وزناً صالحاً أكبر من صفر' : 'Enter a valid weight above zero');
+      document.getElementById('metric-weight')?.focus();
+      return;
+    }
+    setWeightError(null);
 
-  // Compute SVG chart coordinates
+    const optional = (value: string) => {
+      const n = Number(value);
+      return value && !Number.isNaN(n) && n > 0 ? n : undefined;
+    };
+
+    const newEntry: BodyMetricEntry = {
+      id: Date.now().toString(),
+      date: new Date().toISOString(),
+      weight: w,
+      unit: weightUnit,
+      bodyFat: optional(bodyFatInput),
+      chest: optional(chestInput),
+      waist: optional(waistInput),
+      arms: optional(armsInput),
+      thighs: optional(thighsInput)
+    };
+
+    await saveBodyMetric(newEntry);
+    clearForm();
+  };
+
   const chartPoints = (() => {
     if (metricsAscending.length < 2) return null;
     const weights = metricsAscending.map(m => m.weight);
@@ -95,7 +117,9 @@ export function BodyMetricsModal({ isOpen, onClose }: BodyMetricsModalProps) {
     const padding = 20;
 
     const points = metricsAscending.map((m, idx) => {
-      const x = padding + (idx / (metricsAscending.length - 1)) * (width - 2 * padding);
+      const ratio = idx / (metricsAscending.length - 1);
+      const logical = isRTL ? 1 - ratio : ratio;
+      const x = padding + logical * (width - 2 * padding);
       const y = height - padding - ((m.weight - minW) / range) * (height - 2 * padding);
       return { x, y, weight: m.weight, date: m.date };
     });
@@ -105,290 +129,213 @@ export function BodyMetricsModal({ isOpen, onClose }: BodyMetricsModalProps) {
 
     return { points, pathD, areaD, minW, maxW, width, height };
   })();
+  const summaryCards = [
+    { label: t('currentWeight'), value: latestEntry ? latestEntry.weight : '—', unit: weightUnit, color: 'var(--accent-primary)' },
+    {
+      label: t('totalChange'),
+      value: totalDelta !== null ? `${totalDelta > 0 ? '+' : ''}${totalDelta}` : '—',
+      unit: totalDelta !== null ? weightUnit : '',
+      color: totalDelta === null ? 'var(--text-primary)' : totalDelta < 0 ? '#43dcff' : '#10b981',
+      icon: totalDelta !== null
+        ? totalDelta > 0 ? <TrendingUp size={16} className="text-emerald-400" /> : <TrendingDown size={16} className="text-cyan-400" />
+        : null
+    },
+    ...(latestEntry?.bodyFat
+      ? [{ label: t('bodyFat'), value: `${latestEntry.bodyFat}%`, unit: '', color: '#f59e0b', icon: null }]
+      : [])
+  ];
 
-  return createPortal(
-    <AnimatePresence>
-      <div
-        className="portal-modal-backdrop"
-        style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.82)',
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)',
-          zIndex: 10000,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '0.75rem'
-        }}
-        onClick={onClose}
-      >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 15 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-          className="modal-card"
-          style={{
-            width: '100%',
-            maxWidth: '680px',
-            maxHeight: 'calc(100dvh - env(safe-area-inset-top, 0px) - 20px)',
-            backgroundColor: 'var(--bg-secondary)',
-            borderRadius: 'var(--radius-xl, 22px)',
-            border: '1px solid var(--border-color)',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-            direction: isRTL ? 'rtl' : 'ltr'
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header */}
-          <div
-            style={{
-              padding: '1.25rem 1.5rem',
-              borderBottom: '1px solid var(--border-color)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              backgroundColor: 'var(--bg-tertiary)'
-            }}
+  return (
+    <ModalShell
+      isOpen={isOpen}
+      onClose={onClose}
+      titleId="body-metrics-title"
+      title={t('bodyMetricsTitle')}
+      subtitle={t('bodyMetricsSubtitle')}
+      icon={<Scale size={19} />}
+      accent="#43dcff"
+      maxWidth={680}
+      footer={
+        <>
+          <SecondaryAction onClick={clearForm} fullWidth>{isRTL ? 'مسح' : 'Clear'}</SecondaryAction>
+          <PrimaryAction type="submit" form="body-metric-form" icon={<Plus size={17} />}>
+            {t('saveEntry')}
+          </PrimaryAction>
+        </>
+      }
+    >
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.7rem' }}>
+        {summaryCards.map((card, index) => (
+          <div key={card.label} style={{ padding: '0.85rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block' }}>{card.label}</span>
+            <span style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem', marginTop: '0.2rem' }}>
+              {card.icon}
+              <span style={{ fontSize: '1.4rem', fontWeight: 850, color: card.color, fontVariantNumeric: 'tabular-nums' }}>{card.value}</span>
+              {card.unit && <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{card.unit}</span>}
+            </span>
+            {index === 0 && !latestEntry && <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{isRTL ? 'لم تُسجَّل قياسات بعد' : 'No measurements yet'}</span>}
+          </div>
+        ))}
+      </div>
+
+      {chartPoints && (
+        <figure style={{ margin: 0, padding: '1rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
+          <figcaption style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem', fontSize: '0.82rem' }}>
+            <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{t('weightTrend')}</span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+              {metricsAscending.length} {isRTL ? 'قيمة' : 'entries'}
+            </span>
+          </figcaption>
+          <svg
+            viewBox={`0 0 ${chartPoints.width} ${chartPoints.height}`}
+            style={{ width: '100%', height: 'auto', overflow: 'visible' }}
+            role="img"
+            aria-label={isRTL ? `رسم بياني للوزن من ${chartPoints.minW.toFixed(1)} إلى ${chartPoints.maxW.toFixed(1)} ${weightUnit}` : `Weight chart from ${chartPoints.minW.toFixed(1)} to ${chartPoints.maxW.toFixed(1)} ${weightUnit}`}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div
-                style={{
-                  width: '2.5rem',
-                  height: '2.5rem',
-                  borderRadius: '12px',
-                  background: 'linear-gradient(135deg, rgba(67, 220, 255, 0.2), rgba(133, 92, 255, 0.25))',
-                  border: '1px solid rgba(67, 220, 255, 0.35)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                <Scale className="w-5 h-5" style={{ color: 'var(--accent-primary)' }} />
-              </div>
-              <div>
-                <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>
-                  {t('bodyMetricsTitle')}
-                </h2>
-                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                  {t('bodyMetricsSubtitle')}
-                </p>
-              </div>
-            </div>
+            <defs>
+              <linearGradient id="weightGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--accent-primary, #43dcff)" stopOpacity="0.3" />
+                <stop offset="100%" stopColor="var(--accent-primary, #43dcff)" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            <path d={chartPoints.areaD} fill="url(#weightGrad)" />
+            <path d={chartPoints.pathD} fill="none" stroke="var(--accent-primary, #43dcff)" strokeWidth="2.5" strokeLinecap="round" />
+            {chartPoints.points.map((p, i) => (
+              <circle key={i} cx={p.x} cy={p.y} r="3.5" fill="var(--accent-primary, #43dcff)" stroke="#fff" strokeWidth="1.5" />
+            ))}
+          </svg>
+        </figure>
+      )}
 
-            <button className="btn-icon btn-ghost" onClick={onClose} style={{ padding: '0.4rem' }}>
-              <X className="w-5 h-5" />
-            </button>
+      <form id="body-metric-form" onSubmit={handleSave} noValidate style={{ padding: '1rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: '16px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
+        <h4 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 700 }}>{t('logMeasurement')}</h4>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '0.6rem' }}>
+          <div>
+            <label htmlFor="metric-weight" style={{ display: 'block', fontSize: '0.73rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>
+              {t('currentWeight')} ({weightUnit}) <span aria-hidden="true" style={{ color: '#f87171' }}>*</span>
+            </label>
+            <InlineNumberField
+              id="metric-weight"
+              label=""
+              value={weightInput}
+              onChange={value => { setWeightInput(value); if (weightError) setWeightError(null); }}
+              inputMode="decimal"
+              min={20}
+              max={400}
+              accent="var(--accent-primary)"
+              invalid={Boolean(weightError)}
+              describedBy={weightError ? 'metric-weight-error' : 'metric-weight-hint'}
+              dir="ltr"
+              onEnter={() => document.getElementById('metric-bodyfat')?.focus()}
+            />
+            <span id="metric-weight-hint" style={{ display: 'block', fontSize: '0.65rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '0.2rem' }}>
+              {isRTL ? 'الوزن بعد الصيام' : 'Net weigh-in weight'}
+            </span>
+            {weightError && <FieldError id="metric-weight-error" message={weightError} />}
           </div>
 
-          <div style={{ padding: '1.25rem 1.5rem', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            {/* Quick Metrics Summary Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
-              <div style={{ padding: '1rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>{t('currentWeight')}</span>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem', marginTop: '0.25rem' }}>
-                  <span style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--accent-primary)' }}>
-                    {latestEntry ? latestEntry.weight : '—'}
-                  </span>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{weightUnit}</span>
+          <div>
+            <label htmlFor="metric-bodyfat" style={{ display: 'block', fontSize: '0.73rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>{t('bodyFat')}</label>
+            <InlineNumberField
+              id="metric-bodyfat"
+              label=""
+              value={bodyFatInput}
+              onChange={setBodyFatInput}
+              inputMode="decimal"
+              min={1}
+              max={70}
+              suffix="%"
+              accent="#f59e0b"
+              dir="ltr"
+            />
+          </div>
+        </div>
+
+        <button
+          type="button"
+          aria-expanded={showAdvanced}
+          onClick={() => setShowAdvanced(prev => !prev)}
+          style={{ alignSelf: 'flex-start', background: 'transparent', border: 'none', color: 'var(--accent-primary)', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', minHeight: 30 }}
+        >
+          <Ruler size={12} />
+          {showAdvanced
+            ? (isRTL ? 'إخفاء قياسات المحيطات' : 'Hide circumferences')
+            : (isRTL ? '+ إضافة قياسات المحيطات' : '+ Add circumferences')}
+        </button>
+
+        {showAdvanced && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '0.6rem' }}>
+            {advancedFields.map(field => (
+              <div key={field.key}>
+                <label htmlFor={`metric-${field.key}`} style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
+                  {t(field.labelKey)} ({weightUnit})
+                </label>
+                <InlineNumberField
+                  id={`metric-${field.key}`}
+                  label=""
+                  value={advancedValue[field.key]}
+                  onChange={advancedSetter[field.key]}
+                  inputMode="decimal"
+                  min={1}
+                  max={field.max}
+                  accent="var(--accent-primary)"
+                  dir="ltr"
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </form>
+
+      <section aria-label={t('weightTrend')} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <h4 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-secondary)' }}>{t('weightTrend')}</h4>
+
+        {metricsAscending.length === 0 ? (
+          <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-muted)', textAlign: 'center', padding: '1.25rem', background: 'var(--bg-tertiary)', borderRadius: '14px' }}>
+            {t('noMetricsYet')}
+          </p>
+        ) : (
+          metricsAscending.slice().reverse().map(entry => (
+            <div
+              key={entry.id}
+              style={{
+                padding: '0.7rem 0.9rem',
+                backgroundColor: 'var(--bg-tertiary)',
+                borderRadius: '12px',
+                border: '1px solid var(--border-color)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '0.6rem'
+              }}
+            >
+              <div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.35rem' }}>
+                  <strong style={{ fontSize: '1.05rem', color: 'var(--accent-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                    {entry.weight} {entry.unit}
+                  </strong>
+                  {entry.bodyFat ? (
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>({entry.bodyFat}% fat)</span>
+                  ) : null}
                 </div>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  {formatDate(new Date(entry.date), 'MMM d, yyyy · h:mm a')}
+                </span>
               </div>
 
-              <div style={{ padding: '1rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>{t('totalChange')}</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.25rem' }}>
-                  {totalDelta !== null && (
-                    totalDelta > 0 ? <TrendingUp className="w-4 h-4 text-emerald-400" /> : <TrendingDown className="w-4 h-4 text-cyan-400" />
-                  )}
-                  <span style={{ fontSize: '1.5rem', fontWeight: 800, color: totalDelta === null ? 'var(--text-primary)' : totalDelta < 0 ? '#43dcff' : '#10b981' }}>
-                    {totalDelta !== null ? `${totalDelta > 0 ? '+' : ''}${totalDelta}` : '—'}
-                  </span>
-                  {totalDelta !== null && <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{weightUnit}</span>}
-                </div>
-              </div>
-
-              {latestEntry?.bodyFat && (
-                <div style={{ padding: '1rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>{t('bodyFat')}</span>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem', marginTop: '0.25rem' }}>
-                    <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f59e0b' }}>
-                      {latestEntry.bodyFat}%
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* SVG Weight Progression Trend Chart */}
-            {chartPoints && (
-              <div style={{ padding: '1.25rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                    {t('weightTrend')}
-                  </span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    {metricsAscending.length} entries
-                  </span>
-                </div>
-                <svg viewBox={`0 0 ${chartPoints.width} ${chartPoints.height}`} style={{ width: '100%', height: 'auto', overflow: 'visible' }}>
-                  <defs>
-                    <linearGradient id="weightGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="var(--accent-primary, #43dcff)" stopOpacity="0.3" />
-                      <stop offset="100%" stopColor="var(--accent-primary, #43dcff)" stopOpacity="0.0" />
-                    </linearGradient>
-                  </defs>
-                  <path d={chartPoints.areaD} fill="url(#weightGrad)" />
-                  <path d={chartPoints.pathD} fill="none" stroke="var(--accent-primary, #43dcff)" strokeWidth="2.5" strokeLinecap="round" />
-                  {chartPoints.points.map((p, i) => (
-                    <circle key={i} cx={p.x} cy={p.y} r="3.5" fill="var(--accent-primary, #43dcff)" stroke="#fff" strokeWidth="1.5" />
-                  ))}
-                </svg>
-              </div>
-            )}
-
-            {/* Log Weight Entry Form */}
-            <form onSubmit={handleSave} style={{ padding: '1.25rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
-              <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.95rem', fontWeight: 600 }}>
-                {t('logMeasurement')}
-              </h4>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>
-                    {t('currentWeight')} ({weightUnit}) *
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    className="input"
-                    style={{ width: '100%' }}
-                    placeholder="e.g. 78.5"
-                    value={weightInput}
-                    onChange={e => setWeightInput(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>
-                    {t('bodyFat')}
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    className="input"
-                    style={{ width: '100%' }}
-                    placeholder="e.g. 15.2"
-                    value={bodyFatInput}
-                    onChange={e => setBodyFatInput(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              {/* Toggle extra circumferences */}
               <button
                 type="button"
-                className="btn-ghost"
-                style={{ fontSize: '0.75rem', padding: '0.4rem 0', marginTop: '0.75rem', color: 'var(--accent-primary)' }}
-                onClick={() => setShowAdvanced(!showAdvanced)}
+                onClick={() => void deleteBodyMetric(entry.id)}
+                aria-label={isRTL ? `حذف قياس ${entry.weight} ${entry.unit}` : `Delete ${entry.weight} ${entry.unit} entry`}
+                style={{ padding: '0.4rem', color: 'var(--danger, #ef4444)', background: 'transparent', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '9px', cursor: 'pointer', display: 'inline-flex', flexShrink: 0, minWidth: 38, minHeight: 38, alignItems: 'center', justifyContent: 'center' }}
               >
-                {showAdvanced ? (isRTL ? 'إخفاء قياسات المحيطات' : 'Hide circumferences') : (isRTL ? '+ إضافة قياسات المحيطات (خصر، صدر، ذراعين)' : '+ Add circumferences (waist, chest, arms)')}
+                <Trash2 size={15} />
               </button>
-
-              {showAdvanced && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '0.6rem', marginTop: '0.75rem' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '0.2rem' }}>{t('chest')}</label>
-                    <input type="number" step="0.5" className="input" style={{ width: '100%' }} value={chestInput} onChange={e => setChestInput(e.target.value)} />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '0.2rem' }}>{t('waist')}</label>
-                    <input type="number" step="0.5" className="input" style={{ width: '100%' }} value={waistInput} onChange={e => setWaistInput(e.target.value)} />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '0.2rem' }}>{t('arms')}</label>
-                    <input type="number" step="0.5" className="input" style={{ width: '100%' }} value={armsInput} onChange={e => setArmsInput(e.target.value)} />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '0.2rem' }}>{t('thighs')}</label>
-                    <input type="number" step="0.5" className="input" style={{ width: '100%' }} value={thighsInput} onChange={e => setThighsInput(e.target.value)} />
-                  </div>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                className="btn btn-primary"
-                style={{ width: '100%', marginTop: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
-              >
-                <Plus className="w-4 h-4" />
-                <span>{t('saveEntry')}</span>
-              </button>
-            </form>
-
-            {/* Historical Entries List */}
-            <div>
-              <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                {t('weightTrend')}
-              </h4>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                {metricsAscending.length === 0 ? (
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center', padding: '1rem' }}>
-                    {t('noMetricsYet')}
-                  </p>
-                ) : (
-                  metricsAscending.slice().reverse().map(entry => (
-                    <div
-                      key={entry.id}
-                      style={{
-                        padding: '0.75rem 1rem',
-                        backgroundColor: 'var(--bg-tertiary)',
-                        borderRadius: '12px',
-                        border: '1px solid var(--border-color)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between'
-                      }}
-                    >
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem' }}>
-                          <strong style={{ fontSize: '1.05rem', color: 'var(--accent-primary)' }}>
-                            {entry.weight} {entry.unit}
-                          </strong>
-                          {entry.bodyFat && (
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                              ({entry.bodyFat}% fat)
-                            </span>
-                          )}
-                        </div>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                          {formatDate(new Date(entry.date), 'MMM d, yyyy · h:mm a')}
-                        </span>
-                      </div>
-
-                      <button
-                        type="button"
-                        className="btn-icon btn-ghost"
-                        style={{ padding: '0.3rem', color: 'var(--danger, #ef4444)' }}
-                        onClick={() => deleteBodyMetric(entry.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
             </div>
-          </div>
-        </motion.div>
-      </div>
-    </AnimatePresence>,
-    document.body
+          ))
+        )}
+      </section>
+    </ModalShell>
   );
 }
