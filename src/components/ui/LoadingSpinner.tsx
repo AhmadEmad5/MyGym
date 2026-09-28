@@ -1,41 +1,32 @@
 import { Dumbbell } from 'lucide-react';
+import { cn } from './cn';
 
-export function LoadingSpinner({
-  size = 'md',
-  message
-}: {
-  size?: 'sm' | 'md' | 'lg';
-  message?: string;
-}) {
-  const sizeMap = {
-    sm: 'w-4 h-4',
-    md: 'w-8 h-8',
-    lg: 'w-12 h-12'
-  };
+export type LoadingSpinnerSize = 'sm' | 'md' | 'lg';
 
+const SIZE_CLASS: Record<LoadingSpinnerSize, string> = {
+  sm: 'w-4 h-4',
+  md: 'w-8 h-8',
+  lg: 'w-12 h-12'
+};
+
+export function LoadingSpinner({ size = 'md', message, className }: { size?: LoadingSpinnerSize; message?: string; className?: string }) {
   return (
-    <div className="flex flex-col items-center justify-center p-8 gap-3">
+    <div
+      className={cn('flex flex-col items-center justify-center p-8 gap-3', className)}
+      role="status"
+      aria-live="polite"
+    >
       <div className="relative flex items-center justify-center">
-        <Dumbbell className={`${sizeMap[size]} text-[var(--accent-cyan)] animate-bounce`} />
+        <Dumbbell className={cn(SIZE_CLASS[size], 'animate-bounce')} aria-hidden="true" />
+        <span className="sr-only">Loading</span>
       </div>
       {message && (
-        <span className="text-xs font-semibold text-[var(--text-secondary)] tracking-wide">
-          {message}
-        </span>
+        <span className="text-xs font-semibold text-[var(--text-secondary)] tracking-wide">{message}</span>
       )}
     </div>
   );
 }
 
-export function Skeleton({
-  className = ''
-}: {
-  className?: string;
-}) {
-  return (
-    <div
-      className={`animate-pulse bg-white/[0.07] rounded-lg ${className}`.trim()}
-      aria-hidden="true"
-    />
-  );
+export function Skeleton({ className }: { className?: string }) {
+  return <span className={cn('ui-skeleton block w-full h-4', className)} aria-hidden="true" />;
 }

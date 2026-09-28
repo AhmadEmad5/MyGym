@@ -1,45 +1,74 @@
-/**
- * PageSkeleton:
- * Layout-accurate shimmering skeleton component.
- * Replaces jarring full-screen spinners with a smooth, content-matched preview
- * that eliminates cumulative layout shift (CLS) during async view loading.
- */
+import { motion } from 'framer-motion';
+import { cn } from './cn';
+
+export type PageSkeletonVariant = 'default' | 'cards' | 'calendar' | 'nutrition' | 'rows';
+
 export interface PageSkeletonProps {
-  variant?: 'default' | 'cards' | 'calendar' | 'nutrition';
+  variant?: PageSkeletonVariant;
+  rows?: number;
+  className?: string;
 }
 
-export function PageSkeleton({ variant = 'default' }: PageSkeletonProps = {}) {
-  void variant;
+function Bar({ className }: { className?: string }) {
+  return <span className={cn('ui-skeleton', className)} aria-hidden="true" />;
+}
+
+export function PageSkeleton({ variant = 'default', rows = 4, className }: PageSkeletonProps = {}) {
+  if (variant === 'rows') {
+    return (
+      <div
+        className={cn('w-full flex flex-col gap-3', className)}
+        role="status"
+        aria-busy="true"
+        aria-label="Loading"
+      >
+        <Bar className="h-9 w-[min(20rem,55%)]" />
+        {Array.from({ length: Math.max(0, rows) }, (_, index) => (
+          <Bar key={index} className="h-[5.25rem] w-full" />
+        ))}
+      </div>
+    );
+  }
+
   return (
-    <div className="w-full max-w-[1240px] mx-auto py-6 px-4 sm:px-6 flex flex-col gap-6 animate-pulse" aria-busy="true">
-      {/* Page Header Skeleton */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-2 border-b border-white/[0.06]">
+    <div
+      className={cn(
+        'w-full max-w-[1240px] mx-auto py-6 px-4 sm:px-6 flex flex-col gap-6 animate-pulse',
+        className
+      )}
+      role="status"
+      aria-busy="true"
+      aria-label="Loading"
+    >
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-2 border-b border-[var(--border-subtle)]"
+      >
         <div className="flex flex-col gap-2">
-          <div className="w-24 h-4 rounded-full bg-white/[0.08]" />
-          <div className="w-56 sm:w-72 h-9 rounded-xl bg-white/[0.1]" />
-          <div className="w-72 sm:w-96 h-4 rounded-lg bg-white/[0.05]" />
+          <Bar className="w-24 h-4" />
+          <Bar className="w-56 sm:w-72 h-9" />
+          <Bar className="w-72 sm:w-96 h-4 opacity-70" />
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-28 h-10 rounded-xl bg-white/[0.08]" />
-          <div className="w-32 h-10 rounded-xl bg-white/[0.12]" />
+          <Bar className="w-28 h-10" />
+          <Bar className="w-32 h-10 opacity-80" />
         </div>
-      </div>
+      </motion.div>
 
-      {/* Hero / Top Metrics Row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         {[1, 2, 3, 4].map((i) => (
           <div
             key={i}
             className="p-4 rounded-2xl bg-[var(--surface-card)] border border-[var(--border-card)] flex flex-col gap-2"
           >
-            <div className="w-16 h-3 rounded bg-white/[0.06]" />
-            <div className="w-24 h-7 rounded-lg bg-white/[0.12]" />
-            <div className="w-20 h-2.5 rounded bg-white/[0.04]" />
+            <Bar className="w-16 h-3 opacity-60" />
+            <Bar className="w-24 h-7" />
+            <Bar className="w-20 h-2.5 opacity-50" />
           </div>
         ))}
       </div>
 
-      {/* Main Content Cards Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 flex flex-col gap-4">
           {[1, 2].map((i) => (
@@ -48,24 +77,23 @@ export function PageSkeleton({ variant = 'default' }: PageSkeletonProps = {}) {
               className="p-6 rounded-2xl bg-[var(--surface-card)] border border-[var(--border-card)] flex flex-col gap-4 min-h-[180px]"
             >
               <div className="flex items-center justify-between">
-                <div className="w-40 h-5 rounded-lg bg-white/[0.1]" />
-                <div className="w-20 h-6 rounded-full bg-white/[0.06]" />
+                <Bar className="w-40 h-5" />
+                <Bar className="w-20 h-6 opacity-60" />
               </div>
-              <div className="w-full h-24 rounded-xl bg-white/[0.04]" />
+              <Bar className="w-full h-24 opacity-50" />
               <div className="flex items-center justify-between pt-2">
-                <div className="w-28 h-3 rounded bg-white/[0.05]" />
-                <div className="w-24 h-8 rounded-lg bg-white/[0.08]" />
+                <Bar className="w-28 h-3 opacity-60" />
+                <Bar className="w-24 h-8 opacity-70" />
               </div>
             </div>
           ))}
         </div>
 
-        {/* Sidebar / Secondary Card Column */}
         <div className="flex flex-col gap-4">
           <div className="p-6 rounded-2xl bg-[var(--surface-card)] border border-[var(--border-card)] flex flex-col gap-4 min-h-[260px]">
-            <div className="w-32 h-5 rounded-lg bg-white/[0.1]" />
-            <div className="w-full h-36 rounded-xl bg-white/[0.05]" />
-            <div className="w-full h-9 rounded-xl bg-white/[0.08]" />
+            <Bar className="w-32 h-5" />
+            <Bar className="w-full h-36 opacity-50" />
+            <Bar className="w-full h-9 opacity-70" />
           </div>
         </div>
       </div>

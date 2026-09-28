@@ -1,14 +1,17 @@
 import type { AnchorHTMLAttributes, ReactNode } from 'react';
+import { cn } from '../ui/cn';
 
-interface QuietActionProps extends AnchorHTMLAttributes<HTMLAnchorElement> {
+export interface QuietActionProps extends AnchorHTMLAttributes<HTMLAnchorElement> {
   children: ReactNode;
 }
 
-export function QuietAction({ children, className = '', ...props }: QuietActionProps) {
+export function QuietAction({ children, className, ...props }: QuietActionProps) {
   return (
-    <a className={`forma-quiet-action ${className}`.trim()} {...props}>
+    <a className={cn('forma-quiet-action ui-focus-ring', className)} {...props}>
       <span>{children}</span>
-      <span aria-hidden="true">→</span>
+      <span className="ui-directional-affordance" aria-hidden="true">
+        &rarr;
+      </span>
     </a>
   );
 }
