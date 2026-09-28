@@ -1,12 +1,13 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Flame, X, Plus, Minus, Check, Sparkles } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Check, Flame, Minus, Plus, Sparkles, X } from 'lucide-react';
 import { useTranslation } from '../lib/i18n';
 
-interface WarmupSetItem {
+type Unit = 'kg' | 'lb';
+
+interface WarmupStage {
   id: string;
-  stageName: string;
   percent: number;
   weight: number;
   reps: number;
@@ -20,9 +21,14 @@ interface WarmupCalculatorModalProps {
   onClose: () => void;
   exerciseName: string;
   initialWeight: number;
-  unit: 'kg' | 'lb';
-  onApplyWarmupSets: (warmupSets: { weight: number; repsTarget: number; unit: 'kg' | 'lb'; setType: 'warmup' }[]) => void;
+  unit: Unit;
+  onApplyWarmupSets: (
+    warmupSets: { weight: number; repsTarget: number; unit: Unit; setType: 'warmup' }[]
+  ) => void;
 }
+
+const STEP: Record<Unit, number> = { kg: 5, lb: 10 };
+const BAR_WEIGHT: Record<Unit, number> = { kg: 20, lb: 45 };
 
 export function WarmupCalculatorModal({
   isOpen,
@@ -33,342 +39,300 @@ export function WarmupCalculatorModal({
   onApplyWarmupSets
 }: WarmupCalculatorModalProps) {
   const { t, isRTL, tExercise } = useTranslation();
-  const [workingWeight, setWorkingWeight] = useState<number>(initialWeight > 0 ? initialWeight : 60);
-  const [selectedStages, setSelectedStages] = useState<Record<number, boolean>>({
-    0: true,
-    1: true,
-    2: true,
-    3: true
-  });
+  const [workingWeight, setWorkingWeight] = useState<number>(initialWeight > 0 ? initialWeight : unit === 'kg' ? 60 : 135);
+  const [selectedStages, setSelectedStages] = useState<Record<number, boolean>>({ 0: true, 1: true, 2: true, 3: true });
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const lastFocusedRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    if (initialWeight > 0) {
-      setWorkingWeight(initialWeight);
-    }
+    if (initialWeight > 0) setWorkingWeight(initialWeight);
   }, [initialWeight]);
 
   useEffect(() => {
     if (!isOpen) return;
-    document.body.classList.add('modal-open');
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+    lastFocusedRef.current = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const frame = window.requestAnimationFrame(() => {
+      dialogRef.current?.querySelector<HTMLElement>('[data-autofocus="true"]')?.focus();
+    });
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.stopPropagation();
+        onClose();
+        return;
+      }
+      if (event.key !== 'Tab' || !dialogRef.current) return;
+      const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
-    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', onKeyDown);
     return () => {
-      document.body.classList.remove('modal-open');
-      window.removeEventListener('keydown', handleKeyDown);
+      window.cancelAnimationFrame(frame);
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+      lastFocusedRef.current?.focus?.();
     };
   }, [isOpen, onClose]);
 
-  // Round weight to standard gym increments (2.5 kg or 5 lb)
-  const roundIncrement = (w: number) => {
-    const inc = unit === 'kg' ? 2.5 : 5;
-    return Math.max(inc, Math.round(w / inc) * inc);
-  };
+  const round = useCallback(
+    (value: number) => {
+      const increment = unit === 'kg' ? 2.5 : 5;
+      return Math.max(increment, Math.round(value / increment) * increment);
+    },
+    [unit]
+  );
 
-  const stages: WarmupSetItem[] = useMemo(() => {
-    const barWeight = unit === 'kg' ? 20 : 45;
-    const w = Math.max(barWeight, workingWeight);
-
-    return [
+  const stages: WarmupStage[] = useMemo(() => {
+    const bar = BAR_WEIGHT[unit];
+    const working = Math.max(bar, workingWeight);
+    const definitions: { percent: number; reps: number; restSec: number; en: string; ar: string }[] = [
       {
-        id: 'warmup-1',
-        stageName: isRTL ? 'المرحلة 1: تهيئة المفاصل' : 'Stage 1: Joint Warmup',
         percent: 40,
-        weight: Math.min(barWeight, roundIncrement(w * 0.4)),
         reps: 10,
         restSec: 45,
-        description: isRTL ? 'إحماء المفاصل وتنشيط مسار الحركة بدون أي إجهاد' : 'Joint lubrication & groove motor pattern with zero fatigue',
-        selected: selectedStages[0] ?? true
+        en: 'Joint lubrication & groove the motor pattern with zero fatigue',
+        ar: 'إحماء المفاصل وتنشيط مسار الحركة بدون أي إجهاد'
       },
       {
-        id: 'warmup-2',
-        stageName: isRTL ? 'المرحلة 2: تنشيط عصبي' : 'Stage 2: Muscle Activation',
         percent: 60,
-        weight: roundIncrement(w * 0.6),
         reps: 5,
         restSec: 60,
-        description: isRTL ? 'تنشيط الوحدات الحركية وضخ الدم في العضلات المستهدفة' : 'Recruit motor units and increase muscle blood flow',
-        selected: selectedStages[1] ?? true
+        en: 'Recruit motor units and increase muscle blood flow',
+        ar: 'تنشيط الوحدات الحركية وضخ الدم في العضلات المستهدفة'
       },
       {
-        id: 'warmup-3',
-        stageName: isRTL ? 'المرحلة 3: تهيئة الحمل الثقيل' : 'Stage 3: Heavy Potentiation',
         percent: 78,
-        weight: roundIncrement(w * 0.78),
         reps: 3,
         restSec: 90,
-        description: isRTL ? 'تحفيز الجهاز العصبي المركزي وتجهيز الأوتار للوزن الأساسي' : 'CNS potentiation to prepare tendons for working weight',
-        selected: selectedStages[2] ?? true
+        en: 'CNS potentiation to prepare tendons for the working weight',
+        ar: 'تحفيز الجهاز العصبي المركزي وتجهيز الأوتار للوزن الأساسي'
       },
       {
-        id: 'warmup-4',
-        stageName: isRTL ? 'المرحلة 4: قمة التهيئة' : 'Stage 4: Peak Acclimatization',
         percent: 90,
-        weight: roundIncrement(w * 0.9),
         reps: 1,
         restSec: 120,
-        description: isRTL ? 'تكرار واحد فقط لجعل الوزن الأساسي يشعر بخفة استثنائية' : 'Single rep so working weight feels substantially lighter',
-        selected: selectedStages[3] ?? true
+        en: 'Single rep so the working weight feels substantially lighter',
+        ar: 'تكرار واحد فقط يجعل الوزن الأساسي يشعر بخفة استثنائية'
       }
     ];
-  }, [workingWeight, unit, isRTL, selectedStages]);
+
+    return definitions.map((definition, index) => ({
+      id: `warmup-${index + 1}`,
+      percent: definition.percent,
+      weight: index === 0 ? Math.min(bar, round(working * 0.4)) : round(working * (definition.percent / 100)),
+      reps: definition.reps,
+      restSec: definition.restSec,
+      description: isRTL ? definition.ar : definition.en,
+      selected: selectedStages[index] ?? true
+    }));
+  }, [workingWeight, unit, isRTL, round, selectedStages]);
+
+  const activeStages = stages.filter(stage => stage.selected);
+  const totalVolume = activeStages.reduce((sum, stage) => sum + stage.weight * stage.reps, 0);
+  const totalTime = activeStages.reduce((sum, stage) => sum + stage.reps * 4 + stage.restSec, 0);
 
   const toggleStage = (index: number) => {
-    setSelectedStages(prev => ({
-      ...prev,
-      [index]: !prev[index]
-    }));
+    setSelectedStages(prev => ({ ...prev, [index]: !prev[index] }));
   };
 
   const handleApply = () => {
-    const toApply = stages
-      .filter(s => s.selected)
-      .map(s => ({
-        weight: s.weight,
-        repsTarget: s.reps,
+    if (activeStages.length === 0) return;
+    onApplyWarmupSets(
+      activeStages.map(stage => ({
+        weight: stage.weight,
+        repsTarget: stage.reps,
         unit,
         setType: 'warmup' as const
-      }));
-
-    if (toApply.length > 0) {
-      onApplyWarmupSets(toApply);
-      onClose();
-    }
+      }))
+    );
+    onClose();
   };
 
   if (!isOpen) return null;
 
   return createPortal(
-    <AnimatePresence>
-      <div
-        className="portal-modal-backdrop"
-        style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.82)',
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)',
-          zIndex: 10000,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '0.75rem'
-        }}
-        onClick={onClose}
+    <div className="warmup-calc-backdrop" onClick={onClose} role="presentation">
+      <motion.div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={t('warmupCalculatorTitle')}
+        initial={{ opacity: 0, scale: 0.95, y: 18 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        onClick={event => event.stopPropagation()}
+        className="warmup-calc-dialog"
       >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.94, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.94, y: 20 }}
-          transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-          className="modal-card"
-          style={{
-            width: '100%',
-            maxWidth: '560px',
-            maxHeight: '90vh',
-            backgroundColor: 'var(--bg-secondary)',
-            borderRadius: 'var(--radius-xl, 20px)',
-            border: '1px solid var(--border-color)',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-            direction: isRTL ? 'rtl' : 'ltr'
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header */}
-          <div
-            style={{
-              padding: '1.25rem 1.5rem',
-              borderBottom: '1px solid var(--border-color)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              backgroundColor: 'var(--bg-tertiary)'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div
-                style={{
-                  width: '2.6rem',
-                  height: '2.6rem',
-                  borderRadius: '12px',
-                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(245, 158, 11, 0.25))',
-                  border: '1px solid rgba(239, 68, 68, 0.4)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                <Flame className="w-5 h-5" style={{ color: '#ef4444' }} />
-              </div>
-              <div>
-                <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700 }}>
-                  {t('warmupCalculatorTitle')}
-                </h2>
-                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                  {tExercise(exerciseName)}
-                </p>
-              </div>
+        <header className="warmup-calc-header">
+          <div className="warmup-calc-heading">
+            <span className="warmup-calc-icon" aria-hidden="true">
+              <Flame width={18} height={18} />
+            </span>
+            <div>
+              <h2>{t('warmupCalculatorTitle')}</h2>
+              <p>{tExercise(exerciseName)}</p>
             </div>
+          </div>
+          <button type="button" className="warmup-calc-close" onClick={onClose} aria-label={t('cancel')}>
+            <X width={18} height={18} aria-hidden="true" />
+          </button>
+        </header>
 
-            <button className="btn-icon btn-ghost" onClick={onClose} style={{ padding: '0.4rem' }}>
-              <X className="w-5 h-5" />
+        <div className="warmup-calc-target">
+          <div>
+            <span className="warmup-calc-label">{t('targetWorkingWeight')}</span>
+            <div className="warmup-calc-target-value">
+              <input
+                data-autofocus="true"
+                type="number"
+                inputMode="decimal"
+                min={BAR_WEIGHT[unit]}
+                step={STEP[unit]}
+                value={workingWeight}
+                aria-label={t('targetWorkingWeight')}
+                onChange={event => setWorkingWeight(Number(event.target.value) || BAR_WEIGHT[unit])}
+              />
+              <span>{unit}</span>
+            </div>
+          </div>
+          <div className="warmup-calc-target-steps">
+            <button
+              type="button"
+              onClick={() => setWorkingWeight(prev => Math.max(BAR_WEIGHT[unit], prev - STEP[unit]))}
+              aria-label={`${isRTL ? 'أنقص' : 'Decrease'} ${STEP[unit]} ${unit}`}
+            >
+              <Minus size={16} aria-hidden="true" />
+              <span>-{STEP[unit]}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setWorkingWeight(prev => prev + STEP[unit])}
+              aria-label={`${isRTL ? 'زد' : 'Increase'} ${STEP[unit]} ${unit}`}
+            >
+              <Plus size={16} aria-hidden="true" />
+              <span>+{STEP[unit]}</span>
             </button>
           </div>
+        </div>
 
-          {/* Working Weight Selector */}
-          <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-color)', backgroundColor: 'rgba(0,0,0,0.1)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-              <div>
-                <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                  {t('targetWorkingWeight')}
-                </span>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem', marginTop: '0.2rem' }}>
-                  <span style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--accent-primary)' }}>
-                    {workingWeight}
-                  </span>
-                  <span style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                    {unit}
-                  </span>
-                </div>
-              </div>
+        <div className="warmup-calc-body">
+          <p className="warmup-calc-tip">
+            <Sparkles size={15} aria-hidden="true" />
+            <span>{t('warmupScienceTip')}</span>
+          </p>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <ul className="warmup-calc-stages">
+            {stages.map((stage, index) => (
+              <li key={stage.id}>
                 <button
                   type="button"
-                  className="btn btn-secondary"
-                  style={{ padding: '0.5rem 0.85rem' }}
-                  onClick={() => setWorkingWeight(prev => Math.max(unit === 'kg' ? 20 : 45, prev - (unit === 'kg' ? 5 : 10)))}
+                  className="warmup-calc-stage"
+                  aria-pressed={stage.selected}
+                  onClick={() => toggleStage(index)}
                 >
-                  <Minus size={16} />
-                  <span>{unit === 'kg' ? '-5' : '-10'}</span>
+                  <span className="warmup-calc-stage-check" aria-hidden="true">
+                    {stage.selected && <Check size={13} strokeWidth={3} />}
+                  </span>
+                  <span className="warmup-calc-stage-body">
+                    <span className="warmup-calc-stage-title">
+                      {isRTL ? `المرحلة ${index + 1}` : `Stage ${index + 1}`}
+                      <em>{stage.percent}%</em>
+                    </span>
+                    <span className="warmup-calc-stage-desc">{stage.description}</span>
+                  </span>
+                  <span className="warmup-calc-stage-load">
+                    <strong className="tabular-nums">
+                      {stage.weight} {unit}
+                    </strong>
+                    <span>
+                      {stage.reps} {t('repsWord')}
+                    </span>
+                    <span className="warmup-calc-stage-rest tabular-nums">{stage.restSec}s {isRTL ? 'راحة' : 'rest'}</span>
+                  </span>
                 </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  style={{ padding: '0.5rem 0.85rem' }}
-                  onClick={() => setWorkingWeight(prev => prev + (unit === 'kg' ? 5 : 10))}
-                >
-                  <Plus size={16} />
-                  <span>{unit === 'kg' ? '+5' : '+10'}</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Warmup Stages List */}
-          <div style={{ padding: '1.25rem 1.5rem', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '0.55rem 0.85rem', borderRadius: '10px', border: '1px solid rgba(16, 185, 129, 0.25)' }}>
-              <Sparkles size={16} style={{ flexShrink: 0 }} />
-              <span>{t('warmupScienceTip')}</span>
-            </div>
-
-            {stages.map((stage, idx) => (
-              <div
-                key={stage.id}
-                onClick={() => toggleStage(idx)}
-                style={{
-                  padding: '0.85rem 1rem',
-                  borderRadius: '14px',
-                  backgroundColor: stage.selected ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-tertiary)',
-                  border: `1px solid ${stage.selected ? 'rgba(239, 68, 68, 0.35)' : 'var(--border-color)'}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '0.75rem',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                  <div
-                    style={{
-                      width: '1.8rem',
-                      height: '1.8rem',
-                      borderRadius: '8px',
-                      backgroundColor: stage.selected ? '#ef4444' : 'rgba(255,255,255,0.08)',
-                      border: `1px solid ${stage.selected ? '#ef4444' : 'rgba(255,255,255,0.2)'}`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#fff',
-                      flexShrink: 0
-                    }}
-                  >
-                    {stage.selected && <Check size={14} strokeWidth={3} />}
-                  </div>
-
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                      <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>{stage.stageName}</span>
-                      <span style={{
-                        fontSize: '0.72rem',
-                        fontWeight: 700,
-                        padding: '0.1rem 0.4rem',
-                        borderRadius: '4px',
-                        background: 'rgba(239, 68, 68, 0.15)',
-                        color: '#f87171'
-                      }}>
-                        {stage.percent}%
-                      </span>
-                    </div>
-                    <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.3 }}>
-                      {stage.description}
-                    </p>
-                  </div>
-                </div>
-
-                <div style={{ textAlign: isRTL ? 'left' : 'right', flexShrink: 0 }}>
-                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                    {stage.weight} {unit}
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--accent-primary)', fontWeight: 600 }}>
-                    {stage.reps} {t('repsWord')}
-                  </div>
-                </div>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
 
-          {/* Footer actions */}
-          <div
-            style={{
-              padding: '1rem 1.5rem',
-              borderTop: '1px solid var(--border-color)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '1rem',
-              backgroundColor: 'var(--bg-tertiary)'
-            }}
-          >
+          <div className="warmup-calc-table-wrap">
+            <table className="warmup-calc-table">
+              <caption className="sr-only">{isRTL ? 'جدول جولات الإحماء' : 'Warm-up set table'}</caption>
+              <thead>
+                <tr>
+                  <th scope="col">{isRTL ? 'الجولة' : 'Set'}</th>
+                  <th scope="col">{isRTL ? 'النسبة' : '%'}</th>
+                  <th scope="col">{t('weight')}</th>
+                  <th scope="col">{t('reps')}</th>
+                  <th scope="col">{isRTL ? 'الراحة' : 'Rest'}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {activeStages.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="is-empty">
+                      {isRTL ? 'لم يتم اختيار أي مرحلة' : 'No warm-up stage selected'}
+                    </td>
+                  </tr>
+                ) : (
+                  activeStages.map(stage => (
+                    <tr key={stage.id}>
+                      <th scope="row">{isRTL ? 'إحماء' : 'WU'}</th>
+                      <td className="tabular-nums">{stage.percent}%</td>
+                      <td className="tabular-nums">
+                        {stage.weight} {unit}
+                      </td>
+                      <td className="tabular-nums">{stage.reps}</td>
+                      <td className="tabular-nums">{stage.restSec}s</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <th scope="row" colSpan={2}>
+                    {isRTL ? 'الإجمالي' : 'Total'}
+                  </th>
+                  <td className="tabular-nums">{Math.round(totalVolume)} {unit}</td>
+                  <td className="tabular-nums">{activeStages.reduce((sum, stage) => sum + stage.reps, 0)}</td>
+                  <td className="tabular-nums">~{Math.round(totalTime / 60)}m</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+
+        <footer className="warmup-calc-footer">
+          <span className="warmup-calc-footer-hint">
+            {isRTL ? 'سيتم إدراج الجولات قبل الجولات الأساسية' : 'Sets are inserted before your working sets'}
+          </span>
+          <div className="warmup-calc-footer-actions">
             <button type="button" className="btn btn-ghost" onClick={onClose}>
               {t('cancel')}
             </button>
-
             <button
               type="button"
               className="btn btn-primary"
               onClick={handleApply}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                background: 'linear-gradient(135deg, #ef4444, #f59e0b)',
-                border: 'none',
-                fontWeight: 700
-              }}
+              disabled={activeStages.length === 0}
             >
-              <Flame size={16} />
+              <Flame size={16} aria-hidden="true" />
               <span>{t('applyWarmupSetsBtn')}</span>
             </button>
           </div>
-        </motion.div>
-      </div>
-    </AnimatePresence>,
+        </footer>
+      </motion.div>
+    </div>,
     document.body
   );
 }
