@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useTranslation } from '../lib/i18n';
 import { gymAudio } from '../lib/audio';
 
@@ -10,8 +10,25 @@ interface SegmentedMacroPillProps {
   targetCarbs: number;
   fats: number;
   targetFats: number;
-  totalCalories: number;
-  targetCalories: number;
+  totalCalories?: number;
+  targetCalories?: number;
+  compact?: boolean;
+}
+
+type MacroKey = 'protein' | 'carbs' | 'fats';
+
+const MACRO_STYLE: Record<MacroKey, { color: string; tint: string; label: string; labelAr: string; role: string; roleAr: string }> = {
+  protein: { color: '#06b6d4', tint: 'rgba(6, 182, 212, 0.12)', label: 'Protein', labelAr: 'بروتين', role: 'Build & repair', roleAr: 'بناء وترميم' },
+  carbs: { color: '#f59e0b', tint: 'rgba(245, 158, 11, 0.12)', label: 'Carbs', labelAr: 'كارب', role: 'Fuel & glycogen', roleAr: 'طاقة وجليكوجين' },
+  fats: { color: '#ec4899', tint: 'rgba(236, 72, 153, 0.12)', label: 'Fats', labelAr: 'دهون', role: 'Hormones', roleAr: 'هرمونات' }
+};
+
+const OVER_COLOR = '#f43f5e';
+const NEAR_RATIO = 0.9;
+
+function safeRatio(value: number, target: number) {
+  if (!target || target <= 0) return 0;
+  return value / target;
 }
 
 export function SegmentedMacroPill({
@@ -21,263 +38,241 @@ export function SegmentedMacroPill({
   targetCarbs,
   fats,
   targetFats,
-  totalCalories,
-  targetCalories
+  compact = false
 }: SegmentedMacroPillProps) {
   const { isRTL } = useTranslation();
-  const [selectedMacro, setSelectedMacro] = useState<'protein' | 'carbs' | 'fats' | null>(null);
+  const [selectedMacro, setSelectedMacro] = useState<MacroKey | null>(null);
 
-  // Macro calories contribution: Protein 4kcal/g, Carbs 4kcal/g, Fats 9kcal/g
-  const proteinCals = protein * 4;
-  const carbsCals = carbs * 4;
-  const fatsCals = fats * 9;
-  const macroCalsSum = proteinCals + carbsCals + fatsCals || 1;
+  const rows: { key: MacroKey; value: number; target: number }[] = [
+    { key: 'protein', value: protein, target: targetProtein },
+    { key: 'carbs', value: carbs, target: targetCarbs },
+    { key: 'fats', value: fats, target: targetFats }
+  ];
 
-  // Relative percentages of consumed macros
-  const pShare = (proteinCals / macroCalsSum) * 100;
-  const cShare = (carbsCals / macroCalsSum) * 100;
-  const fShare = (fatsCals / macroCalsSum) * 100;
+  const fills = rows.map(row => Math.min(safeRatio(row.value, row.target), 1));
+  const fillSum = fills.reduce((acc, cur) => acc + cur, 0);
+  const allOver = rows.every((_row, i) => fills[i] >= 1);
+  const totalCapped = fillSum > 1;
+  const scale = totalCapped ? 1 / fillSum : 1;
 
-  // Overall fullness of the pill relative to target calories (capped at 100% for container)
-  const totalPercent = targetCalories > 0 ? Math.min(100, Math.round((totalCalories / targetCalories) * 100)) : 0;
-
-  // Remainder values
-  const remProtein = Math.max(0, targetProtein - protein);
-  const remCarbs = Math.max(0, targetCarbs - carbs);
-  const remFats = Math.max(0, targetFats - fats);
-
-  const handleSelect = (macro: 'protein' | 'carbs' | 'fats') => {
+  const handleSelect = (key: MacroKey) => {
     gymAudio.triggerVibration([10]);
-    setSelectedMacro(prev => prev === macro ? null : macro);
+    setSelectedMacro(prev => (prev === key ? null : key));
   };
 
   return (
-    <div className="segmented-macro-pill-wrapper" style={{ marginTop: '0.85rem', marginBottom: '1.25rem' }}>
-      {/* Top Bar Header with Active Macro Info */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.45rem', minHeight: '24px' }}>
-        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
-          {isRTL ? 'توزيع الماكروز التراكمي' : 'Segmented Macro Distribution'}
-        </span>
-
-        <AnimatePresence mode="wait">
-          {selectedMacro ? (
-            <motion.div
-              key={selectedMacro}
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              style={{
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                color: selectedMacro === 'protein' ? '#06b6d4' : selectedMacro === 'carbs' ? '#f59e0b' : '#ec4899',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.35rem'
-              }}
-            >
-              {selectedMacro === 'protein' && (
-                <span>{isRTL ? `🥩 متبقي للهدف: ${remProtein}g بروتين` : `🥩 Remaining: ${remProtein}g Protein`}</span>
-              )}
-              {selectedMacro === 'carbs' && (
-                <span>{isRTL ? `⚡ متبقي للهدف: ${remCarbs}g كارب` : `⚡ Remaining: ${remCarbs}g Carbs`}</span>
-              )}
-              {selectedMacro === 'fats' && (
-                <span>{isRTL ? `🥑 متبقي للهدف: ${remFats}g دهون` : `🥑 Remaining: ${remFats}g Fats`}</span>
-              )}
-            </motion.div>
-          ) : (
-            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-              {isRTL ? 'المس أي جزء لعرض المتبقي' : 'Tap segment for remaining'}
-            </span>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* The Unified Segmented Capsule Bar */}
+    <div
+      style={{ display: 'flex', flexDirection: 'column', gap: compact ? '0.5rem' : '0.7rem' }}
+      role="group"
+      aria-label={isRTL ? 'توزيع الماكروز مقابل الأهداف' : 'Macro distribution against targets'}
+    >
       <div
         style={{
+          position: 'relative',
           width: '100%',
-          height: '22px',
-          borderRadius: '9999px',
-          backgroundColor: 'rgba(255, 255, 255, 0.06)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          padding: '2px',
+          height: compact ? 14 : 18,
+          borderRadius: '999px',
+          backgroundColor: 'rgba(255, 255, 255, 0.07)',
+          border: '1px solid rgba(255, 255, 255, 0.12)',
           display: 'flex',
+          direction: isRTL ? 'rtl' : 'ltr',
           overflow: 'hidden',
-          boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.3)',
-          cursor: 'pointer'
+          boxShadow: 'inset 0 2px 5px rgba(0, 0, 0, 0.35)'
         }}
       >
-        <div 
-          style={{ 
-            width: `${totalPercent}%`, 
-            height: '100%', 
-            borderRadius: '9999px',
-            display: 'flex',
-            overflow: 'hidden',
-            transition: 'width 0.4s ease'
-          }}
-        >
-          {/* Protein Segment */}
-          {protein > 0 && (
-            <motion.div
-              onClick={() => handleSelect('protein')}
-              whileHover={{ opacity: 1 }}
+        {rows.map((row, index) => {
+          const fill = fills[index];
+          if (fill <= 0) return null;
+          const style = MACRO_STYLE[row.key];
+          const isOver = row.value > row.target && row.target > 0;
+          return (
+            <motion.button
+              key={row.key}
+              type="button"
+              onClick={() => handleSelect(row.key)}
+              whileTap={{ scaleY: 0.9 }}
+              aria-label={`${isRTL ? style.labelAr : style.label}: ${Math.round(row.value)} / ${row.target} g`}
+              title={`${isRTL ? style.labelAr : style.label}: ${Math.round(row.value)}g / ${row.target}g`}
               style={{
-                width: `${pShare}%`,
+                position: 'relative',
+                width: `${fill * scale * 100}%`,
                 height: '100%',
-                backgroundColor: '#06b6d4',
-                opacity: selectedMacro && selectedMacro !== 'protein' ? 0.35 : 1,
-                transition: 'opacity 0.2s ease, width 0.3s ease',
-                position: 'relative'
+                border: 'none',
+                padding: 0,
+                cursor: 'pointer',
+                backgroundColor: isOver ? OVER_COLOR : style.color,
+                opacity: selectedMacro && selectedMacro !== row.key ? 0.35 : 1,
+                transition: 'opacity 0.2s ease',
+                backgroundImage: isOver
+                  ? `repeating-linear-gradient(${isRTL ? -45 : 45}deg, rgba(255,255,255,0.28) 0 3px, transparent 3px 7px)`
+                  : `linear-gradient(${isRTL ? '270deg' : '90deg'}, ${style.color}, ${style.color}dd)`,
+                borderInlineEnd: '1px solid rgba(0, 0, 0, 0.25)'
               }}
-              title={`${isRTL ? 'بروتين' : 'Protein'}: ${protein}g (${Math.round(pShare)}%)`}
             />
-          )}
-
-          {/* Carbs Segment */}
-          {carbs > 0 && (
-            <motion.div
-              onClick={() => handleSelect('carbs')}
-              whileHover={{ opacity: 1 }}
-              style={{
-                width: `${cShare}%`,
-                height: '100%',
-                backgroundColor: '#f59e0b',
-                opacity: selectedMacro && selectedMacro !== 'carbs' ? 0.35 : 1,
-                transition: 'opacity 0.2s ease, width 0.3s ease',
-                position: 'relative'
-              }}
-              title={`${isRTL ? 'كارب' : 'Carbs'}: ${carbs}g (${Math.round(cShare)}%)`}
-            />
-          )}
-
-          {/* Fats Segment */}
-          {fats > 0 && (
-            <motion.div
-              onClick={() => handleSelect('fats')}
-              whileHover={{ opacity: 1 }}
-              style={{
-                width: `${fShare}%`,
-                height: '100%',
-                backgroundColor: '#ec4899',
-                opacity: selectedMacro && selectedMacro !== 'fats' ? 0.35 : 1,
-                transition: 'opacity 0.2s ease, width 0.3s ease',
-                position: 'relative'
-              }}
-              title={`${isRTL ? 'دهون' : 'Fats'}: ${fats}g (${Math.round(fShare)}%)`}
-            />
-          )}
-        </div>
+          );
+        })}
+        {fillSum <= 0 && (
+          <span
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '0.62rem',
+              fontWeight: 700,
+              color: 'var(--text-muted)',
+              pointerEvents: 'none'
+            }}
+          >
+            {isRTL ? 'لم تُسجَّل ماكروز بعد' : 'No macros logged yet'}
+          </span>
+        )}
       </div>
 
-      {/* Interactive 3-Card Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.65rem', marginTop: '0.75rem' }}>
-        {/* Protein Card */}
-        <motion.div
-          onClick={() => handleSelect('protein')}
-          whileHover={{ y: -2 }}
-          whileTap={{ scale: 0.98 }}
-          style={{
-            padding: '0.75rem',
-            background: selectedMacro === 'protein' ? 'rgba(6, 182, 212, 0.15)' : 'var(--bg-tertiary)',
-            borderRadius: '12px',
-            border: selectedMacro === 'protein' ? '1px solid #06b6d4' : '1px solid rgba(6, 182, 212, 0.2)',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: '0.2rem' }}>
-            <span style={{ fontWeight: 700, color: '#06b6d4', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-              <span>🥩</span> {isRTL ? 'البروتين' : 'Protein'}
-            </span>
-            <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
-              {Math.round((protein / (targetProtein || 1)) * 100)}%
-            </span>
-          </div>
-          <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#06b6d4' }}>
-            {protein}<small style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>/{targetProtein}g</small>
-          </div>
-          <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '999px', overflow: 'hidden', marginTop: '0.35rem' }}>
-            <div style={{ width: `${Math.min(100, (protein / (targetProtein || 1)) * 100)}%`, height: '100%', background: '#06b6d4', borderRadius: '999px' }} />
-          </div>
-          <span style={{ fontSize: '0.66rem', color: selectedMacro === 'protein' ? '#06b6d4' : 'var(--text-muted)', display: 'block', marginTop: '0.3rem', fontWeight: 600 }}>
-            {selectedMacro === 'protein' 
-              ? (isRTL ? `متبقي ${remProtein}g` : `${remProtein}g left`) 
-              : (isRTL ? 'بناء وتضخيم الأنسجة' : 'Tissue repair')}
-          </span>
-        </motion.div>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: compact ? '0.4rem' : '0.5rem'
+        }}
+      >
+        {rows.map(row => {
+          const style = MACRO_STYLE[row.key];
+          const ratio = safeRatio(row.value, row.target);
+          const pct = Math.round(ratio * 100);
+          const over = row.target > 0 && row.value > row.target;
+          const reached = row.target > 0 && ratio >= 1;
+          const delta = Math.abs(Math.round(row.value - row.target));
+          const deltaLabel = over
+            ? `${isRTL ? 'تجاوز' : '+'}${delta}g`
+            : `${isRTL ? 'متبقٍ' : 'left'} ${delta}g`;
+          const isSelected = selectedMacro === row.key;
+          const barColor = over ? OVER_COLOR : ratio >= NEAR_RATIO ? style.color : style.color;
 
-        {/* Carbs Card */}
-        <motion.div
-          onClick={() => handleSelect('carbs')}
-          whileHover={{ y: -2 }}
-          whileTap={{ scale: 0.98 }}
-          style={{
-            padding: '0.75rem',
-            background: selectedMacro === 'carbs' ? 'rgba(245, 158, 11, 0.15)' : 'var(--bg-tertiary)',
-            borderRadius: '12px',
-            border: selectedMacro === 'carbs' ? '1px solid #f59e0b' : '1px solid rgba(245, 158, 11, 0.2)',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: '0.2rem' }}>
-            <span style={{ fontWeight: 700, color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-              <span>⚡</span> {isRTL ? 'الكارب' : 'Carbs'}
-            </span>
-            <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
-              {Math.round((carbs / (targetCarbs || 1)) * 100)}%
-            </span>
-          </div>
-          <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f59e0b' }}>
-            {carbs}<small style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>/{targetCarbs}g</small>
-          </div>
-          <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '999px', overflow: 'hidden', marginTop: '0.35rem' }}>
-            <div style={{ width: `${Math.min(100, (carbs / (targetCarbs || 1)) * 100)}%`, height: '100%', background: '#f59e0b', borderRadius: '999px' }} />
-          </div>
-          <span style={{ fontSize: '0.66rem', color: selectedMacro === 'carbs' ? '#f59e0b' : 'var(--text-muted)', display: 'block', marginTop: '0.3rem', fontWeight: 600 }}>
-            {selectedMacro === 'carbs' 
-              ? (isRTL ? `متبقي ${remCarbs}g` : `${remCarbs}g left`) 
-              : (isRTL ? 'طاقة ووقود التمرين' : 'Glycogen & stamina')}
-          </span>
-        </motion.div>
+          return (
+            <motion.button
+              key={row.key}
+              type="button"
+              onClick={() => handleSelect(row.key)}
+              whileTap={{ scale: 0.97 }}
+              aria-pressed={isSelected}
+              style={{
+                padding: compact ? '0.5rem' : '0.6rem',
+                textAlign: 'start',
+                background: isSelected ? style.tint : 'var(--bg-tertiary)',
+                borderRadius: '12px',
+                border: `1px solid ${isSelected || over ? (over ? OVER_COLOR : style.color) : `${style.color}44`}`,
+                cursor: 'pointer',
+                color: 'inherit',
+                minWidth: 0,
+                transition: 'all 0.18s ease'
+              }}
+            >
+              <span
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '0.3rem',
+                  fontSize: compact ? '0.68rem' : '0.72rem',
+                  fontWeight: 800,
+                  color: over ? OVER_COLOR : style.color
+                }}
+              >
+                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {isRTL ? style.labelAr : style.label}
+                </span>
+                <span
+                  style={{
+                    fontVariantNumeric: 'tabular-nums',
+                    color: over ? OVER_COLOR : 'var(--text-secondary)',
+                    fontSize: compact ? '0.64rem' : '0.68rem'
+                  }}
+                >
+                  {pct}%
+                </span>
+              </span>
 
-        {/* Fats Card */}
-        <motion.div
-          onClick={() => handleSelect('fats')}
-          whileHover={{ y: -2 }}
-          whileTap={{ scale: 0.98 }}
-          style={{
-            padding: '0.75rem',
-            background: selectedMacro === 'fats' ? 'rgba(236, 72, 153, 0.15)' : 'var(--bg-tertiary)',
-            borderRadius: '12px',
-            border: selectedMacro === 'fats' ? '1px solid #ec4899' : '1px solid rgba(236, 72, 153, 0.2)',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: '0.2rem' }}>
-            <span style={{ fontWeight: 700, color: '#ec4899', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-              <span>🥑</span> {isRTL ? 'الدهون' : 'Fats'}
-            </span>
-            <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
-              {Math.round((fats / (targetFats || 1)) * 100)}%
-            </span>
-          </div>
-          <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#ec4899' }}>
-            {fats}<small style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>/{targetFats}g</small>
-          </div>
-          <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '999px', overflow: 'hidden', marginTop: '0.35rem' }}>
-            <div style={{ width: `${Math.min(100, (fats / (targetFats || 1)) * 100)}%`, height: '100%', background: '#ec4899', borderRadius: '999px' }} />
-          </div>
-          <span style={{ fontSize: '0.66rem', color: selectedMacro === 'fats' ? '#ec4899' : 'var(--text-muted)', display: 'block', marginTop: '0.3rem', fontWeight: 600 }}>
-            {selectedMacro === 'fats' 
-              ? (isRTL ? `متبقي ${remFats}g` : `${remFats}g left`) 
-              : (isRTL ? 'التوازن الهرموني' : 'Hormonal balance')}
-          </span>
-        </motion.div>
+              <span
+                style={{
+                  display: 'block',
+                  marginTop: '0.15rem',
+                  fontSize: compact ? '0.98rem' : '1.12rem',
+                  fontWeight: 900,
+                  color: over ? OVER_COLOR : 'var(--text-primary)',
+                  fontVariantNumeric: 'tabular-nums',
+                  lineHeight: 1.1,
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {Math.round(row.value)}
+                <span style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                  /{Math.round(row.target)}g
+                </span>
+              </span>
+
+              <span
+                style={{
+                  display: 'block',
+                  marginTop: '0.3rem',
+                  height: 5,
+                  borderRadius: '999px',
+                  backgroundColor: 'rgba(255,255,255,0.08)',
+                  overflow: 'hidden'
+                }}
+                aria-hidden="true"
+              >
+                <motion.span
+                  initial={false}
+                  animate={{ width: `${Math.min(100, ratio * 100)}%` }}
+                  transition={{ type: 'spring', stiffness: 160, damping: 22 }}
+                  style={{
+                    display: 'block',
+                    height: '100%',
+                    borderRadius: '999px',
+                    background: over
+                      ? OVER_COLOR
+                      : `linear-gradient(${isRTL ? '270deg' : '90deg'}, ${barColor}, ${style.color})`
+                  }}
+                />
+              </span>
+
+              <span
+                style={{
+                  display: 'block',
+                  marginTop: '0.28rem',
+                  fontSize: compact ? '0.6rem' : '0.65rem',
+                  fontWeight: 700,
+                  color: over ? OVER_COLOR : reached ? style.color : 'var(--text-muted)',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}
+              >
+                {row.target <= 0
+                  ? isRTL ? 'بدون هدف' : 'No target'
+                  : isSelected || over || reached
+                    ? deltaLabel
+                    : isRTL ? style.roleAr : style.role}
+              </span>
+            </motion.button>
+          );
+        })}
       </div>
+
+      {allOver && (
+        <span
+          style={{
+            fontSize: '0.7rem',
+            fontWeight: 800,
+            color: OVER_COLOR,
+            textAlign: 'center'
+          }}
+        >
+          {isRTL ? 'كل الماكروز تجاوزت أهدافك اليوم' : 'All three macros are over target today'}
+        </span>
+      )}
     </div>
   );
 }
