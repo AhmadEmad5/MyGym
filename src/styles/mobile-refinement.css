@@ -1,9 +1,11 @@
 /* Mobile-first finishing layer. Keep this last in main.tsx so it can refine
    the legacy responsive rules without changing their desktop behavior. */
+
 @media (max-width: 900px) {
   :root {
     --mobile-page-gutter: clamp(0.875rem, 4vw, 1.25rem);
     --mobile-touch-size: 44px;
+    --shell-scroll-offset: 0px;
   }
 
   .app-layout { min-height: 100dvh; }
@@ -11,9 +13,8 @@
 
   .app-layout .content-area {
     padding-inline: var(--mobile-page-gutter);
-    padding-top: calc(62px + env(safe-area-inset-top, 0px) + 0.75rem);
-    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
-    scroll-padding-block: 1rem 7rem;
+    padding-block: calc(var(--shell-topbar-inset) + 0.75rem) calc(max(var(--shell-dock-inset), var(--hud-bottom-offset)) + 1.25rem);
+    scroll-padding-block: 1rem calc(var(--shell-dock-inset) + 1rem);
   }
 
   .app-layout.has-live-bar .mobile-top-bar {
@@ -21,17 +22,39 @@
   }
 
   .app-layout.has-live-bar aside[aria-label="Floating Dynamic Island HUD"] {
-    top: calc(58px + env(safe-area-inset-top, 0px)) !important;
+    inset-block-start: calc(var(--shell-topbar-height) + var(--shell-safe-top) + 0.35rem) !important;
   }
 
   .app-layout.has-live-bar .content-area {
-    padding-top: calc(114px + env(safe-area-inset-top, 0px) + 0.5rem);
+    padding-block-start: calc(var(--shell-livebar-inset) + 0.5rem) !important;
+    padding-block-end: calc(max(var(--hud-bottom-offset), 148px) + 0.75rem) !important;
   }
 
   .mobile-top-bar {
+    inset-block-start: 0 !important;
     background: color-mix(in srgb, var(--bg-primary) 88%, transparent) !important;
     border-color: var(--border-color) !important;
     box-shadow: 0 8px 24px color-mix(in srgb, var(--bg-primary) 24%, transparent) !important;
+  }
+
+  .mobile-top-bar > * {
+    min-width: 0;
+  }
+
+  .mobile-top-brand {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
+  .mobile-brand-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobile-top-center {
+    min-width: 0;
+    overflow: hidden;
   }
 
   .mobile-brand-title,
@@ -43,14 +66,30 @@
 
   .mobile-top-btn,
   .mobile-top-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: 44px !important;
     height: 44px !important;
     min-height: 44px !important;
   }
 
+  .mobile-top-btn {
+    position: relative;
+  }
+
+  .mobile-top-btn .theme-dot-indicator {
+    position: absolute;
+    inset-block-end: 8px;
+    inset-inline-end: 8px;
+  }
+
   .modern-nav-wrapper {
-    bottom: 0 !important;
-    padding: 0 max(0.65rem, env(safe-area-inset-right, 0px)) calc(0.5rem + env(safe-area-inset-bottom, 0px)) max(0.65rem, env(safe-area-inset-left, 0px)) !important;
+    inset-block-end: 0 !important;
+    padding-block: 0 calc(0.5rem + var(--shell-safe-bottom)) !important;
+    padding-inline:
+      max(0.65rem, var(--shell-safe-inline-start))
+      max(0.65rem, var(--shell-safe-inline-end)) !important;
   }
 
   .modern-navbar {
@@ -58,7 +97,8 @@
     max-width: 520px !important;
     height: 74px !important;
     min-height: 74px !important;
-    padding: 0.35rem 0.4rem !important;
+    padding-block: 0.35rem !important;
+    padding-inline: 0.4rem !important;
     border: 1px solid var(--border-highlight) !important;
     border-radius: 24px !important;
     background: color-mix(in srgb, var(--bg-secondary) 96%, transparent) !important;
@@ -75,7 +115,8 @@
     min-height: 64px !important;
     height: 64px !important;
     max-height: none !important;
-    padding: 0.25rem 0.1rem !important;
+    padding-block: 0.25rem !important;
+    padding-inline: 0.1rem !important;
     gap: 0.2rem !important;
     border: 0 !important;
     border-radius: 18px !important;
@@ -121,8 +162,7 @@
   }
 
   .modern-nav-links.mobile-only-nav .nav-icon-badge {
-    top: -2px;
-    right: auto;
+    inset-block-start: -2px;
     inset-inline-end: -3px;
     min-width: 16px;
     height: 16px;
@@ -152,6 +192,10 @@
     color: var(--accent-primary);
   }
 
+  .more-sheet-item-copy small {
+    max-width: 100%;
+  }
+
   .modern-nav-item .nav-short-label {
     max-width: 100%;
     overflow: hidden;
@@ -164,16 +208,17 @@
   }
 
   .modern-nav-item.is-active {
+    color: var(--shell-nav-active) !important;
     background: transparent !important;
   }
 
   .modern-nav-item.is-active .nav-icon-wrap {
-    background: color-mix(in srgb, var(--accent-primary) 16%, var(--bg-tertiary)) !important;
+    background: color-mix(in srgb, var(--shell-nav-active) 18%, var(--bg-tertiary)) !important;
   }
 
   .modern-nav-item.is-active .nav-icon,
   .modern-nav-item.is-active .nav-short-label {
-    color: var(--accent-primary) !important;
+    color: var(--shell-nav-active) !important;
     filter: none !important;
   }
 
@@ -192,7 +237,7 @@
   }
 
   .modern-nav-item:focus-visible {
-    outline: 2px solid var(--accent-primary) !important;
+    outline: 2px solid var(--shell-nav-active) !important;
     outline-offset: -2px;
   }
 
@@ -200,7 +245,8 @@
   .forma-mobile-sheet {
     background: color-mix(in srgb, var(--bg-secondary) 96%, transparent) !important;
     border-color: var(--border-highlight) !important;
-    padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-block-end: calc(1.25rem + var(--shell-safe-bottom)) !important;
+    overscroll-behavior: contain;
   }
 
   .more-sheet-item,
@@ -212,16 +258,14 @@
 
   .more-sheet-item:hover,
   .more-sheet-item.is-active {
-    color: var(--accent-primary) !important;
-    background: color-mix(in srgb, var(--accent-primary) 12%, var(--bg-secondary)) !important;
-    border-color: color-mix(in srgb, var(--accent-primary) 40%, var(--border-color)) !important;
+    color: var(--shell-nav-active) !important;
+    background: color-mix(in srgb, var(--shell-nav-active) 14%, var(--bg-secondary)) !important;
+    border-color: color-mix(in srgb, var(--shell-nav-active) 40%, var(--border-color)) !important;
   }
 
   .forma-mobile-sheet {
     max-height: min(88dvh, 48rem);
     overflow: auto;
-    overscroll-behavior: contain;
-    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px)) !important;
   }
 
   .forma-page-frame,
@@ -233,7 +277,7 @@
 
   .forma-page-frame {
     padding-inline: 0;
-    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+    padding-block-end: calc(max(var(--shell-dock-inset), var(--hud-bottom-offset)) + 2rem);
   }
 
   .forma-page-header h1,
@@ -300,11 +344,11 @@
   }
 
   .session-detail-container {
-    padding-bottom: calc(9rem + env(safe-area-inset-bottom, 0px)) !important;
+    padding-block-end: calc(max(var(--hud-bottom-offset), 9rem) + 1rem) !important;
   }
 
   .session-detail-container .session-header-row {
-    top: env(safe-area-inset-top, 0px);
+    inset-block-start: var(--shell-safe-top);
     backdrop-filter: blur(18px);
   }
 
@@ -332,11 +376,11 @@
     min-height: 48px !important;
   }
 
-  .gym-floor-current-set-card input[type="number"] {
+  .gym-floor-current-set-card input[type='number'] {
     max-width: min(5.5rem, 25vw);
     min-height: 48px;
-    font-variant-numeric: tabular-nums;
     color: var(--text-primary) !important;
+    font-variant-numeric: tabular-nums;
   }
 
   .gym-floor-input-row {
@@ -365,6 +409,94 @@
   }
 }
 
+@media (min-width: 901px) and (max-width: 1023px) and (orientation: portrait) {
+  :root {
+    --tablet-rail-width: 4.5rem;
+  }
+
+  .modern-nav-wrapper {
+    position: fixed !important;
+    inset-block: 0 auto !important;
+    inset-inline: 0 auto !important;
+    inset-inline-end: auto !important;
+    z-index: 1000 !important;
+    display: flex !important;
+    width: var(--tablet-rail-width) !important;
+    padding-block: max(0.6rem, var(--shell-safe-top)) max(0.6rem, var(--shell-safe-bottom)) !important;
+    padding-inline: 0.45rem !important;
+    justify-content: flex-start !important;
+    pointer-events: none !important;
+  }
+
+  .modern-navbar {
+    pointer-events: auto;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    max-height: none !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    gap: 0.5rem !important;
+    padding-block: 0.6rem !important;
+    padding-inline: 0.3rem !important;
+    border-radius: 0 !important;
+    border-start-start-radius: 0 !important;
+    border-end-start-radius: 0 !important;
+    border-start-end-radius: 22px !important;
+    border-end-end-radius: 22px !important;
+  }
+
+  .modern-nav-brand {
+    display: flex !important;
+    margin-inline-end: 0 !important;
+  }
+
+  .modern-nav-brand .brand-text-col,
+  .modern-nav-actions .lang-text,
+  .modern-nav-actions .live-workout-title-truncate {
+    display: none !important;
+  }
+
+  .modern-nav-actions {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.35rem !important;
+    margin-inline-start: 0 !important;
+    padding-block-start: 0.4rem !important;
+    border-block-start: 1px solid var(--border-subtle, rgb(255 255 255 / 8%)) !important;
+  }
+
+  .modern-nav-links.desktop-only-nav {
+    flex-direction: column !important;
+    justify-content: center !important;
+    gap: 0.35rem !important;
+    width: 100% !important;
+  }
+
+  .modern-nav-item {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 50px !important;
+    justify-content: center !important;
+    padding-block: 0.5rem !important;
+    padding-inline: 0.35rem !important;
+  }
+
+  .modern-nav-item .nav-label {
+    display: none !important;
+  }
+
+  .nav-action-pill,
+  .nav-streak-pill {
+    padding-block: 0.5rem !important;
+    padding-inline: 0.6rem !important;
+  }
+
+  .app-layout .main-content {
+    margin-inline-start: var(--tablet-rail-width);
+  }
+}
+
 @media (max-width: 380px) {
   :root { --mobile-page-gutter: 0.8rem; }
 
@@ -388,4 +520,12 @@
 @media (prefers-reduced-motion: reduce) {
   .calendar-page .calendar-workout-card:active,
   .routines-page .routine-card:active { transform: none; }
+
+  .modern-nav-item,
+  .modern-nav-item .nav-icon-wrap { transition: none !important; }
+}
+
+:root[data-motion='reduced'] .modern-nav-item,
+:root[data-motion='reduced'] .modern-nav-item .nav-icon-wrap {
+  transition: none !important;
 }

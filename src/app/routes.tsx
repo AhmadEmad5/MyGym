@@ -21,4 +21,6 @@ export const NAV_ROUTE_PATHS = {
   settings: APP_ROUTES.settings,
 } as const;
 
+export const SESSION_ROUTE_PREFIX = APP_ROUTES.session.slice(0, APP_ROUTES.session.indexOf(':'));
+
 export type AppRouteKey = keyof typeof APP_ROUTES;

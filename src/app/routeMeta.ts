@@ -8,19 +8,23 @@ import {
   Utensils,
 } from 'lucide-react';
 import type { RouteId } from '../types/ui';
-import { NAV_ROUTE_PATHS } from './routes';
+import { APP_ROUTES, NAV_ROUTE_PATHS } from './routes';
+
+export type ShellRouteId = Exclude<RouteId, 'session'>;
+
+export type NavTranslationKey =
+  | 'navToday'
+  | 'navPlan'
+  | 'navRoutines'
+  | 'navNutrition'
+  | 'navPerformance'
+  | 'navSettings';
 
 export interface RouteMeta {
-  id: Exclude<RouteId, 'session'>;
+  id: ShellRouteId;
   to: string;
   icon: LucideIcon;
-  translationKey:
-    | 'navToday'
-    | 'navPlan'
-    | 'navRoutines'
-    | 'navNutrition'
-    | 'navPerformance'
-    | 'navSettings';
+  translationKey: NavTranslationKey;
 }
 
 export const ROUTE_META: RouteMeta[] = [
@@ -32,9 +36,32 @@ export const ROUTE_META: RouteMeta[] = [
   { id: 'settings', to: NAV_ROUTE_PATHS.settings, icon: Settings, translationKey: 'navSettings' },
 ];
 
+export const ROUTE_META_BY_ID: Record<ShellRouteId, RouteMeta> = ROUTE_META.reduce(
+  (accumulator, route) => {
+    accumulator[route.id] = route;
+    return accumulator;
+  },
+  {} as Record<ShellRouteId, RouteMeta>,
+);
+
+const ALIASED_ROUTE_PREFIXES: Partial<Record<ShellRouteId, readonly string[]>> = {
+  plan: [APP_ROUTES.calendar],
+  nutrition: [APP_ROUTES.food],
+};
+
 export function routeIsActive(pathname: string, route: RouteMeta) {
-  if (route.id === 'plan') {
-    return pathname.startsWith('/plan') || pathname.startsWith('/calendar');
-  }
-  return pathname.startsWith(route.to);
+  if (pathname.startsWith(route.to)) return true;
+  const aliases = ALIASED_ROUTE_PREFIXES[route.id];
+  return Boolean(aliases?.some(alias => pathname.startsWith(alias)));
 }
+
+export const NAV_DOCK_TRAIN_ID = 'routines' as const satisfies ShellRouteId;
+
+export const NAV_DOCK_LAYOUT = [
+  'today',
+  'plan',
+  NAV_DOCK_TRAIN_ID,
+  'nutrition',
+] as const satisfies readonly ShellRouteId[];
+
+export const NAV_OVERFLOW_ROUTE_IDS = ['routines', 'performance', 'settings'] as const satisfies readonly ShellRouteId[];

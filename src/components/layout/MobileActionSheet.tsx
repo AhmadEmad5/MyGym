@@ -1,7 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useTranslation } from '../../lib/i18n';
+import { SHEET_SPRING, resolveTransition } from './navMotion';
+import { useMotionEnabled } from './useMotionPreference';
 
 interface MobileActionSheetProps {
   open: boolean;
@@ -10,7 +12,19 @@ interface MobileActionSheetProps {
   children: ReactNode;
 }
 
+const FOCUSABLE_SELECTOR = [
+  'a[href]',
+  'button:not(:disabled)',
+  'input:not(:disabled)',
+  'select:not(:disabled)',
+  'textarea:not(:disabled)',
+  '[tabindex]:not([tabindex="-1"])',
+].join(', ');
+
 export function MobileActionSheet({ open, title, onClose, children }: MobileActionSheetProps) {
+  const { isRTL } = useTranslation();
+  const motionEnabled = useMotionEnabled();
+  const titleId = useId();
   const panelRef = useRef<HTMLElement>(null);
   const closeHandler = useRef(onClose);
   const returnFocusRef = useRef<HTMLElement | null>(null);
@@ -18,6 +32,7 @@ export function MobileActionSheet({ open, title, onClose, children }: MobileActi
 
   useEffect(() => {
     if (!open) return;
+
     returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     panelRef.current?.focus();
 
@@ -28,9 +43,7 @@ export function MobileActionSheet({ open, title, onClose, children }: MobileActi
       }
       if (event.key !== 'Tab' || !panelRef.current) return;
 
-      const focusable = Array.from(panelRef.current.querySelectorAll<HTMLElement>(
-        'a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
-      ));
+      const focusable = Array.from(panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
       if (focusable.length === 0) {
         event.preventDefault();
         panelRef.current.focus();
@@ -65,6 +78,7 @@ export function MobileActionSheet({ open, title, onClose, children }: MobileActi
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={resolveTransition({ duration: 0.18 }, motionEnabled)}
             onClick={onClose}
             aria-hidden="true"
           />
@@ -73,19 +87,24 @@ export function MobileActionSheet({ open, title, onClose, children }: MobileActi
             className="forma-mobile-sheet"
             role="dialog"
             aria-modal="true"
-            aria-labelledby="forma-mobile-sheet-title"
+            aria-labelledby={titleId}
             tabIndex={-1}
-            initial={{ y: '100%' }}
+            initial={motionEnabled ? { y: '100%' } : false}
             animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ type: 'spring', stiffness: 380, damping: 34 }}
-            style={{ willChange: 'transform', transform: 'translateZ(0)' }}
+            exit={motionEnabled ? { y: '100%' } : { opacity: 0 }}
+            transition={resolveTransition(SHEET_SPRING, motionEnabled)}
+            style={motionEnabled ? { willChange: 'transform' } : undefined}
           >
             <div className="forma-sheet-handle" aria-hidden="true" />
             <div className="forma-sheet-header">
-              <h2 id="forma-mobile-sheet-title">{title}</h2>
-              <button type="button" className="btn-icon btn-ghost" onClick={onClose} aria-label="Close">
-                <X width={18} height={18} />
+              <h2 id={titleId}>{title}</h2>
+              <button
+                type="button"
+                className="btn-icon btn-ghost"
+                onClick={onClose}
+                aria-label={isRTL ? 'إغلاق' : 'Close'}
+              >
+                <X width={18} height={18} aria-hidden="true" />
               </button>
             </div>
             <div className="forma-sheet-body">{children}</div>
