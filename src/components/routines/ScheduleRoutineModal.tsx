@@ -22,7 +22,7 @@ type ScheduleRoutineModalProps = {
   isRTL: boolean;
   t: (key: any) => string;
   onClose: () => void;
-  onConfirm: (days: number[], repeatWeeks: number, replaceExisting: boolean) => Promise<void>;
+  onConfirm: (days: number[], repeatWeeks: number, replaceExisting: boolean, scheduleStart: 'thisWeek' | 'nextWeek') => Promise<void>;
   onNotify: (message: string, tone: 'success' | 'error' | 'info' | 'warning') => void;
 };
 
@@ -131,7 +131,7 @@ export function ScheduleRoutineModal({
     submittingRef.current = true;
     setIsScheduling(true);
     try {
-      await onConfirm(sortedDays, repeatWeeks, replaceExisting);
+      await onConfirm(sortedDays, repeatWeeks, replaceExisting, scheduleStart);
       onClose();
     } catch {
       return;

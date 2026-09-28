@@ -41,7 +41,7 @@ import {
   requestNotificationPermission,
   testWorkoutReminderNotification
 } from '../lib/notifications';
-import { Button } from '../components/ui';
+import { Button, SegmentedControl } from '../components/ui';
 import { InlineSaveStatus } from '../components/primitives/InlineSaveStatus';
 import { OnboardingTour } from '../components/OnboardingTour';
 import type { SaveState } from '../types/ui';
@@ -1038,26 +1038,14 @@ function ChoiceRow<T extends string>({
 }) {
   return (
     <SettingRow id={id} icon={icon} title={title} detail={detail} saveState={saveState} isRTL={isRTL}>
-      <SegmentedControl labelId={`${id}-label`} value={value} onChange={onChange} options={options} />
+      <SegmentedControl
+        size="sm"
+        aria-label={title}
+        value={value}
+        onChange={onChange}
+        options={options}
+      />
     </SettingRow>
-  );
-}
-
-function SegmentedControl<T extends string>({ labelId, value, onChange, options }: { labelId: string; value: T; onChange: (next: T) => void; options: Array<{ value: T; label: string }> }) {
-  return (
-    <div role="group" aria-labelledby={labelId} className="segmented flex flex-wrap">
-      {options.map((option) => (
-        <button
-          key={option.value}
-          type="button"
-          aria-pressed={value === option.value}
-          onClick={() => onChange(option.value)}
-          className={value === option.value ? 'active' : ''}
-        >
-          {option.label}
-        </button>
-      ))}
-    </div>
   );
 }
 

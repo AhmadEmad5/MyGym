@@ -14,25 +14,6 @@
     border: 0;
   }
 
-  .forma-skip-link {
-    position: absolute;
-    inset-block-start: -100%;
-    inset-inline-start: 1rem;
-    z-index: 1200;
-    padding: 0.65rem 1rem;
-    border-radius: var(--radius-sm);
-    background: var(--surface-elevated);
-    border: 1px solid var(--accent-cyan);
-    color: var(--text-primary);
-    font-size: 0.82rem;
-    font-weight: 700;
-    text-decoration: none;
-  }
-
-  .forma-skip-link:focus-visible {
-    inset-block-start: 1rem;
-  }
-
   /* ==========================================================================
      Shared widget chrome
      ========================================================================== */

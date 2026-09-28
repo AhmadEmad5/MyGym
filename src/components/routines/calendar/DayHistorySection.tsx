@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check, ChevronDown, Clock, Dumbbell, Flame, RotateCcw, Trophy } from 'lucide-react';
 import type { HistoryRecord, SessionExercise, WorkoutSession } from '../../../lib/api';
+import { estimateWorkoutCalories } from '../../../lib/api';
 import { formatTonnage, targetMusclesText, totalTonnage } from './calendarData';
 
 type DayHistorySectionProps = {
@@ -56,7 +57,7 @@ export function DayHistorySection({
         const isExpanded = Boolean(expanded[record.id]);
         const totalSets = exercises.reduce((sum: number, exercise: SessionExercise) => sum + (exercise.sets?.length || 0), 0);
         const muscles = targetMusclesText(exercises);
-        const burned = record.burnedCalories || 0;
+        const burned = record.burnedCalories || (workout ? estimateWorkoutCalories(workout) : 0);
         const duration = workout?.duration || 45;
         const tonnage = exercises.reduce((sum, exercise) => sum + totalTonnage(exercise.sets), 0);
 

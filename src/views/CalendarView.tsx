@@ -4,6 +4,7 @@ import { addDays, endOfMonth, endOfWeek, format, isSameDay, isSameWeek, startOfM
 import { motion } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { WorkoutSession } from '../lib/api';
+import { estimateWorkoutCalories } from '../lib/api';
 import { useData } from '../hooks/useData';
 import { useTranslation } from '../lib/i18n';
 import { notify } from '../lib/feedback';
@@ -147,6 +148,10 @@ export function CalendarView() {
     () => (data?.meals || []).filter(meal => isSameDay(new Date(meal.date), selectedDay)),
     [data?.meals, selectedDay]
   );
+  const dayCardio = useMemo(
+    () => (data?.insights?.cardioLogs || []).filter(cardio => isSameDay(new Date(cardio.date), selectedDay)),
+    [data?.insights?.cardioLogs, selectedDay]
+  );
 
   const dayNutrition = useMemo(() => {
     const consumed = dayMeals.reduce((sum, meal) => sum + (meal.calories || 0), 0);
@@ -160,9 +165,9 @@ export function CalendarView() {
       carbs,
       fats,
       water: data?.waterLogs?.[dayKey] || 0,
-      burned: dayHistory.reduce((sum, record) => sum + (record.burnedCalories || 0), 0)
+      burned: dayHistory.reduce((sum, record) => sum + (record.burnedCalories || (record.snapshot ? estimateWorkoutCalories(record.snapshot) : 0)), 0) + dayCardio.reduce((sum, cardio) => sum + (cardio.calories || 0), 0)
     };
-  }, [data?.history, data?.waterLogs, dayHistory, dayMeals, selectedDay]);
+  }, [data?.history, data?.insights?.cardioLogs, data?.waterLogs, dayHistory, dayMeals, dayCardio, selectedDay]);
 
   const duplicateIds = useMemo(() => {
     const seen = new Set<string>();

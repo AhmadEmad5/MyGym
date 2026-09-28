@@ -1017,7 +1017,7 @@ function RestHudLayer({ reducedMotion, showCelebration, onDismissCelebration, on
         setSecondsLeft(state.secondsLeft);
         setTotalSeconds(state.totalSeconds);
         setExerciseName(state.exerciseName);
-        setIsPaused(!state.isRunning);
+        setIsPaused(state.isPaused);
         if (state.secondsLeft === 0) onCelebrationShown();
       }
     });
@@ -1119,7 +1119,7 @@ function RestHudLayer({ reducedMotion, showCelebration, onDismissCelebration, on
             <button
               type="button"
               className="session-target session-target-ghost"
-              onClick={() => setIsPaused(prev => !prev)}
+              onClick={() => workoutTimer.togglePause()}
               aria-pressed={isPaused}
               aria-label={isRTL ? (isPaused ? 'متابعة المؤقت' : 'إيقاف المؤقت مؤقتاً') : (isPaused ? 'Resume timer' : 'Pause timer')}
               style={{ minWidth: '48px', minHeight: '48px', padding: 0 }}

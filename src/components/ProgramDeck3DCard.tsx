@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { CSSProperties } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Dumbbell, Layers, Pencil, Trash2 } from 'lucide-react';
+import { useReducedMotion } from './performance/useReducedMotion';
 import type { SessionExercise } from '../lib/api';
 
 export interface PredefinedRoutine {
@@ -34,21 +35,6 @@ interface ProgramDeck3DCardProps {
   isCustom?: boolean;
 }
 
-export function useReducedMotionPreference() {
-  const [reduced, setReduced] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
-    const query = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const sync = () => setReduced(query.matches);
-    sync();
-    query.addEventListener('change', sync);
-    return () => query.removeEventListener('change', sync);
-  }, []);
-
-  return reduced;
-}
-
 export function ProgramDeck3DCard({
   routine,
   onApply,
@@ -58,7 +44,7 @@ export function ProgramDeck3DCard({
   onDelete,
   isCustom = false
 }: ProgramDeck3DCardProps) {
-  const reduceMotion = useReducedMotionPreference();
+  const reduceMotion = useReducedMotion();
   const staticDeck = reduceMotion;
 
   const { exerciseCount, setCount, muscleNames, visibleSessions, hiddenSessions } = useMemo(() => {

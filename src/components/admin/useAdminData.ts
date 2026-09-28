@@ -20,6 +20,7 @@ export function useAdminData(onNotify: (message: string, tone: 'success' | 'erro
   const [athletes, setAthletes] = useState<AthleteSummary[]>([]);
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const mounted = useRef(true);
+  const notifyRef = useRef(onNotify);
 
   useEffect(() => {
     mounted.current = true;
@@ -27,6 +28,10 @@ export function useAdminData(onNotify: (message: string, tone: 'success' | 'erro
       mounted.current = false;
     };
   }, []);
+
+  useEffect(() => {
+    notifyRef.current = onNotify;
+  }, [onNotify]);
 
   const refresh = useCallback(
     async (manual = false) => {
@@ -39,16 +44,16 @@ export function useAdminData(onNotify: (message: string, tone: 'success' | 'erro
         setAthletes(result.athletes);
         setLastSyncedAt(new Date());
         setStatus('ready');
-        if (manual) onNotify('sync-ok', 'success');
+        if (manual) notifyRef.current('sync-ok', 'success');
       } catch (caught) {
         console.error('Error loading admin platform data:', caught);
         if (!mounted.current) return;
         setError(caught instanceof Error ? caught.message : 'unknown');
         setStatus('error');
-        if (manual) onNotify('sync-fail', 'error');
+        if (manual) notifyRef.current('sync-fail', 'error');
       }
     },
-    [onNotify]
+    []
   );
 
   useEffect(() => {

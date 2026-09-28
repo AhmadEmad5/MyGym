@@ -6,6 +6,7 @@ export interface WorkoutTimerState {
   totalSeconds: number;
   exerciseName: string;
   isRunning: boolean;
+  isPaused: boolean;
   showCompleteToast: boolean;
 }
 
@@ -15,6 +16,7 @@ class WorkoutTimerManager {
     totalSeconds: 90,
     exerciseName: '',
     isRunning: false,
+    isPaused: false,
     showCompleteToast: false
   };
 
@@ -46,6 +48,7 @@ class WorkoutTimerManager {
       totalSeconds: validSeconds,
       exerciseName,
       isRunning: true,
+      isPaused: false,
       showCompleteToast: false
     };
     this.notify();
@@ -61,6 +64,7 @@ class WorkoutTimerManager {
 
     // Start 1-second interval ticker
     this.intervalId = setInterval(() => {
+      if (this.state.isPaused) return;
       if (this.state.secondsLeft === null || this.state.secondsLeft <= 0) {
         this.handleComplete(soundAlerts, vibrationAlerts);
       } else {
@@ -117,8 +121,15 @@ class WorkoutTimerManager {
     this.state = {
       ...this.state,
       secondsLeft: null,
-      isRunning: false
+      isRunning: false,
+      isPaused: false
     };
+    this.notify();
+  }
+
+  public togglePause() {
+    if (this.state.secondsLeft === null) return;
+    this.state = { ...this.state, isPaused: !this.state.isPaused };
     this.notify();
   }
 

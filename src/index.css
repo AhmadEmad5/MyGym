@@ -258,33 +258,6 @@ html[dir="rtl"], [dir="rtl"] {
     color: var(--text-primary);
   }
 
-  .skip-link {
-    position: fixed;
-    inset-block-start: calc(var(--safe-top) + var(--space-2xs));
-    inset-inline-start: var(--space-2xs);
-    z-index: var(--z-skip);
-    display: inline-flex;
-    align-items: center;
-    min-height: var(--space-touch-min);
-    padding: 0.6rem 1.1rem;
-    border-radius: var(--radius-full);
-    background: var(--surface-elevated);
-    border: 1px solid var(--border-focus);
-    box-shadow: var(--shadow-lg);
-    color: var(--text-primary);
-    font-size: var(--text-sm);
-    font-weight: 700;
-    text-decoration: none;
-    transform: translateY(calc(-100% - 1.25rem));
-    transition: transform var(--motion-base) var(--ease-out);
-  }
-
-  .skip-link:focus-visible {
-    transform: translateY(0);
-    outline: none;
-    box-shadow: 0 0 0 var(--focus-ring-width) var(--focus-ring-halo), var(--shadow-lg);
-  }
-
   .skip-target:focus {
     outline: none;
   }
@@ -4834,27 +4807,6 @@ body, .content-area, .page-surface, .session-detail-page, .forma-page-frame, .ze
   }
 
 
-
-  /* Home Quick Actions Grid 3-col on Mobile */
-  .home-quick-actions-grid {
-    display: grid !important;
-    grid-template-columns: repeat(3, 1fr) !important;
-    gap: 0.45rem !important;
-  }
-  .quick-action-card-btn {
-    padding: 0.7rem 0.5rem !important;
-    min-height: 76px !important;
-    align-items: center !important;
-    text-align: center !important;
-  }
-  .quick-action-card-btn strong {
-    font-size: 0.76rem !important;
-    line-height: 1.15 !important;
-  }
-  .quick-action-card-btn small {
-    font-size: 0.62rem !important;
-    line-height: 1.1 !important;
-  }
 }
 
 /* Zen Focus Mode Exercise Pills Navigation Bar */

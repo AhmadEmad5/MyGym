@@ -102,8 +102,8 @@
   will-change: auto;
 }
 
-.now-playing-glass[data-paused='true'] .spin-slow,
-.now-playing-pill-glass[data-paused='true'] .spin-slow {
+[data-paused='true'] .spin-slow,
+[data-paused='true'] .music-pulse-play {
   animation-play-state: paused;
 }
 

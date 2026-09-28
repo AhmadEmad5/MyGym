@@ -101,7 +101,6 @@ export function RoutinesView() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [scheduleTarget, setScheduleTarget] = useState<ProgramDraft | null>(null);
   const [scheduleDays, setScheduleDays] = useState<number[]>([]);
-  const [scheduleStart, setScheduleStart] = useState<'thisWeek' | 'nextWeek'>('thisWeek');
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [isMuscleMapOpen, setIsMuscleMapOpen] = useState(false);
@@ -143,7 +142,6 @@ export function RoutinesView() {
   const openScheduling = useCallback((program: ProgramDraft, preselectedDays: number[] = []) => {
     setScheduleTarget(program);
     setScheduleDays(preselectedDays);
-    setScheduleStart('thisWeek');
     setIsScheduleOpen(true);
   }, []);
 
@@ -259,14 +257,14 @@ export function RoutinesView() {
   );
 
   const handleConfirmSchedule = useCallback(
-    async (days: number[], repeatWeeks: number, replaceExisting: boolean) => {
+    async (days: number[], repeatWeeks: number, replaceExisting: boolean, selectedStart: 'thisWeek' | 'nextWeek') => {
       if (!scheduleTarget) return;
       try {
         const sessions = buildProgramSessions({
           program: scheduleTarget,
           days,
           repeatWeeks,
-          scheduleStart
+          scheduleStart: selectedStart
         });
         if (replaceExisting && data) {
           const stale = findReplaceableSessionIds(data.sessions, sessions);
@@ -285,7 +283,7 @@ export function RoutinesView() {
         throw error;
       }
     },
-    [data, deleteSessions, navigate, saveSessions, scheduleStart, scheduleTarget, t]
+    [data, deleteSessions, navigate, saveSessions, scheduleTarget, t]
   );
 
   const handleStartSession = useCallback(
@@ -295,7 +293,7 @@ export function RoutinesView() {
         return;
       }
       const now = new Date();
-      now.setHours(Math.max(now.getHours(), 18), 0, 0, 0);
+      now.setSeconds(0, 0);
       const id = createEntityId('session');
       const session: WorkoutSession = {
         id,

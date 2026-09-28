@@ -22,35 +22,6 @@
     font-family: 'Inter', 'Cairo', system-ui, -apple-system, sans-serif;
   }
 
-  .forma-skip-link {
-    position: absolute;
-    inset-block-start: 0.75rem;
-    inset-inline-start: 50%;
-    z-index: 30;
-    translate: -50% -250%;
-    border-radius: 999px;
-    border: 1px solid var(--border-card);
-    background: var(--surface-elevated);
-    padding: 0.6rem 1.1rem;
-    color: var(--text-primary);
-    font-size: 0.82rem;
-    font-weight: 700;
-    text-decoration: none;
-    transition: translate 0.18s ease;
-  }
-
-  [dir="rtl"] .forma-skip-link {
-    translate: 50% -250%;
-  }
-
-  .forma-skip-link:focus {
-    translate: -50% 0;
-  }
-
-  [dir="rtl"] .forma-skip-link:focus {
-    translate: 50% 0;
-  }
-
   .forma-shell {
     position: relative;
     z-index: 2;

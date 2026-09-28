@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { cn } from './cn';
+import { useReducedMotion } from '../performance/useReducedMotion';
 
 export type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | 'full';
 
@@ -40,6 +41,7 @@ export function Modal({
   className,
   initialFocusRef
 }: ModalProps) {
+  const reducedMotion = useReducedMotion();
   const panelRef = useRef<HTMLDivElement>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
   const generatedId = useId();
@@ -110,10 +112,10 @@ export function Modal({
           <motion.div
             ref={panelRef}
             tabIndex={-1}
-            initial={{ y: '100%', opacity: 0.8 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: '100%', opacity: 0 }}
-            transition={{ type: 'spring', damping: 28, stiffness: 350 }}
+            initial={reducedMotion ? { opacity: 0 } : { y: '100%', opacity: 0.8 }}
+            animate={reducedMotion ? { opacity: 1 } : { y: 0, opacity: 1 }}
+            exit={reducedMotion ? { opacity: 0 } : { y: '100%', opacity: 0 }}
+            transition={reducedMotion ? { duration: 0.15 } : { type: 'spring', damping: 28, stiffness: 350 }}
             style={{ willChange: 'transform, opacity', transform: 'translateZ(0)' }}
             className={cn(
               'relative w-full max-h-[90vh] sm:max-h-[85vh] flex flex-col overflow-hidden z-10',
