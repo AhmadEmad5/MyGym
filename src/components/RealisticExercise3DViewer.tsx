@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import * as THREE from 'three';
 import { 
   Compass, RotateCw, ZoomIn, ZoomOut, 
-  Flame, Maximize2, Activity, Sparkles 
+  Flame, Maximize2, Activity, Sparkles, AlertTriangle, Box 
 } from 'lucide-react';
 import { 
   ExerciseTutorial, 
@@ -11,6 +11,20 @@ import {
   getExerciseBiomechanics 
 } from '../lib/exerciseDatabase';
 import { useTranslation } from '../lib/i18n';
+import { useReducedMotion } from './performance/useReducedMotion';
+
+function detectWebGLSupport(): boolean {
+  if (typeof document === 'undefined') return false;
+  try {
+    const canvas = document.createElement('canvas');
+    return Boolean(
+      window.WebGLRenderingContext
+      && (canvas.getContext('webgl2') || canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))
+    );
+  } catch {
+    return false;
+  }
+}
 
 interface RealisticExercise3DViewerProps {
   tutorial: ExerciseTutorial;
@@ -40,6 +54,10 @@ export function RealisticExercise3DViewer({
   const { t, isRTL } = useTranslation();
   const biomechanics = useMemo(() => getExerciseBiomechanics(tutorial), [tutorial]);
   const containerRef = useRef<HTMLDivElement>(null);
+  const reducedMotion = useReducedMotion();
+
+  const [renderStatus, setRenderStatus] = useState<'loading' | 'ready' | 'unsupported' | 'error'>('loading');
+  const [renderError, setRenderError] = useState<string | null>(null);
 
   // Camera preset view angles
   type CameraViewPreset = 'isometric' | 'side' | 'front' | 'back' | 'top';
@@ -119,6 +137,27 @@ export function RealisticExercise3DViewer({
     const container = containerRef.current;
     if (!container) return;
 
+    if (!detectWebGLSupport()) {
+      setRenderStatus('unsupported');
+      return;
+    }
+
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({
+        antialias: false,
+        alpha: false,
+        powerPreference: 'default'
+      });
+    } catch (error) {
+      setRenderError(error instanceof Error ? error.message : 'WebGL context creation failed');
+      setRenderStatus('error');
+      return;
+    }
+
+    setRenderStatus('loading');
+    setRenderError(null);
+
     const width = container.clientWidth || 600;
     const height = container.clientHeight || 340;
 
@@ -135,20 +174,17 @@ export function RealisticExercise3DViewer({
 
     // 3. Renderer with antialiasing, shadow maps & ACES tonemapping
     const isMobileDevice = typeof window !== 'undefined' && ('ontouchstart' in window || window.innerWidth < 768);
-    const renderer = new THREE.WebGLRenderer({ 
-      antialias: !isMobileDevice, 
-      alpha: false,
-      powerPreference: isMobileDevice ? 'default' : 'high-performance' 
-    });
-    rendererRef.current = renderer;
-    renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobileDevice ? 1.5 : 2));
     renderer.shadowMap.enabled = !isMobileDevice;
     if (!isMobileDevice) {
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     }
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.35;
+    rendererRef.current = renderer;
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobileDevice ? 1.5 : 2));
+    renderer.domElement.setAttribute('aria-hidden', 'true');
+    renderer.domElement.setAttribute('tabindex', '-1');
 
     container.innerHTML = '';
     container.appendChild(renderer.domElement);
@@ -346,6 +382,37 @@ export function RealisticExercise3DViewer({
       requestRenderInternal();
     };
 
+    const onKeyDown = (e: KeyboardEvent) => {
+      const orbit = orbitState.current;
+      const step = 0.18;
+      switch (e.key) {
+        case 'ArrowLeft':
+          orbit.targetTheta += step;
+          break;
+        case 'ArrowRight':
+          orbit.targetTheta -= step;
+          break;
+        case 'ArrowUp':
+          orbit.targetPhi = Math.max(0.12, orbit.targetPhi - step * 0.5);
+          break;
+        case 'ArrowDown':
+          orbit.targetPhi = Math.min(Math.PI / 2.05, orbit.targetPhi + step * 0.5);
+          break;
+        case '+':
+        case '=':
+          orbit.targetRadius = Math.max(1.5, orbit.targetRadius - 0.3);
+          break;
+        case '-':
+        case '_':
+          orbit.targetRadius = Math.min(5.0, orbit.targetRadius + 0.3);
+          break;
+        default:
+          return;
+      }
+      e.preventDefault();
+      requestRenderInternal();
+    };
+
     const domElem = renderer.domElement;
     domElem.addEventListener('mousedown', onPointerDown);
     window.addEventListener('mousemove', onPointerMove);
@@ -355,6 +422,7 @@ export function RealisticExercise3DViewer({
     window.addEventListener('touchmove', onPointerMove, { passive: true });
     window.addEventListener('touchend', onPointerUp);
     domElem.addEventListener('wheel', onWheel, { passive: false });
+    domElem.addEventListener('keydown', onKeyDown);
 
     // 8. Resize Observer
     const resizeObserver = new ResizeObserver((entries) => {
@@ -405,15 +473,24 @@ export function RealisticExercise3DViewer({
       } else {
         isSleeping = true;
         animFrameIdRef.current = null;
+        setRenderStatus('ready');
       }
     };
     animFrameIdRef.current = requestAnimationFrame(renderLoop);
+
+    const onContextLost = (event: Event) => {
+      event.preventDefault();
+      setRenderError('graphics-context-lost');
+      setRenderStatus('error');
+    };
+    renderer.domElement.addEventListener('webglcontextlost', onContextLost);
 
     return () => {
       document.removeEventListener('visibilitychange', onVisibilityChange);
       if (animFrameIdRef.current) cancelAnimationFrame(animFrameIdRef.current);
       resizeObserver.disconnect();
 
+      renderer.domElement.removeEventListener('webglcontextlost', onContextLost);
       domElem.removeEventListener('mousedown', onPointerDown);
       window.removeEventListener('mousemove', onPointerMove);
       window.removeEventListener('mouseup', onPointerUp);
@@ -422,6 +499,7 @@ export function RealisticExercise3DViewer({
       window.removeEventListener('touchmove', onPointerMove);
       window.removeEventListener('touchend', onPointerUp);
       domElem.removeEventListener('wheel', onWheel);
+      domElem.removeEventListener('keydown', onKeyDown);
 
       // Deep GPU VRAM buffer cleanup
       scene.traverse((obj) => {
@@ -487,28 +565,96 @@ export function RealisticExercise3DViewer({
     }
   }, [biomechanics.pattern, repPhase]);
 
+  const isStageBlocked = renderStatus === 'unsupported' || renderStatus === 'error';
+
+  const orbitHint = isRTL
+    ? 'اسحب للدوران، قرّب بإصبعين، أو استخدم مفاتيح الأسهم على لوحة المفاتيح'
+    : 'Drag to orbit, pinch to zoom, or use the arrow keys when the stage is focused';
+
+  const stageLabel = isRTL
+    ? `عارض ثلاثي الأبعاد لتأدية ${tutorial.name}`
+    : `Three-dimensional viewer demonstrating ${tutorial.name}`;
+
   return (
-    <div style={{
-      position: 'relative',
-      width: '100%',
-      height: isFullscreen ? '480px' : '340px',
-      borderRadius: '16px',
-      overflow: 'hidden',
-      border: '1px solid rgba(70, 217, 255, 0.35)',
-      backgroundColor: '#060913',
-      boxShadow: 'inset 0 0 60px rgba(0, 0, 0, 0.92), 0 12px 40px -8px rgba(0, 0, 0, 0.75)',
-      transition: 'height 0.25s ease'
-    }}>
-      {/* Three.js Canvas Container */}
-      <div 
-        ref={containerRef} 
-        style={{ 
-          width: '100%', 
-          height: '100%', 
-          cursor: 'grab',
-          touchAction: 'none'
-        }} 
-      />
+    <div className="forma-3d-shell">
+      <div
+        className="forma-3d-stage"
+        style={{
+          position: 'relative',
+          width: '100%',
+          height: isFullscreen ? '480px' : '340px',
+          borderRadius: '16px',
+          overflow: 'hidden',
+          border: '1px solid var(--premium-line)',
+          backgroundColor: '#060913',
+          boxShadow: 'inset 0 0 60px rgba(0, 0, 0, 0.92)',
+          transition: reducedMotion ? 'none' : 'height 0.25s ease'
+        }}
+      >
+        <div
+          ref={containerRef}
+          role="application"
+          aria-label={stageLabel}
+          tabIndex={isStageBlocked ? -1 : 0}
+          aria-describedby={`${stageLabel}-hint`}
+          style={{
+            width: '100%',
+            height: '100%',
+            cursor: isStageBlocked ? 'default' : 'grab',
+            touchAction: isStageBlocked ? 'auto' : 'none'
+          }}
+        />
+
+        {renderStatus === 'loading' && (
+          <div className="forma-3d-overlay" role="status" aria-live="polite">
+            <div>
+              <Box size={26} aria-hidden="true" style={{ margin: '0 auto 0.6rem' }} />
+              <strong>{isRTL ? 'جارٍ تجهيز النموذج ثلاثي الأبعاد' : 'Preparing the 3D model'}</strong>
+              <span>{isRTL ? 'يتم بناء المشهد الآن…' : 'Building the scene now…'}</span>
+            </div>
+          </div>
+        )}
+
+        {renderStatus === 'unsupported' && (
+          <div className="forma-3d-overlay" role="status">
+            <div>
+              <AlertTriangle size={26} aria-hidden="true" style={{ margin: '0 auto 0.6rem', color: 'var(--warning)' }} />
+              <strong>{isRTL ? 'العرض ثلاثي الأبعاد غير متاح' : '3D rendering is unavailable'}</strong>
+              <span>
+                {isRTL
+                  ? 'هذا الجهاز لا يدعم WebGL. يمكنك متابعة التمرين بلوحة الإرشاد النصي أعلى.'
+                  : 'This device does not support WebGL. You can still follow the written form guide above.'}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {renderStatus === 'error' && (
+          <div className="forma-3d-overlay" role="alert">
+            <div>
+              <AlertTriangle size={26} aria-hidden="true" style={{ margin: '0 auto 0.6rem', color: 'var(--danger)' }} />
+              <strong>{isRTL ? 'تعذر تشغيل المشهد ثلاثي الأبعاد' : 'The 3D scene could not start'}</strong>
+              <span>
+                {isRTL
+                  ? 'حدث خطأ في رسوميات الجهاز. بقية التمرين تعمل بشكل طبيعي.'
+                  : 'A graphics error occurred. The rest of the session keeps working normally.'}
+              </span>
+              {renderError && <span className="forma-sr-only">{renderError}</span>}
+              <button
+                type="button"
+                className="forma-3d-chip"
+                style={{ marginBlockStart: '0.75rem' }}
+                onClick={() => {
+                  setRenderStatus('loading');
+                  setRenderError(null);
+                  window.location.reload();
+                }}
+              >
+                {isRTL ? 'إعادة المحاولة' : 'Try again'}
+              </button>
+            </div>
+          </div>
+        )}
 
       {/* Top Floating Overlay: Camera Preset Angles */}
       <div style={{
@@ -524,7 +670,9 @@ export function RealisticExercise3DViewer({
         border: '1px solid rgba(255, 255, 255, 0.14)',
         padding: '0.25rem',
         borderRadius: '10px',
-        zIndex: 5
+        zIndex: 5,
+        opacity: isStageBlocked ? 0 : 1,
+        pointerEvents: isStageBlocked ? 'none' : 'auto'
       }}>
         {([
           { id: 'isometric', label: t('view3D') },
@@ -563,7 +711,9 @@ export function RealisticExercise3DViewer({
         display: 'flex',
         alignItems: 'center',
         gap: '0.35rem',
-        zIndex: 5
+        zIndex: 5,
+        opacity: isStageBlocked ? 0 : 1,
+        pointerEvents: isStageBlocked ? 'none' : 'auto'
       }}>
         {/* Style Mode Switcher: Titanium vs Cyber Hologram */}
         <button
@@ -761,27 +911,30 @@ export function RealisticExercise3DViewer({
       )}
 
       {/* Bottom Floating Hint: 360° Interaction prompt */}
-      <div style={{
-        position: 'absolute',
-        bottom: '8px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.45rem',
-        padding: '0.22rem 0.75rem',
-        borderRadius: '999px',
-        background: 'rgba(5, 9, 18, 0.88)',
-        backdropFilter: 'blur(10px)',
-        border: '1px solid rgba(255, 255, 255, 0.12)',
-        fontSize: '0.7rem',
-        color: 'var(--text-muted)',
-        pointerEvents: 'none',
-        whiteSpace: 'nowrap',
-        zIndex: 5
-      }}>
-        <Compass size={13} style={{ color: '#46d9ff' }} />
-        <span>{t('orbitControlsHint')}</span>
+      <div
+        id={`${stageLabel}-hint`}
+        style={{
+          position: 'absolute',
+          bottom: '8px',
+          insetInlineStart: '50%',
+          transform: 'translateX(-50%)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.45rem',
+          padding: '0.22rem 0.75rem',
+          borderRadius: '999px',
+          background: 'rgba(5, 9, 18, 0.88)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255, 255, 255, 0.12)',
+          fontSize: '0.7rem',
+          color: 'var(--text-muted)',
+          pointerEvents: 'none',
+          whiteSpace: 'nowrap',
+          zIndex: 5
+        }}
+      >
+        <Compass size={13} style={{ color: '#46d9ff' }} aria-hidden="true" />
+        <span>{orbitHint}</span>
       </div>
 
       {/* Muscle Heatmap Active Badge */}
@@ -805,10 +958,18 @@ export function RealisticExercise3DViewer({
           pointerEvents: 'none',
           zIndex: 5
         }}>
-          <Flame size={13} />
+          <Flame size={13} aria-hidden="true" />
           <span>{isRTL ? 'توهج الانقباض 3D' : '3D Muscle Heatmap'}</span>
         </div>
       )}
+      </div>
+
+      <p className="forma-figure-caption">
+        {isRTL
+          ? `التمرين الحالي: ${phaseTitle || ''}. ${phaseCue || ''} ${breathCue || ''}`.trim()
+          : `Current phase: ${phaseTitle || ''}. ${phaseCue || ''} ${breathCue || ''}`.trim()}
+        {showAngles && ` ${isRTL ? `زاوية المفصل ${currentJointAngle} درجة.` : `Joint angle ${currentJointAngle} degrees.`}`}
+      </p>
     </div>
   );
 }

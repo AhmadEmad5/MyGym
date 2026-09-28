@@ -1,10 +1,11 @@
 import React from 'react';
-import { 
-  Play, Pause, RotateCcw, Wind, Flame, Info, Box, 
+import {
+  Play, Pause, RotateCcw, Wind, Flame, Info, Box,
   ChevronRight, Compass
 } from 'lucide-react';
 import { ExerciseTutorial, BiomechanicalProfile } from '../lib/exerciseDatabase';
 import { useTranslation } from '../lib/i18n';
+import { useReducedMotion } from './performance/useReducedMotion';
 
 interface PhaseInfo {
   key: string;
@@ -58,6 +59,7 @@ export function ExerciseMotionHeroCard({
   childrenFigure
 }: ExerciseMotionHeroCardProps) {
   const { t, isRTL } = useTranslation();
+  const reducedMotion = useReducedMotion();
 
   return (
     <div style={{
@@ -341,13 +343,14 @@ export function ExerciseMotionHeroCard({
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: '0.75rem',
-        fontSize: '0.82rem'
+        fontSize: '0.82rem',
+        transition: reducedMotion ? 'none' : 'background-color 0.25s ease, border-color 0.25s ease'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', color: 'var(--text-secondary)' }}>
-          <Info size={16} style={{ color: '#46d9ff', flexShrink: 0 }} />
+          <Info size={16} style={{ color: '#46d9ff', flexShrink: 0 }} aria-hidden="true" />
           <span>{phaseInfo.desc}</span>
         </div>
-        <span style={{ color: '#10b981', fontWeight: 800, fontSize: '0.76rem', whiteSpace: 'nowrap' }}>
+        <span className="tabular-nums" style={{ color: '#10b981', fontWeight: 800, fontSize: '0.76rem', whiteSpace: 'nowrap' }}>
           {Math.round(progress * 100)}%
         </span>
       </div>
@@ -366,20 +369,25 @@ export function ExerciseMotionHeroCard({
             {repPhase > 0.85 ? (isRTL ? 'أقصى انقباض' : 'Peak Squeeze') : (isRTL ? 'تحت الشد' : 'Under Tension')}
           </span>
         </div>
-        <input 
+        <input
           type="range"
           min="0"
           max="1"
           step="0.005"
           value={progress}
           onChange={(e) => onScrub(parseFloat(e.target.value))}
+          aria-label={isRTL ? 'مسار الحركة' : 'Motion timeline'}
+          aria-valuetext={isRTL ? `${phaseInfo.title} — ${Math.round(progress * 100)}٪` : `${phaseInfo.title} — ${Math.round(progress * 100)}%`}
           style={{
             width: '100%',
             accentColor: '#46d9ff',
             cursor: 'pointer',
-            height: '6px'
+            minHeight: '32px'
           }}
         />
+        <span className="forma-sr-only" role="status" aria-live="polite">
+          {isRTL ? phaseInfo.title : phaseInfo.title}
+        </span>
       </div>
 
       {/* 5 Kinetic Rep Step Buttons */}
@@ -435,10 +443,13 @@ export function ExerciseMotionHeroCard({
           <button
             type="button"
             onClick={onTogglePlay}
+            aria-pressed={isPlaying}
+            aria-label={isPlaying ? t('pauseMotion') : t('playMotion')}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '0.45rem',
+              minHeight: '48px',
               padding: '0.45rem 0.95rem',
               borderRadius: '9px',
               backgroundColor: isPlaying ? 'rgba(239, 68, 68, 0.15)' : 'var(--accent-primary)',
@@ -450,7 +461,7 @@ export function ExerciseMotionHeroCard({
               transition: 'all 0.15s ease'
             }}
           >
-            {isPlaying ? <Pause size={14} /> : <Play size={14} fill="currentColor" />}
+            {isPlaying ? <Pause size={14} aria-hidden="true" /> : <Play size={14} fill="currentColor" aria-hidden="true" />}
             <span>{isPlaying ? t('pauseMotion') : t('playMotion')}</span>
           </button>
 

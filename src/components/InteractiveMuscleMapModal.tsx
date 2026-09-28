@@ -388,6 +388,10 @@ export function InteractiveMuscleMapModal({ isOpen, onClose, onSelectExercise }:
                 >
                 <svg
                   viewBox="0 0 320 540"
+                  role="img"
+                  aria-label={isRTL
+                    ? `خريطة عضلية تفاعلية ${activeView === 'front' ? 'أمامية' : 'خلفية'}. استخدم قائمة العضلات أدناه للتنقل بلوحة المفاتيح.`
+                    : `Interactive ${activeView === 'front' ? 'front' : 'back'} muscle map. Use the muscle list below for keyboard navigation.`}
                   style={{
                     width: '100%',
                     maxWidth: '280px',
@@ -849,6 +853,8 @@ export function InteractiveMuscleMapModal({ isOpen, onClose, onSelectExercise }:
                     {isRTL ? 'اختر العضلة مباشرة أو انقر على المجسم:' : 'Tap muscle on body or select below:'}
                   </div>
                   <div
+                    role="group"
+                    aria-label={isRTL ? 'اختيار المجموعة العضلية' : 'Select muscle group'}
                     style={{
                       display: 'flex',
                       gap: '0.4rem',
@@ -868,16 +874,18 @@ export function InteractiveMuscleMapModal({ isOpen, onClose, onSelectExercise }:
                         <button
                           key={id}
                           type="button"
+                          aria-pressed={isSelected}
                           onClick={() => setSelectedMuscle(id)}
                           style={{
-                            padding: '0.4rem 0.75rem',
+                            minHeight: '44px',
+                            padding: '0.4rem 0.85rem',
                             borderRadius: '999px',
                             fontSize: '0.78rem',
                             fontWeight: isSelected ? 700 : 500,
                             whiteSpace: 'nowrap',
-                            backgroundColor: isSelected ? 'var(--accent-primary)' : 'rgba(255,255,255,0.06)',
+                            backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
                             color: isSelected ? '#07101e' : 'var(--text-secondary)',
-                            border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                            border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--premium-line)',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '0.35rem',

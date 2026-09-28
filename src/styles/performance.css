@@ -65,3 +65,505 @@
     .forma-adaptive-chain strong { font-size: 0.75rem; }
   }
 }
+
+/* ==========================================================================
+   Shared analytics chrome: figures, captions, legends, table alternatives
+   ========================================================================== */
+
+@layer components {
+  .forma-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .forma-figure { display: grid; gap: 0.6rem; margin: 0; min-width: 0; }
+  .forma-figure-body { position: relative; min-width: 0; }
+
+  .forma-figure-caption {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    line-height: 1.45;
+  }
+
+  .forma-figure-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    justify-self: start;
+    min-height: 32px;
+    padding: 0.3rem 0.6rem;
+    border: 1px solid var(--premium-line);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    background: transparent;
+    font: inherit;
+    font-size: 0.66rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: border-color 0.18s ease, color 0.18s ease, background 0.18s ease;
+  }
+
+  .forma-figure-toggle:hover { border-color: var(--accent-primary); color: var(--accent-primary); }
+  .forma-figure-toggle[aria-expanded="true"] { color: var(--accent-primary); background: var(--premium-soft); border-color: color-mix(in srgb, var(--accent-primary) 45%, transparent); }
+
+  .forma-data-table { width: 100%; border-collapse: collapse; font-size: 0.72rem; }
+  .forma-data-table caption {
+    padding-bottom: 0.5rem;
+    color: var(--text-muted);
+    font-size: 0.66rem;
+    text-align: start;
+  }
+  .forma-data-table th, .forma-data-table td { padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--premium-line); text-align: start; }
+  .forma-data-table thead th { color: var(--text-muted); font-size: 0.62rem; letter-spacing: 0.07em; text-transform: uppercase; }
+  .forma-data-table tbody th { color: var(--text-primary); font-weight: 700; }
+  .forma-data-table tbody td { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+  .forma-data-table tbody tr:last-child th, .forma-data-table tbody tr:last-child td { border-bottom: 0; }
+
+  .forma-chart-legend { display: flex; flex-wrap: wrap; gap: 0.4rem 0.6rem; margin: 0; padding: 0; list-style: none; }
+  .forma-chart-legend li { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.68rem; color: var(--text-secondary); }
+  .forma-chart-legend i { width: 10px; height: 10px; border-radius: 3px; flex: 0 0 auto; }
+
+  .forma-axis-label { color: var(--text-muted); font-size: 0.6rem; }
+  .forma-plot-axis-y {
+    position: absolute;
+    inset-block-end: 50%;
+    inset-inline-start: -0.15rem;
+    transform-origin: center;
+    transform: rotate(-90deg) translateY(50%);
+    color: var(--text-muted);
+    font-size: 0.58rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .forma-state-panel {
+    display: grid;
+    gap: 0.35rem;
+    place-items: center;
+    padding: 1.5rem 1rem;
+    text-align: center;
+    border: 1px dashed var(--premium-line);
+    border-radius: 0.75rem;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    line-height: 1.5;
+  }
+  .forma-state-panel strong { color: var(--text-primary); font-size: 0.86rem; }
+  .forma-state-panel.is-error { border-style: solid; border-color: color-mix(in srgb, var(--danger) 40%, transparent); color: var(--text-secondary); }
+
+  .forma-skeleton-block { border-radius: 0.6rem; background: color-mix(in srgb, var(--text-muted) 16%, transparent); }
+  .forma-skeleton-stack { display: grid; gap: 0.55rem; }
+  @media (prefers-reduced-motion: no-preference) {
+    .forma-skeleton-block { animation: forma-skeleton-pulse 1.6s ease-in-out infinite; }
+  }
+  [data-motion="reduced"] .forma-skeleton-block { animation: none; }
+  @keyframes forma-skeleton-pulse {
+    0%, 100% { opacity: 0.55; }
+    50% { opacity: 0.9; }
+  }
+
+  .forma-narrative-flow { display: grid; gap: 1.25rem; }
+  .forma-narrative-section { display: grid; gap: 0.75rem; scroll-margin-block-start: 5rem; }
+  .forma-narrative-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
+  .forma-narrative-heading h2 { margin: 0; font-size: 1.05rem; }
+  .forma-section-kicker-text { display: block; color: var(--accent-primary); font-size: 0.62rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+  .forma-count-label { color: var(--text-muted); font-size: 0.65rem; }
+
+  .forma-tile-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: 0.85rem; }
+  .forma-tile {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 1rem 1.15rem;
+    border: 1px solid var(--premium-line);
+    border-radius: 16px;
+    background: var(--bg-secondary);
+  }
+  .forma-tile-icon { display: grid; place-items: center; flex: 0 0 auto; width: 40px; height: 40px; border-radius: 12px; background: var(--premium-soft); color: var(--accent-primary); }
+  .forma-tile-value { display: flex; align-items: baseline; gap: 0.3rem; color: var(--text-primary); font-size: 1.3rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .forma-tile-value small { color: var(--text-secondary); font-size: 0.7rem; font-weight: 600; }
+  .forma-tile-label { color: var(--text-secondary); font-size: 0.76rem; }
+
+  .forma-record-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.6rem;
+    border: 1px solid var(--premium-line);
+    border-radius: 8px;
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+    font-size: 0.78rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .forma-record-chip.is-cyan { color: #34d399; border-color: rgba(52, 211, 153, 0.25); }
+  .forma-record-chip.is-amber { color: #f97316; border-color: rgba(249, 115, 22, 0.25); }
+  .forma-record-chip.is-rose { color: #fb7185; border-color: rgba(251, 113, 133, 0.25); }
+
+  .forma-radar-shell { display: grid; gap: 1rem; }
+  .forma-radar-stage { position: relative; display: grid; place-items: center; min-width: 0; }
+  .forma-radar-stage svg { display: block; width: 100%; max-width: 300px; height: auto; }
+  .forma-radar-axis-hit { cursor: pointer; }
+  .forma-radar-axis-hit:focus { outline: none; }
+  .forma-radar-axis-hit:focus-visible circle { stroke: #fff; stroke-width: 2.5; }
+}
+
+/* ==========================================================================
+   Session HUD: one-thumb targets, safe-area aware floating layers
+   ========================================================================== */
+
+@layer components {
+  .session-hud {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    padding-block-end: calc(14rem + max(12px, env(safe-area-inset-bottom, 0px)));
+  }
+
+  .session-thumb-dock {
+    position: fixed;
+    inset-inline: 0;
+    inset-block-end: 0;
+    z-index: 950;
+    display: grid;
+    gap: 0.4rem;
+    padding: 0.6rem 0.85rem calc(0.6rem + max(10px, env(safe-area-inset-bottom, 0px)));
+    padding-inline: max(0.85rem, env(safe-area-inset-left, 0px)) max(0.85rem, env(safe-area-inset-right, 0px));
+    background: linear-gradient(180deg, transparent, rgba(4, 8, 15, 0.88) 32%);
+    pointer-events: none;
+  }
+
+  .session-thumb-dock > * { pointer-events: auto; }
+
+  .session-dock-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 0.5rem; }
+
+  .session-target {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 56px;
+    min-width: 56px;
+    padding: 0.6rem 1.1rem;
+    border: 1px solid var(--premium-line);
+    border-radius: 16px;
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+    font: inherit;
+    font-size: 0.95rem;
+    font-weight: 800;
+    cursor: pointer;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease;
+  }
+
+  .session-target:active { transform: scale(0.97); }
+  .session-target:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .session-target-primary {
+    border-color: transparent;
+    color: #04121b;
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-hover));
+    box-shadow: 0 10px 26px -8px color-mix(in srgb, var(--accent-primary) 65%, transparent);
+    font-size: 1.05rem;
+  }
+
+  .session-target-success {
+    border-color: color-mix(in srgb, var(--success) 55%, transparent);
+    color: #04140d;
+    background: linear-gradient(135deg, var(--success), #34d399);
+  }
+
+  .session-target-ghost { background: color-mix(in srgb, var(--bg-secondary) 80%, transparent); }
+
+  .session-target-danger { border-color: color-mix(in srgb, var(--danger) 40%, transparent); color: var(--danger); }
+
+  .session-set-check {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    min-height: 64px;
+    padding: 0.7rem 0.85rem;
+    border: 1.5px solid var(--premium-line);
+    border-radius: 18px;
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+    text-align: start;
+    cursor: pointer;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: border-color 0.18s ease, background 0.18s ease, transform 0.12s ease;
+  }
+
+  .session-set-check[aria-pressed="true"] {
+    border-color: color-mix(in srgb, var(--success) 60%, transparent);
+    background: color-mix(in srgb, var(--success) 16%, var(--bg-secondary));
+  }
+
+  .session-set-check.is-active { border-color: var(--accent-primary); box-shadow: 0 0 0 3px var(--premium-soft); }
+  .session-set-check:active { transform: scale(0.99); }
+
+  .session-set-check-mark {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 46px;
+    height: 46px;
+    border: 2px solid var(--premium-line);
+    border-radius: 14px;
+    color: var(--text-muted);
+    background: var(--bg-tertiary);
+    transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+  }
+
+  .session-set-check[aria-pressed="true"] .session-set-check-mark {
+    border-color: var(--success);
+    color: #04140d;
+    background: var(--success);
+  }
+
+  .session-set-check-body { display: grid; gap: 0.15rem; min-width: 0; }
+  .session-set-check-title { color: var(--text-primary); font-size: 0.95rem; font-weight: 800; }
+  .session-set-check-meta { color: var(--text-secondary); font-size: 0.76rem; font-variant-numeric: tabular-nums; }
+
+  .session-overflow-anchor { position: relative; }
+  .session-overflow-menu {
+    position: absolute;
+    inset-block-start: calc(100% + 0.4rem);
+    inset-inline-end: 0;
+    z-index: 60;
+    display: grid;
+    gap: 0.25rem;
+    min-width: 13rem;
+    padding: 0.35rem;
+    border: 1px solid var(--premium-line);
+    border-radius: 14px;
+    background: var(--bg-primary);
+    box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.7);
+  }
+  .session-overflow-menu button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 44px;
+    padding: 0.5rem 0.7rem;
+    border: 0;
+    border-radius: 10px;
+    color: var(--text-primary);
+    background: transparent;
+    font: inherit;
+    font-size: 0.85rem;
+    text-align: start;
+    cursor: pointer;
+  }
+  .session-overflow-menu button:hover { background: var(--premium-soft); }
+  .session-overflow-menu button.is-danger { color: var(--danger); }
+
+  .session-hud-rest {
+    position: fixed;
+    inset-inline: 0.75rem;
+    inset-block-end: calc(11.5rem + max(12px, env(safe-area-inset-bottom, 0px)));
+    z-index: 960;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .session-hud-rest > * { pointer-events: auto; }
+
+  @media (min-width: 900px) {
+    .session-hud-rest { inset-block-end: 1.5rem; }
+    .session-thumb-dock { position: sticky; inset-block-end: 0; background: none; padding: 0; }
+    .session-hud { padding-block-end: 1.5rem; }
+  }
+
+  @media (max-width: 380px) {
+    .session-dock-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .session-hud { padding-block-end: calc(16rem + max(12px, env(safe-area-inset-bottom, 0px))); }
+    .session-hud-rest { inset-block-end: calc(13.5rem + max(12px, env(safe-area-inset-bottom, 0px))); }
+  }
+
+  .session-countdown {
+    font-variant-numeric: tabular-nums;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer components {
+  .forma-keypad-key {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 68px;
+    border: 1px solid var(--premium-line);
+    border-radius: 16px;
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+    font: inherit;
+    font-size: 1.6rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.1s ease, background 0.14s ease;
+  }
+  .forma-keypad-key:active { transform: scale(0.95); background: var(--premium-soft); }
+  .forma-keypad-key.is-muted { font-size: 0.9rem; font-weight: 700; color: var(--text-secondary); }
+
+  .forma-keypad-sheet {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    inline-size: 100%;
+    max-inline-size: 520px;
+    max-block-size: calc(100dvh - 1.5rem);
+    overflow-y: auto;
+    padding: 1rem 1rem calc(1rem + max(12px, env(safe-area-inset-bottom, 0px)));
+    border: 1px solid var(--premium-line);
+    border-block-end: 0;
+    border-start-start-radius: 26px;
+    border-start-end-radius: 26px;
+    color: var(--text-primary);
+    background: var(--bg-primary);
+    box-shadow: 0 -20px 50px rgba(0, 0, 0, 0.6);
+    touch-action: manipulation;
+  }
+
+  .forma-keypad-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; }
+  .forma-keypad-value {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    min-height: 4.25rem;
+    padding: 0.6rem 1rem;
+    border: 1px solid color-mix(in srgb, var(--accent-cyan) 40%, transparent);
+    border-radius: 16px;
+    background: var(--bg-secondary);
+  }
+  .forma-keypad-value strong { color: var(--text-primary); font-size: 2.6rem; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1; }
+  .forma-keypad-value span { color: var(--accent-cyan); font-size: 1.05rem; font-weight: 800; }
+
+  .forma-unit-toggle { display: inline-flex; padding: 3px; border: 1px solid var(--premium-line); border-radius: 12px; background: var(--bg-tertiary); }
+  .forma-unit-toggle button {
+    min-height: 44px;
+    padding: 0.35rem 0.95rem;
+    border: 0;
+    border-radius: 9px;
+    color: var(--text-muted);
+    background: transparent;
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 800;
+    cursor: pointer;
+  }
+  .forma-unit-toggle button[aria-pressed="true"] { color: #04121b; background: var(--accent-cyan); }
+}
+
+@layer components {
+  .forma-3d-shell { position: relative; display: grid; gap: 0.6rem; }
+  .forma-3d-stage {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--premium-line);
+    border-radius: 16px;
+    background: #060913;
+  }
+  .forma-3d-stage canvas { display: block; inline-size: 100%; block-size: 100%; touch-action: none; }
+  .forma-3d-overlay {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    text-align: center;
+    color: var(--text-secondary);
+    background: color-mix(in srgb, var(--bg-primary) 82%, transparent);
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }
+  .forma-3d-overlay strong { display: block; color: var(--text-primary); font-size: 0.92rem; margin-block-end: 0.3rem; }
+  .forma-3d-controls { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+  .forma-3d-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 40px;
+    padding: 0.35rem 0.75rem;
+    border: 1px solid var(--premium-line);
+    border-radius: 10px;
+    color: var(--text-secondary);
+    background: var(--bg-secondary);
+    font: inherit;
+    font-size: 0.76rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .forma-3d-chip[aria-pressed="true"], .forma-3d-chip[aria-current="true"] { color: var(--accent-primary); border-color: color-mix(in srgb, var(--accent-primary) 45%, transparent); background: var(--premium-soft); }
+}
+
+@layer components {
+  .forma-ai-surface { display: grid; gap: 0.75rem; }
+  .forma-ai-empty {
+    display: grid;
+    gap: 0.5rem;
+    place-items: center;
+    padding: 1.75rem 1rem;
+    text-align: center;
+    border: 1px dashed var(--premium-line);
+    border-radius: 14px;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }
+  .forma-ai-stream { display: grid; gap: 0.55rem; }
+  .forma-ai-stream > :first-child { margin-block-start: 0; }
+  .forma-ai-stream > :last-child { margin-block-end: 0; }
+  .forma-ai-stream p, .forma-ai-stream ul, .forma-ai-stream ol { margin-block: 0.45rem; }
+  .forma-ai-stream h1, .forma-ai-stream h2, .forma-ai-stream h3 { margin-block: 0.6rem 0.3rem; font-size: 0.95rem; }
+  .forma-ai-stream code { padding: 0.1rem 0.3rem; border-radius: 5px; background: var(--bg-tertiary); font-size: 0.82em; }
+  .forma-ai-stream ul, .forma-ai-stream ol { padding-inline-start: 1.1rem; }
+  .forma-ai-cursor {
+    display: inline-block;
+    inline-size: 0.5rem;
+    block-size: 1rem;
+    vertical-align: -0.15rem;
+    margin-inline-start: 0.15rem;
+    background: var(--accent-primary);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .forma-ai-cursor { animation: forma-caret-blink 1s steps(2, start) infinite; }
+  }
+  [data-motion="reduced"] .forma-ai-cursor { animation: none; }
+  @keyframes forma-caret-blink { 50% { opacity: 0; } }
+
+  .forma-ai-error {
+    display: grid;
+    gap: 0.55rem;
+    padding: 0.9rem 1rem;
+    border: 1px solid color-mix(in srgb, var(--danger) 45%, transparent);
+    border-radius: 12px;
+    color: var(--text-secondary);
+    background: color-mix(in srgb, var(--danger) 10%, transparent);
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+  .forma-ai-error strong { color: var(--text-primary); }
+}

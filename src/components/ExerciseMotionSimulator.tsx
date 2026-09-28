@@ -1,29 +1,65 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { 
-  Play, Pause, RotateCcw, Info, ArrowLeft, ArrowRight
+import { useState, useEffect, useRef, useMemo, Component, type ReactNode } from 'react';
+import {
+  Play, Pause, RotateCcw, Info, ArrowLeft, ArrowRight, AlertTriangle
 } from 'lucide-react';
-import { 
-  ExerciseTutorial, 
+import {
+  ExerciseTutorial,
   getExerciseBiomechanics,
   MotionPatternType
 } from '../lib/exerciseDatabase';
 import { useTranslation } from '../lib/i18n';
 import { RealisticExercise3DViewer } from './RealisticExercise3DViewer';
 import { ExerciseMotionHeroCard } from './ExerciseMotionHeroCard';
+import { useReducedMotion } from './performance/useReducedMotion';
 
 interface ExerciseMotionSimulatorProps {
   tutorial: ExerciseTutorial;
 }
 
+interface SceneBoundaryProps {
+  children: ReactNode;
+  isRTL: boolean;
+}
+
+interface SceneBoundaryState {
+  hasError: boolean;
+}
+
+class SceneBoundary extends Component<SceneBoundaryProps, SceneBoundaryState> {
+  state: SceneBoundaryState = { hasError: false };
+
+  static getDerivedStateFromError(): SceneBoundaryState {
+    return { hasError: true };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="forma-state-panel is-error" role="alert">
+          <AlertTriangle size={22} aria-hidden="true" />
+          <strong>{this.props.isRTL ? 'تعذر تشغيل العرض ثلاثي الأبعاد' : 'The 3D view could not start'}</strong>
+          <span>
+            {this.props.isRTL
+              ? 'يمكنك متابعة الإرشادات النصية للأداء دون مشاكل.'
+              : 'You can still follow the written coaching cues below.'}
+          </span>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export function ExerciseMotionSimulator({ tutorial }: ExerciseMotionSimulatorProps) {
   const { t, isRTL } = useTranslation();
   const biomechanics = useMemo(() => getExerciseBiomechanics(tutorial), [tutorial]);
+  const reducedMotion = useReducedMotion();
 
   // Hybrid Model Engine: 'fast' (Instant Kinetic Motion Card - Default) vs '3d' (Three.js Studio)
   const [renderMode, setRenderMode] = useState<'fast' | '3d'>('fast');
 
   // Motion playback state
-  const [isPlaying, setIsPlaying] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(!reducedMotion);
   const [progress, setProgress] = useState(0); // 0.0 to 1.0
   const [speed, setSpeed] = useState<0.5 | 1 | 1.5>(1);
   const [showGuides, setShowGuides] = useState(true);
@@ -32,6 +68,12 @@ export function ExerciseMotionSimulator({ tutorial }: ExerciseMotionSimulatorPro
 
   const requestRef = useRef<number | undefined>(undefined);
   const lastTimeRef = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    if (reducedMotion && isPlaying) {
+      setIsPlaying(false);
+    }
+  }, [reducedMotion, isPlaying]);
 
   // Continuous animation loop
   useEffect(() => {
@@ -252,18 +294,20 @@ export function ExerciseMotionSimulator({ tutorial }: ExerciseMotionSimulatorPro
       </div>
 
       {/* Realistic 3D Mannequin Visualizer */}
-      <RealisticExercise3DViewer
-        tutorial={tutorial}
-        repPhase={repPhase}
-        isPlaying={isPlaying}
-        showGuides={showGuides}
-        showAngles={showAngles}
-        showGlow={showGlow}
-        phaseTitle={phaseInfo.title}
-        phaseCue={phaseInfo.desc}
-        breathCue={phaseInfo.breath}
-        isEccentric={isEccentric}
-      />
+      <SceneBoundary isRTL={isRTL}>
+        <RealisticExercise3DViewer
+          tutorial={tutorial}
+          repPhase={repPhase}
+          isPlaying={isPlaying}
+          showGuides={showGuides}
+          showAngles={showAngles}
+          showGlow={showGlow}
+          phaseTitle={phaseInfo.title}
+          phaseCue={phaseInfo.desc}
+          breathCue={phaseInfo.breath}
+          isEccentric={isEccentric}
+        />
+      </SceneBoundary>
 
       {/* Real-time Form & Safety Cue Note */}
       <div style={{

@@ -14,86 +14,86 @@ interface ExerciseMuscleHologramProps {
 const MUSCLE_NAMES: Record<MuscleGroupKey, { en: string; ar: string; roleEn: string; roleAr: string; view: 'front' | 'back' }> = {
   chest: {
     en: 'Chest (Pectoralis Major & Minor)',
-    ar: 'الصدر (الكبير والصغير)',
+    ar: 'Ø§Ù„ØµØ¯Ø± (Ø§Ù„ÙƒØ¨ÙŠØ± ÙˆØ§Ù„ØµØºÙŠØ±)',
     roleEn: 'Prime Mover: Horizontal adduction and pressing power',
-    roleAr: 'المحرك الأساسي: الضم الأفقي وقوة الدفع للأمام',
+    roleAr: 'Ø§Ù„Ù…Ø­Ø±Ùƒ Ø§Ù„Ø£Ø³Ø§Ø³ÙŠ: Ø§Ù„Ø¶Ù… Ø§Ù„Ø£ÙÙ‚ÙŠ ÙˆÙ‚ÙˆØ© Ø§Ù„Ø¯ÙØ¹ Ù„Ù„Ø£Ù…Ø§Ù…',
     view: 'front'
   },
   shoulders: {
     en: 'Deltoids (Anterior, Lateral, Posterior)',
-    ar: 'عضلات الكتف (الأمامي، الجانبي، الخلفي)',
+    ar: 'Ø¹Ø¶Ù„Ø§Øª Ø§Ù„ÙƒØªÙ (Ø§Ù„Ø£Ù…Ø§Ù…ÙŠØŒ Ø§Ù„Ø¬Ø§Ù†Ø¨ÙŠØŒ Ø§Ù„Ø®Ù„ÙÙŠ)',
     roleEn: 'Prime Mover / Synergist: Arm abduction, overhead flexion and stabilization',
-    roleAr: 'المحرك الأساسي أو المساعد: رفع الذراع، الدفع الرأسي، وتثبيت مفصل الكتف',
+    roleAr: 'Ø§Ù„Ù…Ø­Ø±Ùƒ Ø§Ù„Ø£Ø³Ø§Ø³ÙŠ Ø£Ùˆ Ø§Ù„Ù…Ø³Ø§Ø¹Ø¯: Ø±ÙØ¹ Ø§Ù„Ø°Ø±Ø§Ø¹ØŒ Ø§Ù„Ø¯ÙØ¹ Ø§Ù„Ø±Ø£Ø³ÙŠØŒ ÙˆØªØ«Ø¨ÙŠØª Ù…ÙØµÙ„ Ø§Ù„ÙƒØªÙ',
     view: 'front'
   },
   biceps: {
     en: 'Biceps Brachii',
-    ar: 'عضلة البايسبس (ثنائية الرؤوس)',
+    ar: 'Ø¹Ø¶Ù„Ø© Ø§Ù„Ø¨Ø§ÙŠØ³Ø¨Ø³ (Ø«Ù†Ø§Ø¦ÙŠØ© Ø§Ù„Ø±Ø¤ÙˆØ³)',
     roleEn: 'Prime Mover / Synergist: Elbow flexion and forearm supination',
-    roleAr: 'المحرك الأساسي: ثني مفصل الكوع ودوران الساعد للخارج',
+    roleAr: 'Ø§Ù„Ù…Ø­Ø±Ùƒ Ø§Ù„Ø£Ø³Ø§Ø³ÙŠ: Ø«Ù†ÙŠ Ù…ÙØµÙ„ Ø§Ù„ÙƒÙˆØ¹ ÙˆØ¯ÙˆØ±Ø§Ù† Ø§Ù„Ø³Ø§Ø¹Ø¯ Ù„Ù„Ø®Ø§Ø±Ø¬',
     view: 'front'
   },
   abs: {
     en: 'Core (Rectus Abdominis & Obliques)',
-    ar: 'عضلات البطن والجذع (المستقيمة والمائلة)',
+    ar: 'Ø¹Ø¶Ù„Ø§Øª Ø§Ù„Ø¨Ø·Ù† ÙˆØ§Ù„Ø¬Ø°Ø¹ (Ø§Ù„Ù…Ø³ØªÙ‚ÙŠÙ…Ø© ÙˆØ§Ù„Ù…Ø§Ø¦Ù„Ø©)',
     roleEn: 'Core Stabilizer / Flexion: Spinal protection and force transmission',
-    roleAr: 'المثبت الأساسي: حماية العمود الفقري ونقل القوة وتثبيت الحوض',
+    roleAr: 'Ø§Ù„Ù…Ø«Ø¨Øª Ø§Ù„Ø£Ø³Ø§Ø³ÙŠ: Ø­Ù…Ø§ÙŠØ© Ø§Ù„Ø¹Ù…ÙˆØ¯ Ø§Ù„ÙÙ‚Ø±ÙŠ ÙˆÙ†Ù‚Ù„ Ø§Ù„Ù‚ÙˆØ© ÙˆØªØ«Ø¨ÙŠØª Ø§Ù„Ø­ÙˆØ¶',
     view: 'front'
   },
   quads: {
     en: 'Quadriceps Femoris',
-    ar: 'الكوادسيبس (عضلة الفخذ الأمامية رباعية الرؤوس)',
+    ar: 'Ø§Ù„ÙƒÙˆØ§Ø¯Ø³ÙŠØ¨Ø³ (Ø¹Ø¶Ù„Ø© Ø§Ù„ÙØ®Ø° Ø§Ù„Ø£Ù…Ø§Ù…ÙŠØ© Ø±Ø¨Ø§Ø¹ÙŠØ© Ø§Ù„Ø±Ø¤ÙˆØ³)',
     roleEn: 'Prime Mover: Powerful knee extension and stance stability',
-    roleAr: 'المحرك الأساسي: فرد مفصل الركبة وتثبيت وضعية الوقوف والدفع',
+    roleAr: 'Ø§Ù„Ù…Ø­Ø±Ùƒ Ø§Ù„Ø£Ø³Ø§Ø³ÙŠ: ÙØ±Ø¯ Ù…ÙØµÙ„ Ø§Ù„Ø±ÙƒØ¨Ø© ÙˆØªØ«Ø¨ÙŠØª ÙˆØ¶Ø¹ÙŠØ© Ø§Ù„ÙˆÙ‚ÙˆÙ ÙˆØ§Ù„Ø¯ÙØ¹',
     view: 'front'
   },
   traps: {
     en: 'Trapezius (Upper, Middle, Lower)',
-    ar: 'عضلات الترابيس (العلوية والوسطى والسفلية)',
+    ar: 'Ø¹Ø¶Ù„Ø§Øª Ø§Ù„ØªØ±Ø§Ø¨ÙŠØ³ (Ø§Ù„Ø¹Ù„ÙˆÙŠØ© ÙˆØ§Ù„ÙˆØ³Ø·Ù‰ ÙˆØ§Ù„Ø³ÙÙ„ÙŠØ©)',
     roleEn: 'Stabilizer / Scapular control: Shoulder elevation and retraction',
-    roleAr: 'عضلة تثبيت: رفع وسحب لوحي الكتف للخلف والأسفل وحماية الرقبة',
+    roleAr: 'Ø¹Ø¶Ù„Ø© ØªØ«Ø¨ÙŠØª: Ø±ÙØ¹ ÙˆØ³Ø­Ø¨ Ù„ÙˆØ­ÙŠ Ø§Ù„ÙƒØªÙ Ù„Ù„Ø®Ù„Ù ÙˆØ§Ù„Ø£Ø³ÙÙ„ ÙˆØ­Ù…Ø§ÙŠØ© Ø§Ù„Ø±Ù‚Ø¨Ø©',
     view: 'back'
   },
   lats: {
     en: 'Latissimus Dorsi',
-    ar: 'عضلة المجنص (الظهر العريضة)',
+    ar: 'Ø¹Ø¶Ù„Ø© Ø§Ù„Ù…Ø¬Ù†Øµ (Ø§Ù„Ø¸Ù‡Ø± Ø§Ù„Ø¹Ø±ÙŠØ¶Ø©)',
     roleEn: 'Prime Mover: Shoulder adduction, extension, and horizontal pulling',
-    roleAr: 'المحرك الأساسي: سحب الذراعين للأسفل والداخل، وتوليد قوة السحب العريضة',
+    roleAr: 'Ø§Ù„Ù…Ø­Ø±Ùƒ Ø§Ù„Ø£Ø³Ø§Ø³ÙŠ: Ø³Ø­Ø¨ Ø§Ù„Ø°Ø±Ø§Ø¹ÙŠÙ† Ù„Ù„Ø£Ø³ÙÙ„ ÙˆØ§Ù„Ø¯Ø§Ø®Ù„ØŒ ÙˆØªÙˆÙ„ÙŠØ¯ Ù‚ÙˆØ© Ø§Ù„Ø³Ø­Ø¨ Ø§Ù„Ø¹Ø±ÙŠØ¶Ø©',
     view: 'back'
   },
   triceps: {
     en: 'Triceps Brachii',
-    ar: 'عضلة الترايسبس (ثلاثية الرؤوس)',
+    ar: 'Ø¹Ø¶Ù„Ø© Ø§Ù„ØªØ±Ø§ÙŠØ³Ø¨Ø³ (Ø«Ù„Ø§Ø«ÙŠØ© Ø§Ù„Ø±Ø¤ÙˆØ³)',
     roleEn: 'Prime Mover / Synergist: Complete elbow extension and pressing lockout',
-    roleAr: 'المحرك الأساسي أو المساعد: فرد مفصل الكوع بالكامل وإحكام الدفع النهائي',
+    roleAr: 'Ø§Ù„Ù…Ø­Ø±Ùƒ Ø§Ù„Ø£Ø³Ø§Ø³ÙŠ Ø£Ùˆ Ø§Ù„Ù…Ø³Ø§Ø¹Ø¯: ÙØ±Ø¯ Ù…ÙØµÙ„ Ø§Ù„ÙƒÙˆØ¹ Ø¨Ø§Ù„ÙƒØ§Ù…Ù„ ÙˆØ¥Ø­ÙƒØ§Ù… Ø§Ù„Ø¯ÙØ¹ Ø§Ù„Ù†Ù‡Ø§Ø¦ÙŠ',
     view: 'back'
   },
   lowerBack: {
     en: 'Erector Spinae (Lower Back)',
-    ar: 'عضلات أسفل الظهر (ناصبات الفقار)',
+    ar: 'Ø¹Ø¶Ù„Ø§Øª Ø£Ø³ÙÙ„ Ø§Ù„Ø¸Ù‡Ø± (Ù†Ø§ØµØ¨Ø§Øª Ø§Ù„ÙÙ‚Ø§Ø±)',
     roleEn: 'Core & Spinal Stabilizer: Resists flexion and secures axial loading',
-    roleAr: 'مثبت فقري رئيسي: مقاومة الانحناء وحماية الفقرات تحت الأحمال المحورية',
+    roleAr: 'Ù…Ø«Ø¨Øª ÙÙ‚Ø±ÙŠ Ø±Ø¦ÙŠØ³ÙŠ: Ù…Ù‚Ø§ÙˆÙ…Ø© Ø§Ù„Ø§Ù†Ø­Ù†Ø§Ø¡ ÙˆØ­Ù…Ø§ÙŠØ© Ø§Ù„ÙÙ‚Ø±Ø§Øª ØªØ­Øª Ø§Ù„Ø£Ø­Ù…Ø§Ù„ Ø§Ù„Ù…Ø­ÙˆØ±ÙŠØ©',
     view: 'back'
   },
   glutes: {
     en: 'Gluteus Maximus & Medius',
-    ar: 'عضلات الجلوتس (المؤخرة والحوض)',
+    ar: 'Ø¹Ø¶Ù„Ø§Øª Ø§Ù„Ø¬Ù„ÙˆØªØ³ (Ø§Ù„Ù…Ø¤Ø®Ø±Ø© ÙˆØ§Ù„Ø­ÙˆØ¶)',
     roleEn: 'Prime Mover: Hip extension, external rotation, and posterior pelvic drive',
-    roleAr: 'المحرك الأساسي: فرد مفصل الحوض بقوة والدفع الحركي وتثبيت الركبتين',
+    roleAr: 'Ø§Ù„Ù…Ø­Ø±Ùƒ Ø§Ù„Ø£Ø³Ø§Ø³ÙŠ: ÙØ±Ø¯ Ù…ÙØµÙ„ Ø§Ù„Ø­ÙˆØ¶ Ø¨Ù‚ÙˆØ© ÙˆØ§Ù„Ø¯ÙØ¹ Ø§Ù„Ø­Ø±ÙƒÙŠ ÙˆØªØ«Ø¨ÙŠØª Ø§Ù„Ø±ÙƒØ¨ØªÙŠÙ†',
     view: 'back'
   },
   hamstrings: {
     en: 'Hamstrings (Biceps Femoris, Semitendinosus)',
-    ar: 'عضلات الفخذ الخلفية (الهامسترينغ)',
+    ar: 'Ø¹Ø¶Ù„Ø§Øª Ø§Ù„ÙØ®Ø° Ø§Ù„Ø®Ù„ÙÙŠØ© (Ø§Ù„Ù‡Ø§Ù…Ø³ØªØ±ÙŠÙ†Øº)',
     roleEn: 'Prime Mover: Knee flexion, hip extension, and decelerating force',
-    roleAr: 'المحرك الأساسي: ثني الركبة والمساعدة في بسط الحوض والنزول المتحكم',
+    roleAr: 'Ø§Ù„Ù…Ø­Ø±Ùƒ Ø§Ù„Ø£Ø³Ø§Ø³ÙŠ: Ø«Ù†ÙŠ Ø§Ù„Ø±ÙƒØ¨Ø© ÙˆØ§Ù„Ù…Ø³Ø§Ø¹Ø¯Ø© ÙÙŠ Ø¨Ø³Ø· Ø§Ù„Ø­ÙˆØ¶ ÙˆØ§Ù„Ù†Ø²ÙˆÙ„ Ø§Ù„Ù…ØªØ­ÙƒÙ…',
     view: 'back'
   },
   calves: {
     en: 'Calves (Gastrocnemius & Soleus)',
-    ar: 'عضلات السمانة (الكالفز والسمحاقية)',
+    ar: 'Ø¹Ø¶Ù„Ø§Øª Ø§Ù„Ø³Ù…Ø§Ù†Ø© (Ø§Ù„ÙƒØ§Ù„ÙØ² ÙˆØ§Ù„Ø³Ù…Ø­Ø§Ù‚ÙŠØ©)',
     roleEn: 'Prime Mover / Stance: Plantar flexion and ankle propulsion',
-    roleAr: 'المحرك الأساسي: دفع مشط القدم لأسفل وتثبيت توازن الكاحل',
+    roleAr: 'Ø§Ù„Ù…Ø­Ø±Ùƒ Ø§Ù„Ø£Ø³Ø§Ø³ÙŠ: Ø¯ÙØ¹ Ù…Ø´Ø· Ø§Ù„Ù‚Ø¯Ù… Ù„Ø£Ø³ÙÙ„ ÙˆØªØ«Ø¨ÙŠØª ØªÙˆØ§Ø²Ù† Ø§Ù„ÙƒØ§Ø­Ù„',
     view: 'back'
   }
 };
@@ -128,13 +128,35 @@ export function ExerciseMuscleHologram({ tutorial }: ExerciseMuscleHologramProps
 
   const selectedInfo = MUSCLE_NAMES[selectedMuscle] || MUSCLE_NAMES[primaryKey];
 
+  const viewMuscles: MuscleGroupKey[] = activeView === 'front'
+    ? ['chest', 'shoulders', 'biceps', 'abs', 'quads', 'calves']
+    : ['traps', 'lats', 'triceps', 'lowerBack', 'glutes', 'hamstrings', 'calves'];
+
+  const muscleLabel = (id: MuscleGroupKey) => {
+    const info = MUSCLE_NAMES[id];
+    return isRTL ? info.ar : info.en;
+  };
+
+  const roleLabel = (id: MuscleGroupKey) => {
+    if (isMusclePrimary(id)) return isRTL ? 'Ø§Ù„Ù…Ø­Ø±Ùƒ Ø§Ù„Ø£Ø³Ø§Ø³ÙŠ' : 'Prime mover';
+    if (isMuscleSecondary(id)) return isRTL ? 'Ø¹Ø¶Ù„Ø© Ù…Ø³Ø§Ø¹Ø¯Ø©' : 'Synergist';
+    return isRTL ? 'Ø¹Ø¶Ù„Ø© Ø«Ø§Ù†ÙˆÙŠØ©' : 'Secondary';
+  };
+
+  const selectMuscle = (id: MuscleGroupKey) => {
+    setSelectedMuscle(id);
+    if (MUSCLE_NAMES[id]?.view && MUSCLE_NAMES[id].view !== activeView) {
+      setActiveView(MUSCLE_NAMES[id].view);
+    }
+  };
+
   return (
     <div className="muscle-hologram-card" style={{
-      background: 'linear-gradient(160deg, rgba(14, 22, 38, 0.95) 0%, rgba(8, 12, 22, 0.98) 100%)',
-      border: '1px solid rgba(56, 189, 248, 0.24)',
+      background: 'var(--premium-surface)',
+      border: '1px solid var(--premium-line)',
       borderRadius: '20px',
       overflow: 'hidden',
-      boxShadow: '0 16px 40px -10px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
+      boxShadow: '0 16px 40px -10px rgba(0, 0, 0, 0.7)',
       display: 'flex',
       flexDirection: 'column',
       gap: '1rem',
@@ -160,10 +182,10 @@ export function ExerciseMuscleHologram({ tutorial }: ExerciseMuscleHologramProps
           </div>
           <div>
             <h4 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-              {isRTL ? 'التشريح العضلي المجسم' : '3D Anatomical Muscle Map'}
+              {isRTL ? 'Ø§Ù„ØªØ´Ø±ÙŠØ­ Ø§Ù„Ø¹Ø¶Ù„ÙŠ Ø§Ù„Ù…Ø¬Ø³Ù…' : '3D Anatomical Muscle Map'}
             </h4>
             <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-              {isRTL ? `التفعيل الأساسي: ${biomechanics.activationScore}%` : `Primary Activation: ${biomechanics.activationScore}%`}
+              {isRTL ? `Ø§Ù„ØªÙØ¹ÙŠÙ„ Ø§Ù„Ø£Ø³Ø§Ø³ÙŠ: ${biomechanics.activationScore}%` : `Primary Activation: ${biomechanics.activationScore}%`}
             </span>
           </div>
         </div>
@@ -186,7 +208,7 @@ export function ExerciseMuscleHologram({ tutorial }: ExerciseMuscleHologramProps
               boxShadow: activeView === 'front' ? '0 2px 10px rgba(56, 189, 248, 0.35)' : 'none'
             }}
           >
-            {isRTL ? 'أمامي' : 'Front'}
+            {isRTL ? 'Ø£Ù…Ø§Ù…ÙŠ' : 'Front'}
           </button>
           <button
             type="button"
@@ -204,7 +226,7 @@ export function ExerciseMuscleHologram({ tutorial }: ExerciseMuscleHologramProps
               boxShadow: activeView === 'back' ? '0 2px 10px rgba(56, 189, 248, 0.35)' : 'none'
             }}
           >
-            {isRTL ? 'خلفي' : 'Back'}
+            {isRTL ? 'Ø®Ù„ÙÙŠ' : 'Back'}
           </button>
         </div>
       </div>
@@ -238,11 +260,15 @@ export function ExerciseMuscleHologram({ tutorial }: ExerciseMuscleHologramProps
           }} />
 
           {/* SVG Body Model */}
-          <svg 
-            viewBox="0 0 240 420" 
-            style={{ 
-              width: '100%', 
-              height: '100%', 
+          <svg
+            viewBox="0 0 240 420"
+            role="img"
+            aria-label={isRTL
+              ? `Ø®Ø±ÙŠØ·Ø© ØªØ´Ø±ÙŠØ­ Ø¹Ø¶Ù„ÙŠ ${activeView === 'front' ? 'Ø£Ù…Ø§Ù…ÙŠØ©' : 'Ø®Ù„ÙÙŠØ©'}. ${viewMuscles.map(id => `${muscleLabel(id)}: ${roleLabel(id)}`).join('ØŒ ')}.`
+              : `${activeView === 'front' ? 'Front' : 'Back'} anatomical muscle map. ${viewMuscles.map(id => `${muscleLabel(id)}: ${roleLabel(id)}`).join(', ')}.`}
+            style={{
+              width: '100%',
+              height: '100%',
               maxHeight: '270px',
               willChange: 'transform',
               transform: 'translateZ(0)'
@@ -277,7 +303,7 @@ export function ExerciseMuscleHologram({ tutorial }: ExerciseMuscleHologramProps
               <g>
                 {/* Chest (Pectoralis) */}
                 <g 
-                  onClick={() => setSelectedMuscle('chest')}
+                  onClick={() => selectMuscle('chest')}
                   style={{ cursor: 'pointer' }}
                   filter={isMusclePrimary('chest') ? 'url(#holoNeonRed)' : isMuscleSecondary('chest') ? 'url(#holoNeonCyan)' : undefined}
                 >
@@ -299,7 +325,7 @@ export function ExerciseMuscleHologram({ tutorial }: ExerciseMuscleHologramProps
 
                 {/* Shoulders (Anterior & Lateral Deltoids) */}
                 <g 
-                  onClick={() => setSelectedMuscle('shoulders')}
+                  onClick={() => selectMuscle('shoulders')}
                   style={{ cursor: 'pointer' }}
                   filter={isMusclePrimary('shoulders') ? 'url(#holoNeonRed)' : isMuscleSecondary('shoulders') ? 'url(#holoNeonCyan)' : undefined}
                 >
@@ -319,7 +345,7 @@ export function ExerciseMuscleHologram({ tutorial }: ExerciseMuscleHologramProps
 
                 {/* Biceps */}
                 <g 
-                  onClick={() => setSelectedMuscle('biceps')}
+                  onClick={() => selectMuscle('biceps')}
                   style={{ cursor: 'pointer' }}
                   filter={isMusclePrimary('biceps') ? 'url(#holoNeonRed)' : isMuscleSecondary('biceps') ? 'url(#holoNeonCyan)' : undefined}
                 >
@@ -343,7 +369,7 @@ export function ExerciseMuscleHologram({ tutorial }: ExerciseMuscleHologramProps
 
                 {/* Abs & Core */}
                 <g 
-                  onClick={() => setSelectedMuscle('abs')}
+                  onClick={() => selectMuscle('abs')}
                   style={{ cursor: 'pointer' }}
                   filter={isMusclePrimary('abs') ? 'url(#holoNeonRed)' : isMuscleSecondary('abs') ? 'url(#holoNeonCyan)' : undefined}
                 >
@@ -357,7 +383,7 @@ export function ExerciseMuscleHologram({ tutorial }: ExerciseMuscleHologramProps
 
                 {/* Quadriceps (Front Thighs) */}
                 <g 
-                  onClick={() => setSelectedMuscle('quads')}
+                  onClick={() => selectMuscle('quads')}
                   style={{ cursor: 'pointer' }}
                   filter={isMusclePrimary('quads') ? 'url(#holoNeonRed)' : isMuscleSecondary('quads') ? 'url(#holoNeonCyan)' : undefined}
                 >
@@ -377,7 +403,7 @@ export function ExerciseMuscleHologram({ tutorial }: ExerciseMuscleHologramProps
 
                 {/* Calves (Front Tibialis & Gastrocnemius edges) */}
                 <g 
-                  onClick={() => setSelectedMuscle('calves')}
+                  onClick={() => selectMuscle('calves')}
                   style={{ cursor: 'pointer' }}
                   filter={isMusclePrimary('calves') ? 'url(#holoNeonRed)' : isMuscleSecondary('calves') ? 'url(#holoNeonCyan)' : undefined}
                 >
@@ -402,7 +428,7 @@ export function ExerciseMuscleHologram({ tutorial }: ExerciseMuscleHologramProps
               <g>
                 {/* Trapezius (Diamond) */}
                 <g 
-                  onClick={() => setSelectedMuscle('traps')}
+                  onClick={() => selectMuscle('traps')}
                   style={{ cursor: 'pointer' }}
                   filter={isMusclePrimary('traps') ? 'url(#holoNeonRed)' : isMuscleSecondary('traps') ? 'url(#holoNeonCyan)' : undefined}
                 >
@@ -416,7 +442,7 @@ export function ExerciseMuscleHologram({ tutorial }: ExerciseMuscleHologramProps
 
                 {/* Latissimus Dorsi (Lats) */}
                 <g 
-                  onClick={() => setSelectedMuscle('lats')}
+                  onClick={() => selectMuscle('lats')}
                   style={{ cursor: 'pointer' }}
                   filter={isMusclePrimary('lats') ? 'url(#holoNeonRed)' : isMuscleSecondary('lats') ? 'url(#holoNeonCyan)' : undefined}
                 >
@@ -436,7 +462,7 @@ export function ExerciseMuscleHologram({ tutorial }: ExerciseMuscleHologramProps
 
                 {/* Triceps */}
                 <g 
-                  onClick={() => setSelectedMuscle('triceps')}
+                  onClick={() => selectMuscle('triceps')}
                   style={{ cursor: 'pointer' }}
                   filter={isMusclePrimary('triceps') ? 'url(#holoNeonRed)' : isMuscleSecondary('triceps') ? 'url(#holoNeonCyan)' : undefined}
                 >
@@ -456,7 +482,7 @@ export function ExerciseMuscleHologram({ tutorial }: ExerciseMuscleHologramProps
 
                 {/* Lower Back (Erectors) */}
                 <g 
-                  onClick={() => setSelectedMuscle('lowerBack')}
+                  onClick={() => selectMuscle('lowerBack')}
                   style={{ cursor: 'pointer' }}
                   filter={isMusclePrimary('lowerBack') ? 'url(#holoNeonRed)' : isMuscleSecondary('lowerBack') ? 'url(#holoNeonCyan)' : undefined}
                 >
@@ -470,7 +496,7 @@ export function ExerciseMuscleHologram({ tutorial }: ExerciseMuscleHologramProps
 
                 {/* Glutes (Maximus & Medius) */}
                 <g 
-                  onClick={() => setSelectedMuscle('glutes')}
+                  onClick={() => selectMuscle('glutes')}
                   style={{ cursor: 'pointer' }}
                   filter={isMusclePrimary('glutes') ? 'url(#holoNeonRed)' : isMuscleSecondary('glutes') ? 'url(#holoNeonCyan)' : undefined}
                 >
@@ -490,7 +516,7 @@ export function ExerciseMuscleHologram({ tutorial }: ExerciseMuscleHologramProps
 
                 {/* Hamstrings */}
                 <g 
-                  onClick={() => setSelectedMuscle('hamstrings')}
+                  onClick={() => selectMuscle('hamstrings')}
                   style={{ cursor: 'pointer' }}
                   filter={isMusclePrimary('hamstrings') ? 'url(#holoNeonRed)' : isMuscleSecondary('hamstrings') ? 'url(#holoNeonCyan)' : undefined}
                 >
@@ -510,7 +536,7 @@ export function ExerciseMuscleHologram({ tutorial }: ExerciseMuscleHologramProps
 
                 {/* Calves (Gastrocnemius Diamond) */}
                 <g 
-                  onClick={() => setSelectedMuscle('calves')}
+                  onClick={() => selectMuscle('calves')}
                   style={{ cursor: 'pointer' }}
                   filter={isMusclePrimary('calves') ? 'url(#holoNeonRed)' : isMuscleSecondary('calves') ? 'url(#holoNeonCyan)' : undefined}
                 >
@@ -539,10 +565,57 @@ export function ExerciseMuscleHologram({ tutorial }: ExerciseMuscleHologramProps
             color: 'var(--text-muted)',
             background: 'rgba(0,0,0,0.6)',
             padding: '0.15rem 0.5rem',
-            borderRadius: '6px'
+            borderRadius: '6px',
+            pointerEvents: 'none'
           }}>
-            {isRTL ? 'المس العضلة لفحص دورها الميكانيكي' : 'Tap muscle to inspect role'}
+            {isRTL ? 'Ø§Ù„Ù…Ø³ Ø§Ù„Ø¹Ø¶Ù„Ø© Ù„ÙØ­Øµ Ø¯ÙˆØ±Ù‡Ø§ Ø§Ù„Ù…ÙŠÙƒØ§Ù†ÙŠÙƒÙŠ' : 'Tap muscle to inspect role'}
           </div>
+        </div>
+
+        {/* Keyboard + screen-reader equivalent for the anatomical map */}
+        <div
+          role="group"
+          aria-label={isRTL ? 'Ø§Ø®ØªÙŠØ§Ø± Ø§Ù„Ø¹Ø¶Ù„Ø©' : 'Select a muscle group'}
+          style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}
+        >
+          {viewMuscles.map(id => {
+            const isSelected = selectedMuscle === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                aria-pressed={isSelected}
+                onClick={() => selectMuscle(id)}
+                onFocus={() => selectMuscle(id)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  minHeight: '40px',
+                  padding: '0.3rem 0.65rem',
+                  borderRadius: '999px',
+                  border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--premium-line)',
+                  background: isSelected ? 'var(--premium-soft)' : 'transparent',
+                  color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                  fontSize: '0.74rem',
+                  fontWeight: isSelected ? 800 : 600,
+                  cursor: 'pointer'
+                }}
+              >
+                <span
+                  aria-hidden="true"
+                  style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: isMusclePrimary(id) ? '#ff3b3b' : isMuscleSecondary(id) ? '#38bdf8' : isSelected ? '#f59e0b' : 'var(--border-color)'
+                  }}
+                />
+                {muscleLabel(id)}
+                <span className="forma-sr-only">{` â€” ${roleLabel(id)}`}</span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Muscle Information Details Card */}
@@ -563,7 +636,7 @@ export function ExerciseMuscleHologram({ tutorial }: ExerciseMuscleHologramProps
                 gap: '0.35rem'
               }}>
                 <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#ff4646' }} />
-                {isRTL ? 'المحرك الأساسي للتمرين' : 'Prime Mover (Target)'}
+                {isRTL ? 'Ø§Ù„Ù…Ø­Ø±Ùƒ Ø§Ù„Ø£Ø³Ø§Ø³ÙŠ Ù„Ù„ØªÙ…Ø±ÙŠÙ†' : 'Prime Mover (Target)'}
               </span>
             ) : isMuscleSecondary(selectedMuscle) ? (
               <span style={{
@@ -579,7 +652,7 @@ export function ExerciseMuscleHologram({ tutorial }: ExerciseMuscleHologramProps
                 gap: '0.35rem'
               }}>
                 <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#38bdf8' }} />
-                {isRTL ? 'عضلة مساعدة ومثبتة' : 'Synergist & Stabilizer'}
+                {isRTL ? 'Ø¹Ø¶Ù„Ø© Ù…Ø³Ø§Ø¹Ø¯Ø© ÙˆÙ…Ø«Ø¨ØªØ©' : 'Synergist & Stabilizer'}
               </span>
             ) : (
               <span style={{
@@ -590,13 +663,13 @@ export function ExerciseMuscleHologram({ tutorial }: ExerciseMuscleHologramProps
                 background: 'var(--bg-tertiary)',
                 color: 'var(--text-muted)'
               }}>
-                {isRTL ? 'عضلة ثانوية' : 'Secondary Muscle'}
+                {isRTL ? 'Ø¹Ø¶Ù„Ø© Ø«Ø§Ù†ÙˆÙŠØ©' : 'Secondary Muscle'}
               </span>
             )}
 
             {isMusclePrimary(selectedMuscle) && (
               <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#10b981' }}>
-                {biomechanics.activationScore}% {isRTL ? 'كفاءة عزل' : 'Activation'}
+                {biomechanics.activationScore}% {isRTL ? 'ÙƒÙØ§Ø¡Ø© Ø¹Ø²Ù„' : 'Activation'}
               </span>
             )}
           </div>
@@ -622,7 +695,7 @@ export function ExerciseMuscleHologram({ tutorial }: ExerciseMuscleHologramProps
             gap: '0.45rem'
           }}>
             <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-              {isRTL ? 'إشارات التكنيك والزوايا الموصى بها:' : 'Form & Angle Guidelines:'}
+              {isRTL ? 'Ø¥Ø´Ø§Ø±Ø§Øª Ø§Ù„ØªÙƒÙ†ÙŠÙƒ ÙˆØ§Ù„Ø²ÙˆØ§ÙŠØ§ Ø§Ù„Ù…ÙˆØµÙ‰ Ø¨Ù‡Ø§:' : 'Form & Angle Guidelines:'}
             </span>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
               {biomechanics.cues.map((cue, idx) => (
