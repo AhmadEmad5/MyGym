@@ -1,14 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
-import { 
-  Sparkles, X, Dumbbell, Calendar, CheckCircle2, RefreshCw, Clock
+import {
+  Sparkles, X, Dumbbell, Calendar, CheckCircle2, RefreshCw, Clock,
+  AlertTriangle, Square
 } from 'lucide-react';
 import { generateGeminiJson } from '../lib/gemini';
 import { addDays, startOfWeek } from 'date-fns';
 import { useData } from '../hooks/useData';
 import { WorkoutSession, SessionExercise, Routine } from '../lib/api';
 import { useTranslation } from '../lib/i18n';
+import ReactMarkdown from 'react-markdown';
+import { useReducedMotion } from './performance/useReducedMotion';
 
 interface AIWorkoutGeneratorModalProps {
   isOpen: boolean;
@@ -64,6 +67,7 @@ interface GeneratedPlan {
 export function AIWorkoutGeneratorModal({ isOpen, onClose, onRoutineScheduled }: AIWorkoutGeneratorModalProps) {
   const { data, saveSessions, saveRoutine } = useData();
   const { t, isRTL, tExercise, tMuscle, tTitle } = useTranslation();
+  const reducedMotion = useReducedMotion();
 
   const [goal, setGoal] = useState<Goal>('hypertrophy');
   const [level, setLevel] = useState<Level>('intermediate');
@@ -72,6 +76,9 @@ export function AIWorkoutGeneratorModal({ isOpen, onClose, onRoutineScheduled }:
   const [customFocus, setCustomFocus] = useState<string>('');
 
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generationStage, setGenerationStage] = useState(0);
+  const [wasAborted, setWasAborted] = useState(false);
+  const abortRef = useRef(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [generatedPlan, setGeneratedPlan] = useState<GeneratedPlan | null>(null);
   const [selectedSessionTab, setSelectedSessionTab] = useState<number>(0);
@@ -79,6 +86,27 @@ export function AIWorkoutGeneratorModal({ isOpen, onClose, onRoutineScheduled }:
   const [isApplyingToCalendar, setIsApplyingToCalendar] = useState(false);
   const [appliedSuccess, setAppliedSuccess] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+
+  const GENERATION_STAGES_EN = [
+    'Reading your training profile',
+    'Selecting movement patterns',
+    'Balancing volume and recovery',
+    'Writing coaching cues'
+  ];
+  const GENERATION_STAGES_AR = [
+    'قراءة ملفك التدريبي',
+    'اختيار أنماط الحركة',
+    'موازنة الحجم والاستشفاء',
+    'صياغة الإرشادات'
+  ];
+
+  useEffect(() => {
+    if (!isGenerating) return;
+    const timer = setInterval(() => {
+      setGenerationStage(prev => (prev + 1) % GENERATION_STAGES_EN.length);
+    }, 1800);
+    return () => clearInterval(timer);
+  }, [isGenerating]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -97,6 +125,12 @@ export function AIWorkoutGeneratorModal({ isOpen, onClose, onRoutineScheduled }:
 
   if (!isOpen) return null;
 
+  const handleAbort = () => {
+    abortRef.current = true;
+    setIsGenerating(false);
+    setWasAborted(true);
+  };
+
   const handleGenerate = async () => {
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
     if (!apiKey) {
@@ -104,7 +138,10 @@ export function AIWorkoutGeneratorModal({ isOpen, onClose, onRoutineScheduled }:
       return;
     }
 
+    abortRef.current = false;
+    setWasAborted(false);
     setIsGenerating(true);
+    setGenerationStage(0);
     setErrorMessage(null);
     setGeneratedPlan(null);
     setAppliedSuccess(false);
@@ -162,6 +199,8 @@ Output strictly valid JSON with NO markdown code fences, using this schema:
     try {
       const parsed = await generateGeminiJson<GeneratedPlan>({ prompt });
 
+      if (abortRef.current) return;
+
       if (!parsed.sessions || parsed.sessions.length === 0) {
         throw new Error('AI returned an incomplete routine format.');
       }
@@ -169,15 +208,16 @@ Output strictly valid JSON with NO markdown code fences, using this schema:
       setGeneratedPlan(parsed);
       setSelectedSessionTab(0);
     } catch (err: any) {
+      if (abortRef.current) return;
       console.error('AI Routine Generation Error:', err);
       const isBusy = err?.message?.includes('503') || err?.message?.includes('high demand');
       setErrorMessage(
-        isBusy 
+        isBusy
           ? (isRTL ? 'الخوادم تشهد ضغطاً مؤقتاً، يرجى المحاولة مرة أخرى بعد ثوانٍ قليلة.' : 'AI servers are experiencing temporary high demand, please try again in a few moments.')
-          : (err.message || (isRTL ? 'تعذر إنشاء الجدول. يرجى التحقق من الاتصال والمحاولة مجدداً.' : 'Failed to generate routine. Please check your internet connection or try again.'))
+          : (err?.message || (isRTL ? 'تعذر إنشاء الجدول. يرجى التحقق من الاتصال والمحاولة مجدداً.' : 'Failed to generate routine. Please check your internet connection or try again.'))
       );
     } finally {
-      setIsGenerating(false);
+      if (!abortRef.current) setIsGenerating(false);
     }
   };
 
@@ -339,12 +379,17 @@ Output strictly valid JSON with NO markdown code fences, using this schema:
       }}
     >
       <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 15 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 15 }}
+        initial={reducedMotion ? false : { opacity: 0, scale: 0.95, y: 15 }}
+        animate={reducedMotion ? {} : { opacity: 1, scale: 1, y: 0 }}
+        role="dialog"
+        aria-modal="true"
+        aria-label={isRTL ? 'صانع الجداول بالذكاء الاصطناعي' : 'AI Workout Generator'}
         className="card modal-card ai-generator-modal-card"
         style={{
           maxWidth: '750px',
+          maxHeight: 'calc(100dvh - 1.5rem)',
+          display: 'flex',
+          flexDirection: 'column',
           padding: 0,
           overflow: 'hidden',
           backgroundColor: 'var(--bg-secondary)',
@@ -392,18 +437,44 @@ Output strictly valid JSON with NO markdown code fences, using this schema:
         </div>
 
         {/* Modal Body */}
-        <div style={{ padding: '1.5rem', overflowY: 'auto', flex: 1 }} className="hide-scrollbar">
+        <div style={{ padding: '1.5rem', overflowY: 'auto', flex: 1, WebkitOverflowScrolling: 'touch' }} className="hide-scrollbar">
           {errorMessage && (
-            <div style={{
-              padding: '0.75rem 1rem',
-              borderRadius: '8px',
-              backgroundColor: 'rgba(239, 68, 68, 0.15)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              color: '#ef4444',
-              fontSize: '0.875rem',
-              marginBottom: '1.25rem',
-            }}>
-              {errorMessage}
+            <div className="forma-ai-error" role="alert" style={{ marginBottom: '1.25rem' }}>
+              <strong style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                <AlertTriangle size={15} aria-hidden="true" />
+                {isRTL ? 'تعذر توليد الجدول' : 'Routine generation failed'}
+              </strong>
+              <span>{errorMessage}</span>
+              <button
+                type="button"
+                className="forma-figure-toggle"
+                style={{ marginBlockStart: '0.25rem' }}
+                onClick={handleGenerate}
+              >
+                <RefreshCw size={12} aria-hidden="true" />
+                <span>{isRTL ? 'إعادة المحاولة' : 'Try again'}</span>
+              </button>
+            </div>
+          )}
+
+          {wasAborted && !errorMessage && (
+            <div className="forma-state-panel" role="status" style={{ marginBottom: '1.25rem' }}>
+              <strong>{isRTL ? 'تم إيقاف التوليد' : 'Generation stopped'}</strong>
+              <span>{isRTL ? 'يمكنك تعديل الإجابات ثم المحاولة مرة أخرى.' : 'Adjust your answers and try again whenever you are ready.'}</span>
+            </div>
+          )}
+
+          {isGenerating && (
+            <div className="forma-state-panel" role="status" aria-live="polite" style={{ marginBottom: '1.25rem' }}>
+              <span aria-hidden="true" className="forma-ai-cursor" style={{ margin: 0 }} />
+              <strong>
+                {(isRTL ? GENERATION_STAGES_AR : GENERATION_STAGES_EN)[generationStage]}…
+              </strong>
+              <span>
+                {isRTL
+                  ? 'قد يستغرق التصميم الاحترافي بضع ثوانٍ.'
+                  : 'A science-backed split usually takes a few seconds.'}
+              </span>
             </div>
           )}
 
@@ -411,29 +482,32 @@ Output strictly valid JSON with NO markdown code fences, using this schema:
             /* Questionnaire View */
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               {/* Goal */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.6rem', color: 'var(--text-primary)' }}>
+              <fieldset style={{ border: 0, margin: 0, padding: 0 }}>
+                <legend style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.6rem', color: 'var(--text-primary)' }}>
                   {isRTL ? '1. الهدف التدريبي الأساسي' : '1. Primary Training Goal'}
-                </label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.6rem' }}>
+                </legend>
+                <div role="radiogroup" aria-label={isRTL ? 'الهدف التدريبي' : 'Training goal'} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.6rem' }}>
                   {GOALS.map((g) => {
                     const isSelected = goal === g.id;
                     return (
                       <button
                         key={g.id}
                         type="button"
+                        role="radio"
+                        aria-checked={isSelected}
                         onClick={() => setGoal(g.id)}
                         style={{
+                          minHeight: '64px',
                           padding: '0.85rem',
                           borderRadius: '10px',
-                          border: isSelected ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                          background: isSelected ? 'rgba(70, 217, 255, 0.12)' : 'var(--bg-tertiary)',
+                          border: isSelected ? '1.5px solid var(--accent-primary)' : '1px solid var(--premium-line)',
+                          background: isSelected ? 'var(--premium-soft)' : 'var(--bg-tertiary)',
                           textAlign: isRTL ? 'right' : 'left',
                           cursor: 'pointer',
                           transition: 'all 0.2s',
                         }}
                       >
-                        <div style={{ fontSize: '1.25rem', marginBottom: '0.3rem' }}>{g.icon}</div>
+                        <div style={{ fontSize: '1.25rem', marginBottom: '0.3rem' }} aria-hidden="true">{g.icon}</div>
                         <div style={{ fontWeight: 700, fontSize: '0.9rem', color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)' }}>
                           {isRTL ? g.titleAr : g.titleEn}
                         </div>
@@ -444,26 +518,29 @@ Output strictly valid JSON with NO markdown code fences, using this schema:
                     );
                   })}
                 </div>
-              </div>
+              </fieldset>
 
               {/* Experience Level */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.6rem', color: 'var(--text-primary)' }}>
+              <fieldset style={{ border: 0, margin: 0, padding: 0 }}>
+                <legend style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.6rem', color: 'var(--text-primary)' }}>
                   {isRTL ? '2. مستوى الخبرة في رفع الأثقال' : '2. Lifting Experience Level'}
-                </label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.6rem' }}>
+                </legend>
+                <div role="radiogroup" aria-label={isRTL ? 'مستوى الخبرة' : 'Experience level'} style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.6rem' }}>
                   {LEVELS.map((l) => {
                     const isSelected = level === l.id;
                     return (
                       <button
                         key={l.id}
                         type="button"
+                        role="radio"
+                        aria-checked={isSelected}
                         onClick={() => setLevel(l.id)}
                         style={{
+                          minHeight: '64px',
                           padding: '0.75rem',
                           borderRadius: '10px',
-                          border: isSelected ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                          background: isSelected ? 'rgba(70, 217, 255, 0.12)' : 'var(--bg-tertiary)',
+                          border: isSelected ? '1.5px solid var(--accent-primary)' : '1px solid var(--premium-line)',
+                          background: isSelected ? 'var(--premium-soft)' : 'var(--bg-tertiary)',
                           textAlign: 'center',
                           cursor: 'pointer',
                           transition: 'all 0.2s',
@@ -479,28 +556,32 @@ Output strictly valid JSON with NO markdown code fences, using this schema:
                     );
                   })}
                 </div>
-              </div>
+              </fieldset>
 
               {/* Frequency & Equipment Grid */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
                 {/* Days Per Week */}
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.6rem', color: 'var(--text-primary)' }}>
+                <fieldset style={{ border: 0, margin: 0, padding: 0 }}>
+                  <legend style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.6rem', color: 'var(--text-primary)' }}>
                     {isRTL ? '3. عدد أيام التمرين بالأسبوع' : '3. Frequency (Days/Week)'}
-                  </label>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  </legend>
+                  <div role="radiogroup" aria-label={isRTL ? 'أيام التمرين أسبوعياً' : 'Days per week'} style={{ display: 'flex', gap: '0.5rem' }}>
                     {[2, 3, 4, 5, 6].map((num) => {
                       const isSelected = daysCount === num;
                       return (
                         <button
                           key={num}
                           type="button"
+                          role="radio"
+                          aria-checked={isSelected}
+                          aria-label={`${num} ${isRTL ? 'أيام' : 'days per week'}`}
                           onClick={() => setDaysCount(num)}
                           style={{
                             flex: 1,
+                            minHeight: '52px',
                             padding: '0.65rem 0.25rem',
                             borderRadius: '8px',
-                            border: isSelected ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                            border: isSelected ? '1.5px solid var(--accent-primary)' : '1px solid var(--premium-line)',
                             background: isSelected ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
                             color: isSelected ? '#000' : 'var(--text-primary)',
                             fontWeight: 800,
@@ -514,27 +595,30 @@ Output strictly valid JSON with NO markdown code fences, using this schema:
                       );
                     })}
                   </div>
-                </div>
+                </fieldset>
 
                 {/* Equipment */}
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.6rem', color: 'var(--text-primary)' }}>
+                <fieldset style={{ border: 0, margin: 0, padding: 0 }}>
+                  <legend style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.6rem', color: 'var(--text-primary)' }}>
                     {isRTL ? '4. المعدات المتاحة' : '4. Available Equipment'}
-                  </label>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  </legend>
+                  <div role="radiogroup" aria-label={isRTL ? 'المعدات' : 'Equipment'} style={{ display: 'flex', gap: '0.5rem' }}>
                     {EQUIPMENTS.map((eq) => {
                       const isSelected = equipment === eq.id;
                       return (
                         <button
                           key={eq.id}
                           type="button"
+                          role="radio"
+                          aria-checked={isSelected}
                           onClick={() => setEquipment(eq.id)}
                           style={{
                             flex: 1,
+                            minHeight: '68px',
                             padding: '0.65rem 0.35rem',
                             borderRadius: '8px',
-                            border: isSelected ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                            background: isSelected ? 'rgba(70, 217, 255, 0.12)' : 'var(--bg-tertiary)',
+                            border: isSelected ? '1.5px solid var(--accent-primary)' : '1px solid var(--premium-line)',
+                            background: isSelected ? 'var(--premium-soft)' : 'var(--bg-tertiary)',
                             color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)',
                             fontWeight: 700,
                             fontSize: '0.8rem',
@@ -546,60 +630,88 @@ Output strictly valid JSON with NO markdown code fences, using this schema:
                             transition: 'all 0.2s',
                           }}
                         >
-                          <span>{eq.icon}</span>
+                          <span aria-hidden="true">{eq.icon}</span>
                           <span>{isRTL ? eq.titleAr.split(' ')[0] : eq.titleEn.split(' ')[0]}</span>
                         </button>
                       );
                     })}
                   </div>
-                </div>
+                </fieldset>
               </div>
 
               {/* Custom Focus */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.4rem', color: 'var(--text-primary)' }}>
+                <label htmlFor="ai-routine-focus" style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.4rem', color: 'var(--text-primary)' }}>
                   {isRTL ? '5. تركيز خاص أو نقاط ضعف (اختياري)' : '5. Focus Areas & Special Requests (Optional)'}
                 </label>
                 <input
+                  id="ai-routine-focus"
                   type="text"
                   className="input"
                   placeholder={isRTL ? 'مثال: التركيز على الصدر والذراعين، تجنب إجهاد أسفل الظهر...' : 'e.g. Focus on chest and arms, avoid lower back strain, prioritize compound lifts...'}
                   value={customFocus}
                   onChange={(e) => setCustomFocus(e.target.value)}
-                  style={{ width: '100%', borderRadius: '10px', textAlign: isRTL ? 'right' : 'left' }}
+                  style={{ width: '100%', minHeight: '48px', borderRadius: '10px', textAlign: isRTL ? 'right' : 'left' }}
                 />
               </div>
 
               {/* Submit Generator Button */}
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={handleGenerate}
-                disabled={isGenerating}
-                style={{
-                  padding: '0.9rem',
-                  fontSize: '1rem',
-                  fontWeight: 800,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.6rem',
-                  borderRadius: '12px',
-                  boxShadow: '0 8px 25px rgba(14, 165, 233, 0.35)',
-                }}
-              >
-                {isGenerating ? (
-                  <>
-                    <RefreshCw size={20} className="animate-spin" />
-                    {isRTL ? 'جاري تصميم برنامجك المخصص عبر ذكاء Gemini...' : 'Designing your custom program with Gemini CSCS AI...'}
-                  </>
-                ) : (
-                  <>
-                    <Sparkles size={20} />
-                    {isRTL ? 'توليد جدولي التدريبي بالذكاء الاصطناعي' : 'Generate My Routine with AI'}
-                  </>
-                )}
-              </button>
+              {isGenerating ? (
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={handleAbort}
+                  style={{
+                    width: '100%',
+                    padding: '0.9rem',
+                    minHeight: '56px',
+                    fontSize: '1rem',
+                    fontWeight: 800,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.6rem',
+                    borderRadius: '12px',
+                    background: 'color-mix(in srgb, var(--danger) 18%, transparent)',
+                    border: '1px solid color-mix(in srgb, var(--danger) 40%, transparent)',
+                    color: 'var(--danger)'
+                  }}
+                >
+                  <Square size={16} fill="currentColor" aria-hidden="true" />
+                  <span>{isRTL ? 'إيقاف التوليد' : 'Stop generating'}</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleGenerate}
+                  style={{
+                    width: '100%',
+                    padding: '0.9rem',
+                    minHeight: '56px',
+                    fontSize: '1rem',
+                    fontWeight: 800,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.6rem',
+                    borderRadius: '12px',
+                    boxShadow: '0 8px 25px rgba(14, 165, 233, 0.35)',
+                  }}
+                >
+                  <Sparkles size={18} aria-hidden="true" />
+                  <span>{isRTL ? 'توليد جدول احترافي بالذكاء الاصطناعي' : 'Generate My Science-Backed Split'}</span>
+                </button>
+              )}
+              {isGenerating && (
+                <span
+                  className="forma-sr-only"
+                  role="status"
+                  aria-live="polite"
+                >
+                  {isRTL ? 'جاري تصميم برنامجك المخصص عبر ذكاء Gemini' : 'Designing your custom program with Gemini AI'}
+                </span>
+              )}
             </div>
           ) : (
             /* Generated Routine View */
@@ -628,24 +740,28 @@ Output strictly valid JSON with NO markdown code fences, using this schema:
                 <p style={{ margin: '0 0 0.75rem 0', color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 600 }}>
                   {generatedPlan.tagline}
                 </p>
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
-                  💡 <strong>{isRTL ? 'التفسير التدريبي:' : 'Coach Rationale:'}</strong> {generatedPlan.scientificRationale}
+                <div className="forma-ai-stream" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  <strong>{isRTL ? 'التفسير التدريبي:' : 'Coach Rationale:'}</strong>
+                  <ReactMarkdown>{generatedPlan.scientificRationale}</ReactMarkdown>
                 </div>
               </div>
 
               {/* Day Tabs */}
               <div>
-                <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+                <div role="tablist" aria-label={isRTL ? 'أيام البرنامج' : 'Program days'} style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
                   {generatedPlan.sessions.map((s, idx) => (
                     <button
                       key={idx}
                       type="button"
+                      role="tab"
+                      aria-selected={selectedSessionTab === idx}
                       onClick={() => setSelectedSessionTab(idx)}
                       style={{
+                        minHeight: '48px',
                         padding: '0.55rem 0.9rem',
                         borderRadius: '8px',
-                        border: selectedSessionTab === idx ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                        background: selectedSessionTab === idx ? 'rgba(70, 217, 255, 0.15)' : 'var(--bg-tertiary)',
+                        border: selectedSessionTab === idx ? '1.5px solid var(--accent-primary)' : '1px solid var(--premium-line)',
+                        background: selectedSessionTab === idx ? 'var(--premium-soft)' : 'var(--bg-tertiary)',
                         color: selectedSessionTab === idx ? 'var(--accent-primary)' : 'var(--text-secondary)',
                         fontWeight: 700,
                         fontSize: '0.85rem',

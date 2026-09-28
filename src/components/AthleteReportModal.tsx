@@ -1,13 +1,15 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
-import { 
-  X, Printer, Dumbbell, Trophy, 
+import {
+  X, Printer, Dumbbell, Trophy,
   Activity, Flame, Clock, Award, ShieldCheck
 } from 'lucide-react';
 import { format, subDays, startOfMonth, startOfWeek } from 'date-fns';
 import { useData } from '../hooks/useData';
 import { useTranslation } from '../lib/i18n';
 import { computeAllPersonalRecords, estimateWorkoutCalories } from '../lib/api';
+import { useReducedMotion } from './performance/useReducedMotion';
 
 interface AthleteReportModalProps {
   isOpen: boolean;
@@ -19,6 +21,7 @@ type DateRangeFilter = 'all' | '30days' | 'month' | 'week';
 export function AthleteReportModal({ isOpen, onClose }: AthleteReportModalProps) {
   const { data } = useData();
   const { isRTL, formatDate, tTitle, tMuscle } = useTranslation();
+  const reducedMotion = useReducedMotion();
   const [rangeFilter, setRangeFilter] = useState<DateRangeFilter>('30days');
   const [coachNotes, setCoachNotes] = useState('');
 
@@ -118,6 +121,21 @@ export function AthleteReportModal({ isOpen, onClose }: AthleteReportModalProps)
     };
   }, [filteredMeals]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    document.body.classList.add('modal-open');
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.classList.remove('modal-open');
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handlePrint = () => {
@@ -133,7 +151,7 @@ export function AthleteReportModal({ isOpen, onClose }: AthleteReportModalProps)
     }
   };
 
-  return (
+  return createPortal(
     <div
       className="modal-backdrop athlete-report-backdrop"
       onClick={onClose}
@@ -152,14 +170,16 @@ export function AthleteReportModal({ isOpen, onClose }: AthleteReportModalProps)
     >
       <motion.div
         className="card athlete-report-modal"
-        initial={{ opacity: 0, scale: 0.96, y: 15 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.96, y: 15 }}
+        role="dialog"
+        aria-modal="true"
+        aria-label={getRangeLabel()}
+        initial={reducedMotion ? false : { opacity: 0, scale: 0.96, y: 15 }}
+        animate={reducedMotion ? {} : { opacity: 1, scale: 1, y: 0 }}
         onClick={(e) => e.stopPropagation()}
         style={{
           width: '100%',
           maxWidth: '860px',
-          maxHeight: '94vh',
+          maxHeight: '94dvh',
           display: 'flex',
           flexDirection: 'column',
           padding: '0',
@@ -626,6 +646,7 @@ export function AthleteReportModal({ isOpen, onClose }: AthleteReportModalProps)
           </div>
         </div>
       </motion.div>
-    </div>
+    </div>,
+    document.body
   );
 }

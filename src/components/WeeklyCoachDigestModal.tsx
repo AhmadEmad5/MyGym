@@ -1,15 +1,16 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Bot, Sparkles, X, RefreshCw, Trophy, Target, Compass, 
-  Dumbbell, Utensils, Flame, Calendar
+import {
+  Bot, Sparkles, X, RefreshCw, Trophy, Target, Compass,
+  Dumbbell, Utensils, Flame, Calendar, AlertTriangle, Square
 } from 'lucide-react';
 import { generateGeminiJson } from '../lib/gemini';
 import { format, subDays, isAfter } from 'date-fns';
 import { useData } from '../hooks/useData';
 import { useTranslation } from '../lib/i18n';
 import { estimateWorkoutCalories } from '../lib/api';
+import { useReducedMotion } from './performance/useReducedMotion';
 
 interface WeeklyCoachDigestModalProps {
   isOpen: boolean;
@@ -26,9 +27,12 @@ interface CoachDigest {
 export function WeeklyCoachDigestModal({ isOpen, onClose }: WeeklyCoachDigestModalProps) {
   const { data } = useData();
   const { t, isRTL } = useTranslation();
+  const reducedMotion = useReducedMotion();
 
   const [digest, setDigest] = useState<CoachDigest | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [wasAborted, setWasAborted] = useState(false);
+  const abortRef = useRef(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Define 7-day lookback window for current weekly digest
@@ -83,6 +87,8 @@ export function WeeklyCoachDigestModal({ isOpen, onClose }: WeeklyCoachDigestMod
       return;
     }
 
+    abortRef.current = false;
+    setWasAborted(false);
     setIsGenerating(true);
     setErrorMessage(null);
 
@@ -129,6 +135,8 @@ Strictly return JSON with this structure:
         prompt
       });
 
+      if (abortRef.current) return;
+
       const newDigest: CoachDigest = {
         consistency: parsed.consistency || '',
         strength: parsed.strength || '',
@@ -140,15 +148,22 @@ Strictly return JSON with this structure:
       localStorage.setItem(storageKey, JSON.stringify(newDigest));
     } catch (err: any) {
 
+      if (abortRef.current) return;
       console.error('Failed to generate weekly coach digest:', err);
       setErrorMessage(
-        isRTL 
-          ? 'تعذر الاتصال بالمدرب الذكي. يرجى التأكد من اتصال الإنترنت والمحاولة ثانية.' 
+        isRTL
+          ? 'تعذر الاتصال بالمدرب الذكي. يرجى التأكد من اتصال الإنترنت والمحاولة ثانية.'
           : 'Failed to generate weekly digest. Please check your connection and try again.'
       );
     } finally {
-      setIsGenerating(false);
+      if (!abortRef.current) setIsGenerating(false);
     }
+  };
+
+  const handleAbort = () => {
+    abortRef.current = true;
+    setIsGenerating(false);
+    setWasAborted(true);
   };
 
   useEffect(() => {
@@ -188,9 +203,12 @@ Strictly return JSON with this structure:
         onClick={onClose}
       >
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 15 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 15 }}
+          role="dialog"
+          aria-modal="true"
+          aria-label={t('weeklyCoachDigest')}
+          initial={reducedMotion ? false : { opacity: 0, scale: 0.95, y: 15 }}
+          animate={reducedMotion ? {} : { opacity: 1, scale: 1, y: 0 }}
+          exit={reducedMotion ? {} : { opacity: 0, scale: 0.95, y: 15 }}
           className="modal-card"
           style={{
             backgroundColor: 'var(--bg-surface, #131722)',
@@ -363,56 +381,102 @@ Strictly return JSON with this structure:
 
           {/* Error Message */}
           {errorMessage && (
-            <div style={{
-              backgroundColor: 'rgba(239, 68, 68, 0.12)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              color: '#ef4444',
-              padding: '0.75rem 1rem',
-              borderRadius: '10px',
-              fontSize: '0.85rem',
-              marginBottom: '1.25rem'
-            }}>
-              {errorMessage}
+            <div className="forma-ai-error" role="alert" style={{ marginBottom: '1.25rem' }}>
+              <strong style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                <AlertTriangle size={15} aria-hidden="true" />
+                {isRTL ? 'تعذر إنشاء الملخص' : 'Digest generation failed'}
+              </strong>
+              <span>{errorMessage}</span>
+              <button
+                type="button"
+                className="forma-figure-toggle"
+                style={{ marginBlockStart: '0.25rem' }}
+                onClick={generateDigest}
+              >
+                <RefreshCw size={12} aria-hidden="true" />
+                <span>{isRTL ? 'إعادة المحاولة' : 'Try again'}</span>
+              </button>
+            </div>
+          )}
+
+          {wasAborted && !errorMessage && (
+            <div className="forma-state-panel" role="status" style={{ marginBottom: '1.25rem' }}>
+              <strong>{isRTL ? 'تم إيقاف إنشاء الملخص' : 'Digest generation stopped'}</strong>
+              <span>{isRTL ? 'يمكنك إعادة المحاولة في أي وقت.' : 'You can retry whenever you are ready.'}</span>
+            </div>
+          )}
+
+          {isGenerating && (
+            <div className="forma-state-panel" role="status" aria-live="polite" style={{ marginBottom: '1.25rem' }}>
+              <span aria-hidden="true" className="forma-ai-cursor" style={{ margin: 0 }} />
+              <strong>{isRTL ? 'المدرب يحلل أسبوعك...' : 'Your coach is reviewing your week…'}</strong>
+              <span>
+                {isRTL
+                  ? `قراءة ${weeklyWorkouts.length} تمريناً و${weeklyMeals.length} وجبة مسجلة.`
+                  : `Reading ${weeklyWorkouts.length} workouts and ${weeklyMeals.length} logged meals.`}
+              </span>
             </div>
           )}
 
           {/* Actions */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.75rem', flexWrap: 'wrap' }}>
             <button
               type="button"
               className="btn btn-ghost"
               onClick={onClose}
               disabled={isGenerating}
+              style={{ minHeight: '48px' }}
             >
               {t('close')}
             </button>
 
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={generateDigest}
-              disabled={isGenerating}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
-                boxShadow: '0 4px 14px rgba(99, 102, 241, 0.35)',
-                border: 'none',
-                padding: '0.65rem 1.25rem',
-                borderRadius: '10px',
-                color: 'white',
-                fontWeight: 600,
-                cursor: isGenerating ? 'not-allowed' : 'pointer'
-              }}
-            >
-              <RefreshCw className={`w-4 h-4 ${isGenerating ? 'animate-spin' : ''}`} />
-              <span>
-                {isGenerating 
-                  ? t('generatingDigest') 
-                  : (digest ? t('refreshDigest') : t('generateWeeklyDigest'))}
-              </span>
-            </button>
+            {isGenerating ? (
+              <button
+                type="button"
+                className="btn"
+                onClick={handleAbort}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  minHeight: '48px',
+                  padding: '0.65rem 1.25rem',
+                  borderRadius: '10px',
+                  background: 'color-mix(in srgb, var(--danger) 18%, transparent)',
+                  border: '1px solid color-mix(in srgb, var(--danger) 40%, transparent)',
+                  color: 'var(--danger)',
+                  fontWeight: 600
+                }}
+              >
+                <Square size={14} fill="currentColor" aria-hidden="true" />
+                <span>{isRTL ? 'إيقاف' : 'Stop'}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={generateDigest}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  minHeight: '48px',
+                  background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+                  boxShadow: '0 4px 14px rgba(99, 102, 241, 0.35)',
+                  border: 'none',
+                  padding: '0.65rem 1.25rem',
+                  borderRadius: '10px',
+                  color: 'white',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                <RefreshCw size={14} aria-hidden="true" />
+                <span>
+                  {digest ? t('refreshDigest') : t('generateWeeklyDigest')}
+                </span>
+              </button>
+            )}
           </div>
         </motion.div>
       </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Delete, Check, Plus, Minus } from 'lucide-react';
 import { useTranslation } from '../lib/i18n';
@@ -15,6 +15,8 @@ interface WorkoutNumberKeypadModalProps {
   onSave: (value: number) => void;
 }
 
+const WEIGHT_UNITS = ['kg', 'lb'] as const;
+
 export function WorkoutNumberKeypadModal({
   isOpen,
   onClose,
@@ -25,107 +27,153 @@ export function WorkoutNumberKeypadModal({
   type,
   onSave
 }: WorkoutNumberKeypadModalProps) {
-  const { isRTL } = useTranslation();
+  const { isRTL, t } = useTranslation();
   const [valStr, setValStr] = useState<string>('');
+  const [activeUnit, setActiveUnit] = useState<string>(unit || 'kg');
+  const [announcement, setAnnouncement] = useState('');
+  const sheetRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen) {
       setValStr(initialValue > 0 ? String(initialValue) : '');
+      setActiveUnit(unit || 'kg');
+      setAnnouncement('');
     }
-  }, [isOpen, initialValue]);
+  }, [isOpen, initialValue, unit]);
+
+  const currentNum = useCallback(() => parseFloat(valStr) || 0, [valStr]);
+
+  const describe = useCallback((value: string) => {
+    const parsed = parseFloat(value) || 0;
+    if (type === 'reps') {
+      return isRTL ? `${parsed} تكرار` : `${parsed} ${parsed === 1 ? 'rep' : 'reps'}`;
+    }
+    return isRTL ? `${parsed} ${activeUnit}` : `${parsed} ${activeUnit}`;
+  }, [type, activeUnit, isRTL]);
+
+  const announce = useCallback((message: string) => {
+    setAnnouncement('');
+    window.setTimeout(() => setAnnouncement(message), 40);
+  }, []);
+
+  const handleDigit = useCallback((d: string) => {
+    gymAudio.triggerVibration([10]);
+    setValStr(prev => {
+      let next = prev;
+      if (d === '.') {
+        if (type === 'reps') return prev;
+        if (prev.includes('.')) return prev;
+        next = prev === '' ? '0.' : prev + '.';
+      } else if (prev === '0') {
+        next = d;
+      } else if (prev.length < 6) {
+        next = prev + d;
+      }
+      announce(describe(next));
+      return next;
+    });
+  }, [type, announce, describe]);
+
+  const handleBackspace = useCallback(() => {
+    gymAudio.triggerVibration([10]);
+    setValStr(prev => {
+      const next = prev.slice(0, -1);
+      announce(next ? describe(next) : (isRTL ? 'تم المسح' : 'Cleared'));
+      return next;
+    });
+  }, [announce, describe, isRTL]);
+
+  const handleClear = useCallback(() => {
+    gymAudio.triggerVibration([12]);
+    setValStr('');
+    announce(isRTL ? 'تم المسح' : 'Cleared');
+  }, [announce, isRTL]);
+
+  const handleAdjust = useCallback((delta: number) => {
+    gymAudio.triggerVibration([12]);
+    const next = Math.max(0, Math.round((currentNum() + delta) * 100) / 100);
+    setValStr(next === 0 ? '' : String(next));
+    announce(describe(String(next)));
+  }, [announce, currentNum, describe]);
+
+  const handleUnitChange = useCallback((nextUnit: string) => {
+    gymAudio.triggerVibration([12]);
+    setActiveUnit(nextUnit);
+    announce(isRTL ? `الوحدة ${nextUnit}` : `Unit ${nextUnit}`);
+  }, [announce, isRTL]);
+
+  const handleDone = useCallback(() => {
+    gymAudio.triggerSubtleHaptic([25]);
+    onSave(currentNum());
+    onClose();
+  }, [onSave, onClose, currentNum]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.stopPropagation();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
-  const currentNum = parseFloat(valStr) || 0;
-
-  const handleDigit = (d: string) => {
-    gymAudio.triggerVibration([10]);
-    if (d === '.') {
-      if (type === 'reps') return; // reps are integers
-      if (valStr.includes('.')) return;
-      setValStr(prev => (prev === '' ? '0.' : prev + '.'));
-    } else {
-      // Avoid leading zeroes like 00 or 05 unless decimal
-      if (valStr === '0') {
-        setValStr(d);
-      } else {
-        if (valStr.length < 6) {
-          setValStr(prev => prev + d);
-        }
-      }
-    }
-  };
-
-  const handleBackspace = () => {
-    gymAudio.triggerVibration([10]);
-    setValStr(prev => prev.slice(0, -1));
-  };
-
-  const handleClear = () => {
-    gymAudio.triggerVibration([12]);
-    setValStr('');
-  };
-
-  const handleAdjust = (delta: number) => {
-    gymAudio.triggerVibration([12]);
-    const next = Math.max(0, Math.round((currentNum + delta) * 100) / 100);
-    setValStr(next === 0 ? '' : String(next));
-  };
-
-  const handleDone = () => {
-    gymAudio.triggerSubtleHaptic([25]);
-    onSave(currentNum);
-    onClose();
-  };
-
-  const weightShortcuts = unit === 'lb' ? [2.5, 5, 10, 20] : [1.25, 2.5, 5, 10];
+  const unitSuffix = type === 'reps' ? (isRTL ? 'تكرار' : 'reps') : activeUnit;
+  const weightShortcuts = activeUnit === 'lb' ? [2.5, 5, 10, 20] : [1.25, 2.5, 5, 10];
   const repsShortcuts = [1, 2, 5];
+  const entryLabel = isRTL
+    ? (type === 'reps' ? 'إدخال عدد التكرارات' : 'إدخال الوزن')
+    : (type === 'reps' ? 'Entering repetitions' : 'Entering weight');
 
   return (
-    <AnimatePresence>
-      <div 
-        className="workout-keypad-backdrop"
-        onClick={onClose}
-        style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.72)',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
-          zIndex: 9999,
-          display: 'flex',
-          alignItems: 'flex-end',
-          justifyContent: 'center'
-        }}
-      >
+    <div
+      className="portal-modal-backdrop"
+      role="presentation"
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        display: 'flex',
+        alignItems: 'flex-end',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.72)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+        zIndex: 9999
+      }}
+    >
+      <AnimatePresence>
         <motion.div
-          className="workout-keypad-sheet"
+          ref={sheetRef}
+          className="forma-keypad-sheet"
+          role="dialog"
+          aria-modal="true"
+          aria-label={title}
           onClick={e => e.stopPropagation()}
           initial={{ y: '100%' }}
           animate={{ y: 0 }}
           exit={{ y: '100%' }}
-          transition={{ type: 'spring', damping: 28, stiffness: 350 }}
-          style={{
-            width: '100%',
-            maxWidth: '480px',
-            backgroundColor: '#0f172a',
-            borderTopLeftRadius: '24px',
-            borderTopRightRadius: '24px',
-            border: '1px solid rgba(255, 255, 255, 0.12)',
-            borderBottom: 'none',
-            padding: '1.25rem 1.25rem calc(1.25rem + max(12px, env(safe-area-inset-bottom, 0px)))',
-            boxShadow: '0 -20px 40px rgba(0,0,0,0.6)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1rem',
-            userSelect: 'none',
-            touchAction: 'manipulation'
-          }}
+          transition={{ type: 'spring', damping: 30, stiffness: 340 }}
         >
-          {/* Header */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem' }}>
+            <div style={{ minWidth: 0 }}>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: '0.66rem',
+                  fontWeight: 800,
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  color: 'var(--accent-cyan)'
+                }}
+              >
+                {entryLabel}
+              </p>
+              <h3 style={{ margin: '0.1rem 0 0', fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                 {title}
               </h3>
               {subtitle && (
@@ -136,295 +184,136 @@ export function WorkoutNumberKeypadModal({
             </div>
             <button
               type="button"
-              className="btn-icon btn-ghost"
+              className="session-target session-target-ghost"
               onClick={onClose}
-              style={{ padding: '0.4rem', borderRadius: '10px', color: 'var(--text-secondary)' }}
+              aria-label={isRTL ? 'إغلاق' : 'Close'}
+              style={{ minWidth: '48px', minHeight: '48px', padding: 0, flexShrink: 0 }}
             >
-              <X size={20} />
+              <X size={20} aria-hidden="true" />
             </button>
           </div>
 
-          {/* Value Display */}
-          <div style={{
-            background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.95))',
-            borderRadius: '16px',
-            border: '1px solid rgba(56, 189, 248, 0.3)',
-            padding: '0.9rem 1.25rem',
-            display: 'flex',
-            alignItems: 'baseline',
-            justifyContent: 'space-between'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.35rem' }}>
-              <span style={{
-                fontSize: '2.5rem',
-                fontWeight: 800,
-                color: valStr ? 'var(--text-primary)' : 'var(--text-muted)',
-                fontVariantNumeric: 'tabular-nums',
-                letterSpacing: '-0.02em',
-                lineHeight: 1
-              }}>
-                {valStr || '0'}
+          <div className="forma-keypad-value">
+            <strong aria-hidden="true">{valStr || '0'}</strong>
+            <span aria-hidden="true">{unitSuffix}</span>
+            <span className="forma-sr-only">{describe(valStr)}</span>
+          </div>
+
+          <span className="forma-sr-only" role="status" aria-live="polite" aria-atomic="true">
+            {announcement}
+          </span>
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem', flexWrap: 'wrap' }}>
+            {type === 'weight' ? (
+              <div className="forma-unit-toggle" role="group" aria-label={isRTL ? 'وحدة الوزن' : 'Weight unit'}>
+                {WEIGHT_UNITS.map(candidate => (
+                  <button
+                    key={candidate}
+                    type="button"
+                    aria-pressed={activeUnit === candidate}
+                    onClick={() => handleUnitChange(candidate)}
+                  >
+                    {candidate}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                {t('reps')}
               </span>
-              {unit && (
-                <span style={{ fontSize: '1.1rem', fontWeight: 700, color: '#38bdf8' }}>
-                  {unit}
-                </span>
-              )}
-            </div>
+            )}
 
             <button
               type="button"
+              className="forma-3d-chip"
               onClick={handleClear}
-              style={{
-                background: 'rgba(255, 255, 255, 0.06)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                color: 'var(--text-secondary)',
-                fontSize: '0.78rem',
-                fontWeight: 600,
-                padding: '0.35rem 0.65rem',
-                borderRadius: '8px',
-                cursor: 'pointer'
-              }}
+              style={{ minHeight: '44px' }}
             >
-              {isRTL ? 'مسح' : 'Clear'}
+              {isRTL ? 'مسح الكل' : 'Clear all'}
             </button>
           </div>
 
-          {/* Quick Increment Shortcuts */}
-          <div style={{
-            display: 'flex',
-            gap: '0.45rem',
-            overflowX: 'auto',
-            paddingBottom: '0.2rem'
-          }} className="hide-scrollbar">
-            {type === 'weight' ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => handleAdjust(unit === 'lb' ? -5 : -2.5)}
-                  style={{
-                    flex: '1 0 auto',
-                    padding: '0.5rem 0.65rem',
-                    background: 'rgba(239, 68, 68, 0.12)',
-                    border: '1px solid rgba(239, 68, 68, 0.3)',
-                    color: '#f87171',
-                    borderRadius: '10px',
-                    fontSize: '0.84rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.2rem'
-                  }}
-                >
-                  <Minus size={13} />
-                  {unit === 'lb' ? '5' : '2.5'}
-                </button>
-                {weightShortcuts.map(val => (
-                  <button
-                    key={val}
-                    type="button"
-                    onClick={() => handleAdjust(val)}
-                    style={{
-                      flex: '1 0 auto',
-                      padding: '0.5rem 0.65rem',
-                      background: 'rgba(56, 189, 248, 0.12)',
-                      border: '1px solid rgba(56, 189, 248, 0.3)',
-                      color: '#38bdf8',
-                      borderRadius: '10px',
-                      fontSize: '0.84rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.2rem'
-                    }}
-                  >
-                    <Plus size={13} />
-                    {val}
-                  </button>
-                ))}
-              </>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => handleAdjust(-1)}
-                  style={{
-                    flex: '1 0 auto',
-                    padding: '0.5rem 0.65rem',
-                    background: 'rgba(239, 68, 68, 0.12)',
-                    border: '1px solid rgba(239, 68, 68, 0.3)',
-                    color: '#f87171',
-                    borderRadius: '10px',
-                    fontSize: '0.84rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.2rem'
-                  }}
-                >
-                  <Minus size={13} /> 1
-                </button>
-                {repsShortcuts.map(val => (
-                  <button
-                    key={val}
-                    type="button"
-                    onClick={() => handleAdjust(val)}
-                    style={{
-                      flex: '1 0 auto',
-                      padding: '0.5rem 0.65rem',
-                      background: 'rgba(16, 185, 129, 0.12)',
-                      border: '1px solid rgba(16, 185, 129, 0.3)',
-                      color: '#10b981',
-                      borderRadius: '10px',
-                      fontSize: '0.84rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.2rem'
-                    }}
-                  >
-                    <Plus size={13} /> {val}
-                  </button>
-                ))}
-              </>
-            )}
+          <div style={{ display: 'flex', gap: '0.45rem' }} role="group" aria-label={isRTL ? 'تعديل سريع' : 'Quick adjust'}>
+            <button
+              type="button"
+              className="forma-keypad-key is-muted"
+              style={{ flex: 1, borderColor: 'color-mix(in srgb, var(--danger) 35%, transparent)', color: 'var(--danger)' }}
+              onClick={() => handleAdjust(type === 'reps' ? -1 : (activeUnit === 'lb' ? -5 : -2.5))}
+            >
+              <Minus size={16} aria-hidden="true" />
+              <span className="forma-sr-only">{isRTL ? 'إنقاص' : 'Decrease'}</span>
+              {type === 'reps' ? 1 : (activeUnit === 'lb' ? 5 : 2.5)}
+            </button>
+            {(type === 'weight' ? weightShortcuts : repsShortcuts).map(step => (
+              <button
+                key={step}
+                type="button"
+                className="forma-keypad-key is-muted"
+                style={{ flex: 1 }}
+                onClick={() => handleAdjust(step)}
+              >
+                <Plus size={16} aria-hidden="true" />
+                {step}
+              </button>
+            ))}
           </div>
 
-          {/* Numeric Keypad Grid */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: '0.5rem'
-          }}>
+          <div className="forma-keypad-grid" role="group" aria-label={isRTL ? 'لوحة الأرقام' : 'Number pad'}>
             {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(d => (
-              <motion.button
+              <button
                 key={d}
                 type="button"
-                whileTap={{ scale: 0.94 }}
+                className="forma-keypad-key"
                 onClick={() => handleDigit(d)}
-                style={{
-                  height: '56px',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  borderRadius: '14px',
-                  color: 'var(--text-primary)',
-                  fontSize: '1.45rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'background 0.12s'
-                }}
               >
                 {d}
-              </motion.button>
+              </button>
             ))}
 
-            {/* Bottom Row */}
             {type === 'weight' ? (
-              <motion.button
+              <button
                 type="button"
-                whileTap={{ scale: 0.94 }}
+                className="forma-keypad-key"
                 onClick={() => handleDigit('.')}
-                style={{
-                  height: '56px',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  borderRadius: '14px',
-                  color: 'var(--text-primary)',
-                  fontSize: '1.6rem',
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
+                aria-label={isRTL ? 'فاصلة عشرية' : 'Decimal point'}
               >
                 .
-              </motion.button>
+              </button>
             ) : (
-              <div />
+              <span aria-hidden="true" />
             )}
 
-            <motion.button
+            <button
               type="button"
-              whileTap={{ scale: 0.94 }}
+              className="forma-keypad-key"
               onClick={() => handleDigit('0')}
-              style={{
-                height: '56px',
-                background: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                borderRadius: '14px',
-                color: 'var(--text-primary)',
-                fontSize: '1.45rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
             >
               0
-            </motion.button>
+            </button>
 
-            <motion.button
+            <button
               type="button"
-              whileTap={{ scale: 0.94 }}
+              className="forma-keypad-key is-muted"
               onClick={handleBackspace}
-              style={{
-                height: '56px',
-                background: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                borderRadius: '14px',
-                color: 'var(--text-secondary)',
-                fontSize: '1.2rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-              title="Backspace"
+              aria-label={isRTL ? 'حذف' : 'Backspace'}
             >
-              <Delete size={22} style={{ transform: isRTL ? 'scaleX(-1)' : 'none' }} />
-            </motion.button>
+              <Delete size={24} style={{ transform: isRTL ? 'scaleX(-1)' : 'none' }} aria-hidden="true" />
+            </button>
           </div>
 
-          {/* Confirm Button */}
-          <motion.button
+          <button
             type="button"
-            whileTap={{ scale: 0.97 }}
+            className="session-target session-target-success"
             onClick={handleDone}
-            style={{
-              height: '52px',
-              background: 'linear-gradient(135deg, #10b981, #059669)',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '14px',
-              fontSize: '1.05rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem',
-              boxShadow: '0 8px 20px rgba(16, 185, 129, 0.35)',
-              marginTop: '0.25rem'
-            }}
+            style={{ width: '100%', minHeight: '60px', fontSize: '1.05rem' }}
           >
-            <Check size={20} />
-            <span>{isRTL ? 'تأكيد' : 'Done'}</span>
-          </motion.button>
+            <Check size={20} aria-hidden="true" />
+            <span>
+              {isRTL ? `حفظ ${describe(valStr)}` : `Save ${describe(valStr)}`}
+            </span>
+          </button>
         </motion.div>
-      </div>
-    </AnimatePresence>
+      </AnimatePresence>
+    </div>
   );
 }
