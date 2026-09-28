@@ -3,6 +3,7 @@ import { Check, Trash2, Zap } from 'lucide-react';
 import type { SetRecord } from '../../lib/api';
 import type { PreviousSetReference } from '../../types/ui';
 import { useTranslation } from '../../lib/i18n';
+import { useFormaReducedMotion } from '../TodayBentoGrid';
 
 interface GymFloorSetCardProps {
   set: SetRecord;
@@ -18,6 +19,15 @@ interface GymFloorSetCardProps {
   onSelectSet?: () => void;
 }
 
+const inputStyle: React.CSSProperties = {
+  background: 'transparent',
+  border: 'none',
+  textAlign: 'center',
+  color: 'var(--text-primary)',
+  outline: 'none',
+  fontVariantNumeric: 'tabular-nums',
+};
+
 export function GymFloorSetCard({
   set,
   setIndex,
@@ -32,85 +42,73 @@ export function GymFloorSetCard({
   onSelectSet,
 }: GymFloorSetCardProps) {
   const { isRTL } = useTranslation();
+  const reduceMotion = useFormaReducedMotion();
+  const tapScale = reduceMotion ? undefined : { scale: 0.9 };
+  const weightId = `gym-floor-weight-${setIndex}`;
+  const repsId = `gym-floor-reps-${setIndex}`;
+  const summary = `${set.weight || 0} ${set.unit} × ${set.repsActual || set.repsTarget || 10} ${isRTL ? 'عدة' : 'reps'}`;
 
-  // If rendered in compact mode (for secondary sets in list)
   if (isCompact) {
     return (
       <motion.div
-        layout
-        onClick={onSelectSet}
-        style={{
-          borderRadius: '16px',
-          padding: '0.75rem 1rem',
-          background: set.isCompleted ? 'rgba(16, 185, 129, 0.1)' : 'rgba(255, 255, 255, 0.03)',
-          border: set.isCompleted ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(255, 255, 255, 0.07)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          cursor: 'pointer',
-          transition: 'all 0.2s ease'
-        }}
+        layout={!reduceMotion}
+        className={`gym-floor-set-row ${set.isCompleted ? 'is-complete' : ''}`.trim()}
+        role="group"
+        aria-label={`${isRTL ? 'الجولة' : 'Set'} ${setIndex + 1}: ${summary}`}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div style={{
-            width: '28px',
-            height: '28px',
-            borderRadius: '8px',
-            background: set.isCompleted ? '#10b981' : 'rgba(255, 255, 255, 0.08)',
-            color: '#ffffff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '0.8rem',
-            fontWeight: 800
-          }}>
+        <button
+          type="button"
+          className="gym-floor-set-summary"
+          onClick={onSelectSet}
+          disabled={!onSelectSet}
+          aria-label={summary}
+        >
+          <span className="gym-floor-set-index tabular-nums" aria-hidden="true">
             {setIndex + 1}
-          </div>
-          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+          </span>
+          <span className="gym-floor-set-detail tabular-nums" dir="ltr">
             {set.weight || 0} {set.unit} × {set.repsActual || set.repsTarget || 10} {isRTL ? 'عدة' : 'reps'}
-          </div>
-        </div>
+          </span>
+        </button>
 
         <motion.button
           type="button"
-          whileTap={{ scale: 0.85 }}
-          onClick={(e) => {
-            e.stopPropagation();
+          whileTap={reduceMotion ? undefined : { scale: 0.88 }}
+          onClick={(event) => {
+            event.stopPropagation();
             onToggleComplete();
           }}
           className={`gym-floor-check-circle ${set.isCompleted ? 'completed' : 'uncompleted'}`}
-          style={{ width: '38px', height: '38px' }}
+          style={{ inlineSize: '2.4rem', blockSize: '2.4rem' }}
+          aria-pressed={set.isCompleted}
+          aria-label={set.isCompleted ? (isRTL ? 'إلغاء تعليم الجولة' : 'Mark set as not done') : (isRTL ? 'تعليم الجولة كمنجزة' : 'Mark set as done')}
         >
-          <Check className="w-4 h-4" />
+          <Check size={16} aria-hidden="true" />
         </motion.button>
       </motion.div>
     );
   }
 
-  // Full Gym Floor Mode Current Set Focus Card (Matches the Approved Mockup)
   return (
     <motion.div
-      layout
-      className={`gym-floor-current-set-card ${set.isCompleted ? 'is-completed' : ''}`}
-      style={{ marginBottom: '1rem' }}
+      layout={!reduceMotion}
+      className={`gym-floor-current-set-card ${set.isCompleted ? 'is-completed' : ''}`.trim()}
+      style={{ marginBlockEnd: '1rem' }}
     >
-      {/* Top Header: Set Counter & Prev Reference */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+      <div className="gym-floor-set-header">
         <div>
-          <div className="gym-floor-set-heading" style={{ fontSize: '1.25rem', fontWeight: 900, color: '#ffffff', letterSpacing: '-0.01em' }}>
+          <h3 className="gym-floor-set-heading">
             {isRTL ? `الجولة ${setIndex + 1} من ${totalSets}` : `Set ${setIndex + 1} of ${totalSets}`}
-          </div>
+          </h3>
           {previousRecord ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#38bdf8', fontSize: '0.82rem', fontWeight: 700, marginTop: '0.15rem' }}>
-              <Zap className="w-3.5 h-3.5 fill-cyan-400" />
+            <p className="gym-floor-set-prev">
+              <Zap size={14} aria-hidden="true" />
               <span>
                 {isRTL ? 'السابق' : 'Prev'}: {previousRecord.weight} {previousRecord.unit} × {previousRecord.reps} {isRTL ? 'عدة' : 'reps'}
               </span>
-            </div>
+            </p>
           ) : (
-            <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem', marginTop: '0.15rem' }}>
-              {isRTL ? 'الجولة الأولى المسجلة' : 'Target: Clean form & steady tempo'}
-            </div>
+            <p className="gym-floor-set-hint">{isRTL ? 'الجولة الأولى المسجلة' : 'Target: clean form & steady tempo'}</p>
           )}
         </div>
 
@@ -119,88 +117,57 @@ export function GymFloorSetCard({
             type="button"
             className="btn-icon btn-ghost"
             onClick={onDeleteSet}
-            style={{ color: 'var(--text-muted)', padding: '0.35rem' }}
-            title="Delete Set"
+            style={{ color: 'var(--text-muted)' }}
+            aria-label={isRTL ? 'حذف الجولة' : 'Delete set'}
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 size={16} aria-hidden="true" />
           </button>
         )}
       </div>
 
-      {/* Main Floor Steppers & Values */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', marginBottom: '1.25rem' }}>
-        {/* Weight Row: -2.5 | [Big Weight Input] | +2.5 | +5 */}
-        <div className="gym-floor-input-row" style={{
-          background: 'rgba(0, 0, 0, 0.35)',
-          borderRadius: '16px',
-          padding: '0.65rem 0.85rem',
-          border: '1px solid rgba(255, 255, 255, 0.06)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '0.5rem'
-        }}>
-          {/* Minus Stepper */}
+      <div className="gym-floor-inputs">
+        <div className="gym-floor-input-row">
           <button
             type="button"
             className="gym-floor-thumb-stepper"
             onClick={() => onQuickWeightAdjust(-2.5)}
-            title="-2.5"
+            aria-label={isRTL ? 'إنقاص الوزن 2.5' : 'Decrease weight by 2.5'}
           >
-            -2.5
+            −2.5
           </button>
 
-          {/* Central Weight Display & Input */}
-          <div className="gym-floor-input-value" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.35rem' }}>
+          <div className="gym-floor-input-value">
+            <label className="gym-floor-input-label" htmlFor={weightId}>
+              {isRTL ? 'الوزن' : 'Weight'}
+            </label>
+            <div className="gym-floor-input-line">
               <input
+                id={weightId}
                 type="number"
                 inputMode="decimal"
+                step="0.5"
                 value={set.weight === 0 ? '' : set.weight}
                 placeholder="0"
-                onChange={(e) => onUpdateSet('weight', parseFloat(e.target.value) || 0)}
-                style={{
-                  width: '90px',
-                  background: 'transparent',
-                  border: 'none',
-                  textAlign: 'center',
-                  fontSize: '1.9rem',
-                  fontWeight: 900,
-                  color: '#ffffff',
-                  outline: 'none',
-                  fontVariantNumeric: 'tabular-nums'
-                }}
+                onChange={(event) => onUpdateSet('weight', parseFloat(event.target.value) || 0)}
+                style={{ ...inputStyle, inlineSize: '5.5rem', fontSize: '1.8rem', fontWeight: 900 }}
               />
               <button
                 type="button"
                 className="gym-floor-unit-toggle"
                 onClick={() => onUpdateSet('unit', set.unit === 'kg' ? 'lb' : 'kg')}
-                style={{
-                  fontSize: '0.85rem',
-                  fontWeight: 800,
-                  color: '#38bdf8',
-                  background: 'rgba(56, 189, 248, 0.15)',
-                  border: '1px solid rgba(56, 189, 248, 0.3)',
-                  borderRadius: '8px',
-                  padding: '0.15rem 0.45rem',
-                  cursor: 'pointer'
-                }}
+                aria-label={isRTL ? `تبديل الوحدة، الحالية ${set.unit}` : `Switch unit, currently ${set.unit}`}
               >
                 {set.unit}
               </button>
             </div>
-            <span className="gym-floor-input-label" style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              {isRTL ? 'الوزن' : 'Weight'}
-            </span>
           </div>
 
-          {/* Plus Steppers */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+          <div className="gym-floor-stepper-pair">
             <button
               type="button"
               className="gym-floor-thumb-stepper stepper-cyan"
               onClick={() => onQuickWeightAdjust(2.5)}
-              title="+2.5"
+              aria-label={isRTL ? 'زيادة الوزن 2.5' : 'Increase weight by 2.5'}
             >
               +2.5
             </button>
@@ -208,86 +175,63 @@ export function GymFloorSetCard({
               type="button"
               className="gym-floor-thumb-stepper stepper-cyan"
               onClick={() => onQuickWeightAdjust(5)}
-              title="+5"
+              aria-label={isRTL ? 'زيادة الوزن 5' : 'Increase weight by 5'}
             >
               +5
             </button>
           </div>
         </div>
 
-        {/* Reps Row: -1 | [Big Reps Input] | +1 */}
-        <div className="gym-floor-input-row" style={{
-          background: 'rgba(0, 0, 0, 0.35)',
-          borderRadius: '16px',
-          padding: '0.65rem 0.85rem',
-          border: '1px solid rgba(255, 255, 255, 0.06)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '0.5rem'
-        }}>
-          {/* Minus 1 Rep */}
+        <div className="gym-floor-input-row">
           <button
             type="button"
             className="gym-floor-thumb-stepper"
             onClick={() => onQuickRepAdjust(-1)}
-            title="-1 Rep"
+            aria-label={isRTL ? 'إنقاص التكرار' : 'Decrease reps'}
           >
-            -1
+            −1
           </button>
 
-          {/* Central Reps Display & Input */}
-          <div className="gym-floor-input-value" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.35rem' }}>
+          <div className="gym-floor-input-value">
+            <label className="gym-floor-input-label" htmlFor={repsId}>
+              {isRTL ? 'التكرار' : 'Reps'}
+            </label>
+            <div className="gym-floor-input-line">
               <input
+                id={repsId}
                 type="number"
                 inputMode="numeric"
                 value={set.repsActual || set.repsTarget || ''}
                 placeholder="10"
-                onChange={(e) => onUpdateSet('repsActual', parseInt(e.target.value) || 0)}
-                style={{
-                  width: '80px',
-                  background: 'transparent',
-                  border: 'none',
-                  textAlign: 'center',
-                  fontSize: '1.9rem',
-                  fontWeight: 900,
-                  color: '#ffffff',
-                  outline: 'none',
-                  fontVariantNumeric: 'tabular-nums'
-                }}
+                onChange={(event) => onUpdateSet('repsActual', parseInt(event.target.value) || 0)}
+                style={{ ...inputStyle, inlineSize: '5rem', fontSize: '1.8rem', fontWeight: 900 }}
               />
-              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-muted)' }}>
-                {isRTL ? 'عدة' : 'reps'}
-              </span>
+              <span className="gym-floor-input-suffix">{isRTL ? 'عدة' : 'reps'}</span>
             </div>
-            <span className="gym-floor-input-label" style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              {isRTL ? 'التكرار' : 'Repetitions'}
-            </span>
           </div>
 
-          {/* Plus 1 Rep */}
           <button
             type="button"
             className="gym-floor-thumb-stepper stepper-green"
             onClick={() => onQuickRepAdjust(1)}
-            title="+1 Rep"
+            aria-label={isRTL ? 'زيادة التكرار' : 'Increase reps'}
           >
             +1
           </button>
         </div>
       </div>
 
-      {/* Prominent Circular Check Button Centered */}
-      <div style={{ display: 'flex', justifyContent: 'center' }}>
+      <div className="gym-floor-complete-row">
         <motion.button
           type="button"
-          whileTap={{ scale: 0.9 }}
+          whileTap={tapScale}
           onClick={onToggleComplete}
           className={`gym-floor-check-circle ${set.isCompleted ? 'completed' : 'uncompleted'}`}
-          style={{ width: '60px', height: '60px' }}
+          style={{ inlineSize: '3.75rem', blockSize: '3.75rem' }}
+          aria-pressed={set.isCompleted}
+          aria-label={set.isCompleted ? (isRTL ? 'إلغاء تعليم الجولة' : 'Mark set as not done') : (isRTL ? 'تعليم الجولة كمنجزة' : 'Mark set as done')}
         >
-          <Check className="w-7 h-7" />
+          <Check size={26} aria-hidden="true" />
         </motion.button>
       </div>
     </motion.div>

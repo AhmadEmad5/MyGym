@@ -1,130 +1,89 @@
-import { Zap, ChevronDown } from 'lucide-react';
+import { ChevronDown, Zap } from 'lucide-react';
 import { useTranslation } from '../lib/i18n';
 import type { RecoveryOverview, MuscleRecoveryStatus } from '../lib/recovery';
+import { WidgetFrame } from './TodayBentoGrid';
 
 export interface RecoveryCardProps {
   recovery: RecoveryOverview;
   onExploreMuscles?: () => void;
+  status?: 'loading' | 'ready' | 'error';
+  errorMessage?: string;
+  onRetry?: () => void;
 }
 
-export function RecoveryCard({ recovery, onExploreMuscles }: RecoveryCardProps) {
+const statusTone = (score: number) => (score >= 80 ? 'lime' : score >= 50 ? 'amber' : 'rose');
+
+export function RecoveryCard({ recovery, onExploreMuscles, status = 'ready', errorMessage, onRetry }: RecoveryCardProps) {
   const { isRTL } = useTranslation();
 
-  const statusLabel = recovery.overallScore >= 80 
-    ? (isRTL ? 'جاهز' : 'Ready') 
-    : recovery.overallScore >= 50 
-      ? (isRTL ? 'متوسط' : 'Moderate') 
-      : (isRTL ? 'متعب' : 'Fatigued');
+  const statusLabel =
+    recovery.overallScore >= 80
+      ? isRTL ? 'جاهز' : 'Ready'
+      : recovery.overallScore >= 50
+        ? isRTL ? 'متوسط' : 'Moderate'
+        : isRTL ? 'متعب' : 'Fatigued';
+
+  const ready = status === 'ready';
+  const tone = ready ? statusTone(recovery.overallScore) : 'cyan';
+  const recommended = (recovery.recommendedMuscles || []).slice(0, 3);
 
   return (
-    <div style={{
-      background: 'linear-gradient(145deg, rgba(16, 24, 42, 0.88) 0%, rgba(10, 15, 26, 0.95) 100%)',
-      border: '1px solid var(--border-card)',
-      borderRadius: '24px',
-      padding: '1.35rem 1.45rem',
-      position: 'relative',
-      overflow: 'hidden',
-      boxShadow: '0 16px 36px -10px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
-      backdropFilter: 'blur(20px)',
-      WebkitBackdropFilter: 'blur(20px)',
-      marginBottom: '0.85rem'
-    }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-          <div style={{
-            width: '38px',
-            height: '38px',
-            borderRadius: '11px',
-            background: 'rgba(163, 230, 53, 0.16)',
-            border: '1px solid rgba(163, 230, 53, 0.4)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#bef264'
-          }}>
-            <Zap size={20} />
-          </div>
-          <div>
-            <h3 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 800, color: '#ffffff' }}>
-              {isRTL ? 'الاستشفاء' : 'Recovery'}
-            </h3>
-            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-              {isRTL ? 'من السجل التدريبي الفعلي' : 'From logged training'}
-            </span>
-          </div>
-        </div>
-
-        {onExploreMuscles && (
-          <button
-            type="button"
-            onClick={onExploreMuscles}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.25rem',
-              padding: '0.3rem 0.6rem',
-              borderRadius: '8px',
-              border: '1px solid rgba(198, 244, 50, 0.28)',
-              background: 'rgba(198, 244, 50, 0.08)',
-              color: '#bef264',
-              fontSize: '0.72rem',
-              fontWeight: 750,
-              cursor: 'pointer'
-            }}
-          >
-            <span>{isRTL ? 'المجسم' : '3D Body'}</span>
-            <ChevronDown size={14} />
+    <WidgetFrame
+      title={isRTL ? 'الاستشفاء' : 'Recovery'}
+      icon={<Zap size={15} aria-hidden="true" />}
+      tone={tone}
+      trailing={
+        onExploreMuscles && ready ? (
+          <button type="button" className="forma-quiet-button" onClick={onExploreMuscles}>
+            <span>{isRTL ? 'المجسم' : '3D body'}</span>
+            <ChevronDown size={14} aria-hidden="true" style={{ transform: isRTL ? 'rotate(90deg)' : 'none' }} />
           </button>
-        )}
+        ) : undefined
+      }
+    >
+      <div
+        className="today-recovery-score"
+        role="img"
+        aria-label={
+          isRTL
+            ? `مؤشر الاستشفاء ${recovery.overallScore} بالمئة، الحالة ${statusLabel}.`
+            : `Recovery score ${recovery.overallScore} percent, status ${statusLabel}.`
+        }
+      >
+        <strong className="tabular-nums">{recovery.overallScore}%</strong>
+        <span>{statusLabel}</span>
       </div>
 
-      {/* Big Score Row */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'baseline',
-        gap: '0.65rem',
-        margin: '1.15rem 0 1rem'
-      }}>
-        <strong style={{
-          fontSize: '2.4rem',
-          fontWeight: 950,
-          color: '#bef264',
-          letterSpacing: '-0.04em',
-          lineHeight: 1,
-          fontVariantNumeric: 'tabular-nums'
-        }}>
-          {recovery.overallScore}%
-        </strong>
-        <span style={{
-          fontSize: '1.05rem',
-          fontWeight: 750,
-          color: '#f1f5f9'
-        }}>
-          {statusLabel}
-        </span>
-      </div>
+      {recommended.length > 0 && (
+        <ul className="today-recovery-tags" aria-label={isRTL ? 'العضلات المقترحة' : 'Recommended muscles'}>
+          {recommended.map((muscle: MuscleRecoveryStatus) => (
+            <li key={muscle.id}>
+              {isRTL ? muscle.nameAr : muscle.nameEn}
+              <span className="forma-sr-only">
+                {isRTL ? ` — ${muscle.percent} بالمئة` : ` — ${muscle.percent} percent`}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
 
-      {/* Recommended Muscle Tags */}
-      <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap' }}>
-        {(recovery.recommendedMuscles || []).slice(0, 3).map((muscle: MuscleRecoveryStatus) => (
-          <span
-            key={muscle.id}
-            style={{
-              padding: '0.35rem 0.75rem',
-              borderRadius: '9px',
-              background: 'rgba(163, 230, 53, 0.08)',
-              border: '1px solid rgba(163, 230, 53, 0.3)',
-              color: '#bef264',
-              fontSize: '0.78rem',
-              fontWeight: 750,
-              letterSpacing: '0.01em'
-            }}
-          >
-            {isRTL ? muscle.nameAr : muscle.nameEn}
-          </span>
-        ))}
-      </div>
-    </div>
+      <p className="forma-sr-only">
+        {isRTL
+          ? 'العضلات المقترحة للاستشفاء الكامل أو الجاهزة للتدريب.'
+          : 'Muscles recommended as fully recovered or ready to train.'}
+      </p>
+
+      {status === 'error' && errorMessage && (
+        <p className="today-recovery-error" role="alert">
+          {errorMessage}
+        </p>
+      )}
+
+      {onRetry && status === 'error' && (
+        <button type="button" className="forma-quiet-button" onClick={onRetry}>
+          {isRTL ? 'إعادة المحاولة' : 'Retry'}
+        </button>
+      )}
+    </WidgetFrame>
   );
 }

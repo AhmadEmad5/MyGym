@@ -1,16 +1,16 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Clock, 
-  Sunrise, 
-  Sun, 
-  Moon, 
-  Zap, 
-  Calendar as CalendarIcon, 
-  Play, 
-  Pause, 
-  RotateCcw, 
-  Flag, 
+import {
+  Clock,
+  Sunrise,
+  Sun,
+  Moon,
+  Zap,
+  Calendar as CalendarIcon,
+  Play,
+  Pause,
+  RotateCcw,
+  Flag,
   Sparkles,
   Trophy,
   Volume2,
@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from '../lib/i18n';
 import { gymAudio } from '../lib/audio';
+import { useFormaReducedMotion } from './TodayBentoGrid';
 
 interface LapRecord {
   id: number;
@@ -26,9 +27,11 @@ interface LapRecord {
 }
 
 const spring = { type: 'spring' as const, stiffness: 350, damping: 28 };
+const COMMIT_INTERVAL_MS = 33;
 
 export function ModernClockWidget() {
   const { t, formatDate, isRTL } = useTranslation();
+  const reduceMotion = useFormaReducedMotion();
 
   // Time state
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
@@ -52,13 +55,35 @@ export function ModernClockWidget() {
   const stopwatchStartRef = useRef<number>(0);
   const stopwatchAccumulatedRef = useRef<number>(0);
   const animFrameRef = useRef<number | null>(null);
+  const lastCommitRef = useRef<number>(0);
 
-  // Synchronized Clock Interval
+  // Synchronized Clock — aligned to the second boundary and paused while hidden.
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 200);
-    return () => clearInterval(interval);
+    let timeoutId = 0;
+
+    const schedule = () => {
+      if (document.hidden) return;
+      const delay = 1000 - (Date.now() % 1000);
+      timeoutId = window.setTimeout(() => {
+        setCurrentTime(new Date());
+        schedule();
+      }, delay);
+    };
+
+    schedule();
+    const onVisibility = () => {
+      window.clearTimeout(timeoutId);
+      if (!document.hidden) {
+        setCurrentTime(new Date());
+        schedule();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, []);
 
   // Format Persistence
@@ -74,30 +99,53 @@ export function ModernClockWidget() {
     });
   };
 
-  // Stopwatch Animation Frame Loop
+  // Stopwatch Animation Frame Loop — commits throttled and suspended off-screen/background.
   useEffect(() => {
-    if (isStopwatchRunning) {
-      stopwatchStartRef.current = performance.now();
-
-      const updateStopwatch = () => {
-        const now = performance.now();
-        const elapsed = stopwatchAccumulatedRef.current + (now - stopwatchStartRef.current);
-        setStopwatchTime(elapsed);
-        animFrameRef.current = requestAnimationFrame(updateStopwatch);
-      };
-
-      animFrameRef.current = requestAnimationFrame(updateStopwatch);
-    } else {
+    if (!isStopwatchRunning) {
       if (animFrameRef.current) {
         cancelAnimationFrame(animFrameRef.current);
         animFrameRef.current = null;
       }
+      return;
     }
 
-    return () => {
-      if (animFrameRef.current) {
-        cancelAnimationFrame(animFrameRef.current);
+    stopwatchStartRef.current = performance.now();
+    lastCommitRef.current = 0;
+    let paused = document.hidden;
+
+    const updateStopwatch = (now: number) => {
+      if (!paused) {
+        if (now - lastCommitRef.current >= COMMIT_INTERVAL_MS) {
+          lastCommitRef.current = now;
+          setStopwatchTime(stopwatchAccumulatedRef.current + (now - stopwatchStartRef.current));
+        }
+        animFrameRef.current = requestAnimationFrame(updateStopwatch);
       }
+    };
+
+    animFrameRef.current = requestAnimationFrame(updateStopwatch);
+
+    const onVisibility = () => {
+      if (document.hidden) {
+        paused = true;
+        stopwatchAccumulatedRef.current += performance.now() - stopwatchStartRef.current;
+        stopwatchStartRef.current = performance.now();
+        if (animFrameRef.current) {
+          cancelAnimationFrame(animFrameRef.current);
+          animFrameRef.current = null;
+        }
+        return;
+      }
+      paused = false;
+      stopwatchStartRef.current = performance.now();
+      lastCommitRef.current = 0;
+      animFrameRef.current = requestAnimationFrame(updateStopwatch);
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [isStopwatchRunning]);
 
@@ -260,9 +308,9 @@ export function ModernClockWidget() {
   return (
     <motion.section
       className="modern-clock-widget"
-      initial={{ opacity: 0, y: 14 }}
+      initial={reduceMotion ? false : { opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.05, ...spring }}
+      transition={reduceMotion ? { duration: 0 } : { delay: 0.05, ...spring }}
       style={{
         position: 'relative',
         borderRadius: '24px',
@@ -477,9 +525,9 @@ export function ModernClockWidget() {
         {mode === 'clock' ? (
           <motion.div
             key="clock-panel"
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.98 }}
+            initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             style={{ position: 'relative', zIndex: 1 }}
           >
@@ -620,9 +668,17 @@ export function ModernClockWidget() {
                     height: '80px',
                     flexShrink: 0
                   }}
+                  role="img"
+                  aria-label={
+                    isRTL
+                      ? `الثواني ${clockDisplay.secondsStr} من 60.`
+                      : `Seconds ${clockDisplay.secondsStr} of 60.`
+                  }
                 >
                   <svg
                     viewBox="0 0 76 76"
+                    aria-hidden="true"
+                    focusable="false"
                     style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}
                   >
                     {/* Background Track */}
@@ -776,9 +832,9 @@ export function ModernClockWidget() {
           /* Stopwatch / Gym Timer Mode */
           <motion.div
             key="stopwatch-panel"
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.98 }}
+            initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             style={{ position: 'relative', zIndex: 1 }}
           >
@@ -793,6 +849,9 @@ export function ModernClockWidget() {
             >
               {/* Giant Stopwatch Digits */}
               <div
+                role="timer"
+                aria-live="off"
+                aria-label={isRTL ? `المؤقت ${swDisplay.minStr} دقيقة و ${swDisplay.secStr} ثانية` : `Stopwatch ${swDisplay.minStr} minutes ${swDisplay.secStr} seconds`}
                 style={{
                   display: 'flex',
                   alignItems: 'baseline',
@@ -834,8 +893,8 @@ export function ModernClockWidget() {
                 {/* Start / Pause Button */}
                 <motion.button
                   type="button"
-                  whileHover={{ scale: 1.04 }}
-                  whileTap={{ scale: 0.95 }}
+                  whileHover={reduceMotion ? undefined : { scale: 1.02 }}
+                  whileTap={reduceMotion ? undefined : { scale: 0.96 }}
                   onClick={handleStartPauseStopwatch}
                   style={{
                     display: 'inline-flex',
@@ -924,8 +983,9 @@ export function ModernClockWidget() {
               {/* Laps List */}
               {laps.length > 0 && (
                 <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
+                  initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
                   style={{
                     width: '100%',
                     maxWidth: '480px',

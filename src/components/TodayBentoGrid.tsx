@@ -1,16 +1,210 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import type { RefObject } from 'react';
+import type { ReactNode } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Flame, Dumbbell, Droplet, Trophy, 
-  ArrowUpRight, Zap, Camera, 
-  Moon, CheckCircle2, ShieldCheck, Activity
+import { addDays, format, isSameDay, startOfWeek } from 'date-fns';
+import {
+  Activity,
+  AlertTriangle,
+  ArrowUpRight,
+  Camera,
+  CheckCircle2,
+  Droplet,
+  Dumbbell,
+  Flame,
+  Inbox,
+  Moon,
+  ShieldCheck,
+  Trophy,
+  Zap,
 } from 'lucide-react';
-import { format, startOfWeek, addDays, isSameDay } from 'date-fns';
 import { useTranslation } from '../lib/i18n';
 import { gymAudio } from '../lib/audio';
-import type { WorkoutSession } from '../lib/api';
+import type { HistoryRecord, WorkoutSession } from '../lib/api';
+import { Button } from './ui/Button';
 
-interface TodayBentoGridProps {
+export type WidgetStatus = 'loading' | 'ready' | 'empty' | 'error';
+
+const prefersReduced = () => {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+};
+
+const motionAttrReduced = () => {
+  if (typeof document === 'undefined') return false;
+  return document.documentElement.getAttribute('data-motion') === 'reduced';
+};
+
+export function useFormaReducedMotion() {
+  const [reduced, setReduced] = useState(() => prefersReduced() || motionAttrReduced());
+
+  useEffect(() => {
+    const sync = () => setReduced(prefersReduced() || motionAttrReduced());
+    sync();
+
+    if (typeof window.matchMedia !== 'function') return;
+    const query = window.matchMedia('(prefers-reduced-motion: reduce)');
+    query.addEventListener('change', sync);
+
+    const observer =
+      typeof MutationObserver !== 'undefined'
+        ? new MutationObserver(sync)
+        : null;
+    observer?.observe(document.documentElement, { attributes: true, attributeFilter: ['data-motion'] });
+
+    return () => {
+      query.removeEventListener('change', sync);
+      observer?.disconnect();
+    };
+  }, []);
+
+  return reduced;
+}
+
+export function useAnimationActive(ref: RefObject<HTMLElement | null>) {
+  const [active, setActive] = useState(false);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+
+    const compute = () => {
+      if (typeof document !== 'undefined' && document.hidden) {
+        setActive(false);
+        return;
+      }
+      if (typeof IntersectionObserver === 'undefined') {
+        setActive(true);
+        return;
+      }
+      setActive(true);
+    };
+
+    compute();
+
+    const observer =
+      typeof IntersectionObserver !== 'undefined'
+        ? new IntersectionObserver((entries) => setActive(entries.some((entry) => entry.isIntersecting)), { rootMargin: '120px' })
+        : null;
+    observer?.observe(node);
+
+    const onVisibility = () => {
+      if (document.hidden) setActive(false);
+      else compute();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      observer?.disconnect();
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [ref]);
+
+  return active;
+}
+
+export interface WidgetFrameProps {
+  title: string;
+  icon?: ReactNode;
+  tone?: 'cyan' | 'emerald' | 'lime' | 'amber' | 'rose' | 'purple';
+  trailing?: ReactNode;
+  children: ReactNode;
+  className?: string;
+  id?: string;
+  style?: React.CSSProperties;
+}
+
+export function WidgetFrame({
+  title,
+  icon,
+  tone = 'cyan',
+  trailing,
+  children,
+  className = '',
+  id,
+  style,
+}: WidgetFrameProps) {
+  return (
+    <section id={id} className={`forma-widget is-${tone} ${className}`.trim()} style={style}>
+      <header className="forma-widget-header">
+        <h3 className="forma-widget-title">
+          {icon && <span className="forma-widget-icon">{icon}</span>}
+          <span>{title}</span>
+        </h3>
+        {trailing}
+      </header>
+      <div className="forma-widget-body">{children}</div>
+    </section>
+  );
+}
+
+export interface WidgetSkeletonProps {
+  label?: string;
+  rows?: number;
+  circular?: boolean;
+}
+
+export function WidgetSkeleton({ label, rows = 3, circular = false }: WidgetSkeletonProps) {
+  return (
+    <div
+      className="forma-widget-state"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      {circular && <div className="today-skeleton" style={{ width: 96, height: 96, borderRadius: '50%' }} aria-hidden="true" />}
+      <div className="today-skeleton-stack" aria-hidden="true">
+        {Array.from({ length: rows }).map((_, index) => (
+          <div
+            key={index}
+            className="today-skeleton"
+            style={{ height: '0.75rem', width: `${100 - index * 14}%` }}
+          />
+        ))}
+      </div>
+      <span className="forma-sr-only">{label || 'Loading'}</span>
+    </div>
+  );
+}
+
+export interface WidgetStateProps {
+  title: string;
+  description?: string;
+  tone?: 'error' | 'empty';
+  icon?: ReactNode;
+  action?: ReactNode;
+  role?: 'status' | 'alert';
+}
+
+export function WidgetState({
+  title,
+  description,
+  tone = 'empty',
+  icon,
+  action,
+  role = 'status',
+}: WidgetStateProps) {
+  return (
+    <div className={`forma-widget-state is-${tone}`} role={role}>
+      <span className="forma-widget-state-icon" aria-hidden="true">
+        {icon || (tone === 'error' ? <AlertTriangle size={18} /> : <Inbox size={18} />)}
+      </span>
+      <p className="forma-widget-state-title">{title}</p>
+      {description && <p className="forma-widget-state-body">{description}</p>}
+      {action && <div className="forma-widget-state-actions">{action}</div>}
+    </div>
+  );
+}
+
+interface FocusMuscle {
+  nameAr: string;
+  nameEn: string;
+  badge: string;
+  statusTextAr: string;
+  statusTextEn: string;
+}
+
+export interface TodayBentoGridProps {
   todayBurnedCalories: number;
   calorieBurnTarget?: number;
   workoutMinutes: number;
@@ -24,15 +218,34 @@ interface TodayBentoGridProps {
   activeSession: WorkoutSession | null;
   recoveryScore: number;
   streakDays: number;
-  history: any[];
+  history: HistoryRecord[];
   sessions: WorkoutSession[];
   isFriday: boolean;
+  status?: WidgetStatus;
+  errorMessage?: string;
+  onRetry?: () => void;
   onLogWater: (amount: number) => void;
   onOpenQuickWorkout: () => void;
   onNavigatePlan: () => void;
   onNavigateNutrition: () => void;
   onScrollToHologram: () => void;
 }
+
+const RING_RADIUS = { move: 52, exercise: 39, water: 26 } as const;
+
+const ringMetrics = (burned: number, calorieGoal: number, minutes: number, minuteGoal: number, water: number, waterGoal: number) => {
+  const safe = (value: number, goal: number) => (goal > 0 ? Math.min(1, Math.max(0, value / goal)) : 0);
+  return {
+    move: safe(burned, calorieGoal),
+    exercise: safe(minutes, minuteGoal),
+    water: safe(water, waterGoal),
+  };
+};
+
+const ringSummary = (isRTL: boolean, move: number, exercise: number, water: number) =>
+  isRTL
+    ? `حلقات النشاط: الحرق ${Math.round(move * 100)}%، وقت التمرين ${Math.round(exercise * 100)}%، الترطيب ${Math.round(water * 100)}%.`
+    : `Activity rings: ${Math.round(move * 100)}% move, ${Math.round(exercise * 100)}% exercise, ${Math.round(water * 100)}% hydration.`;
 
 export function TodayBentoGrid({
   todayBurnedCalories,
@@ -51,6 +264,9 @@ export function TodayBentoGrid({
   history,
   sessions,
   isFriday,
+  status = 'ready',
+  errorMessage,
+  onRetry,
   onLogWater,
   onOpenQuickWorkout,
   onNavigatePlan,
@@ -58,38 +274,23 @@ export function TodayBentoGrid({
   onScrollToHologram,
 }: TodayBentoGridProps) {
   const { isRTL } = useTranslation();
-  const [activeRing, setActiveRing] = useState<'calories' | 'workout' | 'water' | null>(null);
+  const reduceMotion = useFormaReducedMotion();
+  const [activeRing, setActiveRing] = useState<'move' | 'exercise' | 'water' | null>(null);
 
-  // Calculate Ring Progresses (0 to 1+)
-  const calProgress = Math.min(todayBurnedCalories / (calorieBurnTarget || 1), 1);
-  const workoutProgress = Math.min(workoutMinutes / (workoutMinutesTarget || 1), 1);
-  const waterProgress = Math.min(todayWater / (waterGoal || 1), 1);
-  const allRingsClosed = calProgress >= 1 && workoutProgress >= 1 && waterProgress >= 1;
+  const progress = useMemo(
+    () => ringMetrics(todayBurnedCalories, calorieBurnTarget, workoutMinutes, workoutMinutesTarget, todayWater, waterGoal),
+    [todayBurnedCalories, calorieBurnTarget, workoutMinutes, workoutMinutesTarget, todayWater, waterGoal],
+  );
+  const allRingsClosed = progress.move >= 1 && progress.exercise >= 1 && progress.water >= 1;
 
-  // Ring Radii & Circumferences for concentric SVG rings
-  // Outer (Calories): r=66, Middle (Workout): r=50, Inner (Water): r=34
-  const rCal = 66;
-  const cCal = 2 * Math.PI * rCal; // ~414.69
-  const offsetCal = cCal * (1 - calProgress);
-
-  const rWork = 50;
-  const cWork = 2 * Math.PI * rWork; // ~314.16
-  const offsetWork = cWork * (1 - workoutProgress);
-
-  const rWater = 34;
-  const cWater = 2 * Math.PI * rWater; // ~213.63
-  const offsetWater = cWater * (1 - waterProgress);
-
-  // Derive Focus Muscle from Active Session
-  const focusMuscleInfo = useMemo(() => {
+  const focusMuscle = useMemo<FocusMuscle>(() => {
     if (isFriday) {
       return {
         nameAr: 'استشفاء كامل (عطلة الجمعة)',
         nameEn: 'Full Recovery (Friday Off-Day)',
-        badge: '🛌 Rest & Grow',
-        tone: 'amber',
+        badge: isRTL ? 'راحة ونمو' : 'Rest & Grow',
         statusTextAr: 'الجيم مغلق — ركز على التغذية وإعادة بناء الألياف العضلية',
-        statusTextEn: 'Gym is closed — prioritize nutrition & tissue regeneration'
+        statusTextEn: 'Gym is closed — prioritize nutrition & tissue regeneration',
       };
     }
 
@@ -97,740 +298,454 @@ export function TodayBentoGrid({
       return {
         nameAr: 'يوم استشفاء نشط',
         nameEn: 'Active Recovery Day',
-        badge: '🌱 Mobility & Rest',
-        tone: 'cyan',
+        badge: isRTL ? 'إطالة وراحة' : 'Mobility & Rest',
         statusTextAr: 'لا توجد جلسة مجدولة لليوم — جاهزية الجسم ممتازة',
-        statusTextEn: 'No session planned today — physical readiness is high'
+        statusTextEn: 'No session planned today — physical readiness is high',
       };
     }
 
-    const titleLower = activeSession.title.toLowerCase();
-    const exercisesText = (activeSession.exercises || []).map(e => e.name.toLowerCase()).join(' ');
+    const title = activeSession.title.toLowerCase();
+    const exerciseText = (activeSession.exercises || []).map((item) => item.name.toLowerCase()).join(' ');
+    const count = activeSession.exercises?.length || 0;
 
-    if (titleLower.includes('chest') || titleLower.includes('push') || exercisesText.includes('bench') || exercisesText.includes('press')) {
+    if (title.includes('chest') || title.includes('push') || exerciseText.includes('bench') || exerciseText.includes('press')) {
       return {
-        nameAr: 'عضلات الصدر والدفع (Chest & Push)',
+        nameAr: 'عضلات الصدر والدفع',
         nameEn: 'Chest & Push Muscles',
-        badge: '🛡️ Pectorals / Triceps',
-        tone: 'rose',
-        statusTextAr: `مستهدف اليوم عبر ${activeSession.exercises?.length || 0} تمارين متخصصة`,
-        statusTextEn: `Targeted today across ${activeSession.exercises?.length || 0} dedicated exercises`
+        badge: isRTL ? 'صدر / ترايسبس' : 'Pectorals / Triceps',
+        statusTextAr: `مستهدف اليوم عبر ${count} تمارين متخصصة`,
+        statusTextEn: `Targeted today across ${count} dedicated exercises`,
       };
-    } else if (titleLower.includes('back') || titleLower.includes('pull') || exercisesText.includes('row') || exercisesText.includes('pull')) {
+    }
+    if (title.includes('back') || title.includes('pull') || exerciseText.includes('row') || exerciseText.includes('pull')) {
       return {
-        nameAr: 'عضلات الظهر والسحب (Back & Pull)',
+        nameAr: 'عضلات الظهر والسحب',
         nameEn: 'Back & Pull Muscles',
-        badge: '🦅 Lats / Rhomboids',
-        tone: 'cyan',
-        statusTextAr: `مستهدف اليوم عبر ${activeSession.exercises?.length || 0} تمارين متخصصة`,
-        statusTextEn: `Targeted today across ${activeSession.exercises?.length || 0} dedicated exercises`
+        badge: isRTL ? 'عضلات الجناح' : 'Lats / Rhomboids',
+        statusTextAr: `مستهدف اليوم عبر ${count} تمارين متخصصة`,
+        statusTextEn: `Targeted today across ${count} dedicated exercises`,
       };
-    } else if (titleLower.includes('leg') || exercisesText.includes('squat') || exercisesText.includes('leg')) {
+    }
+    if (title.includes('leg') || exerciseText.includes('squat') || exerciseText.includes('leg')) {
       return {
-        nameAr: 'عضلات الأرجل والقوة (Legs & Quads)',
+        nameAr: 'عضلات الأرجل والقوة',
         nameEn: 'Legs & Lower Body',
-        badge: '⚡ Quads / Hamstrings',
-        tone: 'lime',
-        statusTextAr: `مستهدف اليوم عبر ${activeSession.exercises?.length || 0} تمارين متخصصة`,
-        statusTextEn: `Targeted today across ${activeSession.exercises?.length || 0} dedicated exercises`
+        badge: isRTL ? 'فخذ / راحة' : 'Quads / Hamstrings',
+        statusTextAr: `مستهدف اليوم عبر ${count} تمارين متخصصة`,
+        statusTextEn: `Targeted today across ${count} dedicated exercises`,
       };
-    } else if (titleLower.includes('shoulder') || exercisesText.includes('delt')) {
+    }
+    if (title.includes('shoulder') || exerciseText.includes('delt')) {
       return {
-        nameAr: 'الأكتاف والمثلثات (Shoulders & Delts)',
+        nameAr: 'الأكتاف والمثلثات',
         nameEn: 'Shoulders & Deltoids',
-        badge: '🎯 Deltoids',
-        tone: 'indigo',
-        statusTextAr: `مستهدف اليوم عبر ${activeSession.exercises?.length || 0} تمارين متخصصة`,
-        statusTextEn: `Targeted today across ${activeSession.exercises?.length || 0} dedicated exercises`
+        badge: isRTL ? 'مثلثات' : 'Deltoids',
+        statusTextAr: `مستهدف اليوم عبر ${count} تمارين متخصصة`,
+        statusTextEn: `Targeted today across ${count} dedicated exercises`,
       };
     }
 
     return {
       nameAr: activeSession.title,
       nameEn: activeSession.title,
-      badge: '💪 ' + activeSession.type,
-      tone: 'cyan',
-      statusTextAr: `${activeSession.exercises?.length || 0} تمارين مخطط لها اليوم`,
-      statusTextEn: `${activeSession.exercises?.length || 0} exercises planned today`
+      badge: `${activeSession.type}`,
+      statusTextAr: `${count} تمارين مخطط لها اليوم`,
+      statusTextEn: `${count} exercises planned today`,
     };
-  }, [activeSession, isFriday]);
+  }, [activeSession, isFriday, isRTL]);
 
-  // Compute 7-day Weekly consistency dots (starting Saturday for Middle East / Arab or Monday for en)
   const weekDays = useMemo(() => {
     const now = new Date();
-    // Week start: Saturday (day 6 of previous week) or standard
-    const start = startOfWeek(now, { weekStartsOn: 6 }); // Starts Saturday
-    const days = [];
-
-    for (let i = 0; i < 7; i++) {
-      const dayDate = addDays(start, i);
-      const isPast = dayDate < now && !isSameDay(dayDate, now);
-      const isCurrentDay = isSameDay(dayDate, now);
-      const dayIsFriday = dayDate.getDay() === 5;
-
-      const hasWorkout = history.some(h => isSameDay(new Date(h.date), dayDate)) ||
-                         sessions.some(s => s.isCompleted && isSameDay(new Date(s.date), dayDate));
-
-      const isScheduled = sessions.some(s => !s.isCompleted && isSameDay(new Date(s.date), dayDate));
-
-      days.push({
-        date: dayDate,
+    const start = startOfWeek(now, { weekStartsOn: 6 });
+    return Array.from({ length: 7 }, (_, index) => {
+      const dayDate = addDays(start, index);
+      const hasWorkout =
+        (history || []).some((record) => isSameDay(new Date(record.date), dayDate)) ||
+        (sessions || []).some((session) => session.isCompleted && isSameDay(new Date(session.date), dayDate));
+      return {
+        key: dayDate.toISOString(),
         dayName: format(dayDate, 'EEE'),
         dayNumber: format(dayDate, 'd'),
-        isPast,
-        isCurrentDay,
-        dayIsFriday,
+        isCurrentDay: isSameDay(dayDate, now),
+        dayIsFriday: dayDate.getDay() === 5,
         hasWorkout,
-        isScheduled
-      });
-    }
-    return days;
+      };
+    });
   }, [history, sessions]);
 
-  // Net energy calculation
   const netCalories = todayCalories - todayBurnedCalories;
+  const proteinPct = Math.min(100, Math.round((todayProtein / (dailyProteinTarget || 1)) * 100));
+  const caloriePct = Math.min(100, Math.round((todayCalories / (dailyCaloriesTarget || 1)) * 100));
+
+  const ringRows = useMemo(
+    () => [
+      { id: 'move' as const, tone: 'rose', labelAr: 'حرق السعرات', labelEn: 'Move (kcal)', value: todayBurnedCalories, target: `${calorieBurnTarget} kcal`, progress: progress.move },
+      { id: 'exercise' as const, tone: 'lime', labelAr: 'التمارين', labelEn: 'Exercise (min)', value: workoutMinutes, target: `${workoutMinutesTarget} min`, progress: progress.exercise },
+      { id: 'water' as const, tone: 'cyan', labelAr: 'الترطيب', labelEn: 'Hydration (ml)', value: todayWater, target: `${waterGoal} ml`, progress: progress.water },
+    ],
+    [calorieBurnTarget, dailyCaloriesTarget, progress, todayBurnedCalories, todayWater, workoutMinutes, workoutMinutesTarget, waterGoal],
+  );
+
+  const weekSummary = useMemo(() => {
+    const done = weekDays.filter((day) => day.hasWorkout).length;
+    return isRTL
+      ? `${done} أيام تدريب من أصل 7 في الأسبوع الحالي.`
+      : `${done} of 7 training days completed this week.`;
+  }, [weekDays, isRTL]);
+
+  const renderCardStates = (label: string) => {
+    if (status === 'loading') return <WidgetSkeleton label={label} />;
+    if (status === 'error') {
+      return (
+        <WidgetState
+          tone="error"
+          role="alert"
+          title={isRTL ? 'تعذّر تحميل البيانات' : 'Could not load data'}
+          description={errorMessage || (isRTL ? 'أعد المحاولة أو تحقق من الاتصال.' : 'Retry, or check your connection.')}
+          action={
+            onRetry && (
+              <Button variant="secondary" size="sm" onClick={onRetry}>
+                {isRTL ? 'إعادة المحاولة' : 'Retry'}
+              </Button>
+            )
+          }
+        />
+      );
+    }
+    return null;
+  };
+
+  const isNothingLogged = !activeSession && streakDays === 0 && todayBurnedCalories === 0 && todayWater === 0;
+  const cardState = status === 'ready' && isNothingLogged ? 'empty' : null;
 
   return (
-    <div className="forma-bento-section" style={{ marginBottom: '1.5rem' }}>
-      <div 
-        className="forma-bento-grid"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-          gap: '1rem',
-          alignItems: 'stretch'
-        }}
-      >
-        {/* ========================================================
-            CARD 1: CONCENTRIC FITNESS ACTIVITY RINGS WIDGET
-           ======================================================== */}
-        <motion.div
-          className="forma-bento-card bento-card-rings"
-          whileHover={{ y: -2 }}
-          transition={{ duration: 0.2 }}
-          style={{
-            gridColumn: 'span 1',
-            minHeight: '230px',
-            padding: '1.25rem',
-            borderRadius: '1.25rem',
-            backgroundColor: 'var(--bg-secondary)',
-            border: '1px solid var(--border-color)',
-            boxShadow: '0 8px 24px -6px rgba(0, 0, 0, 0.25)',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            position: 'relative',
-            overflow: 'hidden'
-          }}
-        >
-          {/* Subtle Ambient Glow */}
-          <div style={{
-            position: 'absolute',
-            top: '-20%',
-            right: isRTL ? 'auto' : '-20%',
-            left: isRTL ? '-20%' : 'auto',
-            width: '160px',
-            height: '160px',
-            borderRadius: '50%',
-            background: allRingsClosed 
-              ? 'radial-gradient(circle, rgba(234, 179, 8, 0.15) 0%, transparent 70%)'
-              : 'radial-gradient(circle, rgba(244, 63, 94, 0.12) 0%, transparent 70%)',
-            pointerEvents: 'none'
-          }} />
-
-          {/* Top Title */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <div style={{
-                width: '26px',
-                height: '26px',
-                borderRadius: '8px',
-                backgroundColor: 'rgba(244, 63, 94, 0.15)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <Activity className="w-3.5 h-3.5 text-rose-500" style={{ color: '#f43f5e' }} />
-              </div>
-              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
-                {isRTL ? 'حلقات النشاط اليومي' : 'Daily Activity Rings'}
-              </span>
+    <div className="forma-bento-section">
+      <div className="forma-bento-grid is-layered" role="group" aria-label={isRTL ? 'ملخص اليوم' : 'Today at a glance'}>
+        <article className="forma-bento-card" data-tier="secondary" data-span="2">
+          <div className="forma-bento-card-body">
+            <div className="forma-widget-header" style={{ padding: 0 }}>
+              <h3 className="forma-widget-title">
+                <span className="forma-widget-icon" style={{ color: 'var(--accent-rose)' }}>
+                  <Activity size={15} aria-hidden="true" />
+                </span>
+                <span>{isRTL ? 'حلقات النشاط اليومي' : 'Daily Activity Rings'}</span>
+              </h3>
+              {allRingsClosed ? (
+                <span className="forma-badge" style={{ color: 'var(--accent-amber)', background: 'rgba(245,158,11,0.14)', borderColor: 'rgba(245,158,11,0.32)' }}>
+                  <Trophy size={12} aria-hidden="true" />
+                  {isRTL ? 'مكتملة 100%' : '100% Closed'}
+                </span>
+              ) : (
+                <span className="today-surface-date">{format(new Date(), 'EEEE')}</span>
+              )}
             </div>
 
-            {allRingsClosed ? (
-              <span style={{
-                fontSize: '0.7rem',
-                fontWeight: 700,
-                padding: '0.2rem 0.5rem',
-                borderRadius: '9999px',
-                backgroundColor: 'rgba(234, 179, 8, 0.15)',
-                color: '#eab308',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.25rem'
-              }}>
-                <Trophy className="w-3 h-3" />
-                <span>{isRTL ? 'مكتملة 100%' : '100% Closed!'}</span>
-              </span>
+            {status !== 'ready' ? (
+              renderCardStates(isRTL ? 'جارٍ تحميل حلقات النشاط' : 'Loading activity rings')
+            ) : cardState === 'empty' ? (
+              <WidgetState
+                title={isRTL ? 'لا توجد بيانات اليوم بعد' : 'Nothing logged today yet'}
+                description={isRTL ? 'ابدأ تمرينك أو سجّل الماء لتظهر الحلقات مباشرة.' : 'Start a workout or log water to fill the rings.'}
+                action={
+                  <Button variant="secondary" size="sm" onClick={onOpenQuickWorkout} leftIcon={<Zap size={14} />}>
+                    {isRTL ? 'تمرين سريع' : 'Quick workout'}
+                  </Button>
+                }
+              />
             ) : (
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                {format(new Date(), 'EEEE')}
-              </span>
+              <div className="today-bento-rings-layout">
+                <div
+                  className="today-bento-rings-visual"
+                  role="img"
+                  aria-label={ringSummary(isRTL, progress.move, progress.exercise, progress.water)}
+                >
+                  <svg viewBox="0 0 130 130" aria-hidden="true" focusable="false">
+                    <defs>
+                      <linearGradient id="bentoRingMove" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#f59e0b" />
+                        <stop offset="100%" stopColor="#ef4444" />
+                      </linearGradient>
+                      <linearGradient id="bentoRingExercise" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="var(--accent-lime)" />
+                        <stop offset="100%" stopColor="var(--accent-emerald)" />
+                      </linearGradient>
+                      <linearGradient id="bentoRingWater" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="var(--accent-cyan)" />
+                        <stop offset="100%" stopColor="#06b6d4" />
+                      </linearGradient>
+                    </defs>
+                    <g transform="rotate(-90 65 65)">
+                      <circle cx="65" cy="65" r={RING_RADIUS.move} fill="none" stroke="var(--accent-rose)" strokeOpacity="0.16" strokeWidth="10" />
+                      <circle cx="65" cy="65" r={RING_RADIUS.exercise} fill="none" stroke="var(--accent-lime)" strokeOpacity="0.16" strokeWidth="9" />
+                      <circle cx="65" cy="65" r={RING_RADIUS.water} fill="none" stroke="var(--accent-cyan)" strokeOpacity="0.16" strokeWidth="8" />
+
+                      {ringRows.map((row, index) => {
+                        const circumference = 2 * Math.PI * RING_RADIUS[row.id];
+                        const offset = circumference * (1 - row.progress);
+                        const stroke = row.id === 'move' ? 'url(#bentoRingMove)' : row.id === 'exercise' ? 'url(#bentoRingExercise)' : 'url(#bentoRingWater)';
+                        const common = {
+                          cx: 65,
+                          cy: 65,
+                          r: RING_RADIUS[row.id],
+                          fill: 'none',
+                          stroke,
+                          strokeWidth: 10 - index,
+                          strokeLinecap: 'round' as const,
+                          strokeDasharray: circumference,
+                          strokeDashoffset: offset,
+                          style: {
+                            filter: activeRing === row.id ? `drop-shadow(0 0 6px var(--accent-${row.tone === 'rose' ? 'rose' : row.tone}))` : 'none',
+                            transition: reduceMotion ? 'none' : 'filter 0.18s ease',
+                          },
+                        };
+                        return reduceMotion ? (
+                          <circle key={row.id} {...common} />
+                        ) : (
+                          <motion.circle
+                            key={row.id}
+                            {...common}
+                            initial={{ strokeDashoffset: circumference }}
+                            animate={{ strokeDashoffset: offset }}
+                            transition={{ duration: 0.9, delay: index * 0.1, ease: 'easeOut' }}
+                          />
+                        );
+                      })}
+                    </g>
+                  </svg>
+                  <span className="today-bento-rings-center tabular-nums" aria-hidden="true">
+                    {Math.round(progress.move * 100)}%
+                  </span>
+                </div>
+
+                <ul className="today-bento-legend">
+                  {ringRows.map((row) => (
+                    <li
+                      key={row.id}
+                      className="today-bento-legend-row"
+                      data-active={activeRing === row.id ? 'true' : 'false'}
+                      data-tone={row.tone}
+                      onMouseEnter={() => setActiveRing(row.id)}
+                      onMouseLeave={() => setActiveRing(null)}
+                    >
+                      <span className="today-bento-legend-label">
+                        <span className="today-bento-legend-dot" aria-hidden="true" />
+                        {isRTL ? row.labelAr : row.labelEn}
+                      </span>
+                      <span className="today-bento-legend-value tabular-nums" dir="ltr">
+                        {row.value}
+                        <small> / {row.target}</small>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+
+                <table className="forma-sr-only">
+                  <caption>{isRTL ? 'تفاصيل حلقات النشاط' : 'Activity ring breakdown'}</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">{isRTL ? 'المؤشر' : 'Metric'}</th>
+                      <th scope="col">{isRTL ? 'القيمة' : 'Value'}</th>
+                      <th scope="col">{isRTL ? 'الهدف' : 'Goal'}</th>
+                      <th scope="col">{isRTL ? 'النسبة' : 'Progress'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ringRows.map((row) => (
+                      <tr key={row.id}>
+                        <th scope="row">{isRTL ? row.labelAr : row.labelEn}</th>
+                        <td>{row.value}</td>
+                        <td>{row.target}</td>
+                        <td>{Math.round(row.progress * 100)}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
+        </article>
 
-          {/* Rings & Legend Layout */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1 }}>
-            {/* SVG Concentric Rings */}
-            <div style={{ position: 'relative', width: '136px', height: '136px', flexShrink: 0 }}>
-              <svg width="136" height="136" viewBox="0 0 160 160" style={{ transform: 'rotate(-90deg)' }}>
-                {/* Background tracks */}
-                <circle cx="80" cy="80" r={rCal} fill="none" stroke="#f43f5e" strokeWidth="10" strokeOpacity="0.16" />
-                <circle cx="80" cy="80" r={rWork} fill="none" stroke="#bef264" strokeWidth="10" strokeOpacity="0.16" />
-                <circle cx="80" cy="80" r={rWater} fill="none" stroke="#38bdf8" strokeWidth="10" strokeOpacity="0.16" />
-
-                {/* Animated Progress Rings */}
-                <motion.circle
-                  cx="80"
-                  cy="80"
-                  r={rCal}
-                  fill="none"
-                  stroke="#f43f5e"
-                  strokeWidth="10"
-                  strokeLinecap="round"
-                  strokeDasharray={cCal}
-                  initial={{ strokeDashoffset: cCal }}
-                  animate={{ strokeDashoffset: offsetCal }}
-                  transition={{ duration: 1, ease: 'easeOut' }}
-                  style={{
-                    filter: activeRing === 'calories' ? 'drop-shadow(0 0 6px #f43f5e)' : 'none'
-                  }}
-                />
-                <motion.circle
-                  cx="80"
-                  cy="80"
-                  r={rWork}
-                  fill="none"
-                  stroke="#bef264"
-                  strokeWidth="10"
-                  strokeLinecap="round"
-                  strokeDasharray={cWork}
-                  initial={{ strokeDashoffset: cWork }}
-                  animate={{ strokeDashoffset: offsetWork }}
-                  transition={{ duration: 1, delay: 0.15, ease: 'easeOut' }}
-                  style={{
-                    filter: activeRing === 'workout' ? 'drop-shadow(0 0 6px #bef264)' : 'none'
-                  }}
-                />
-                <motion.circle
-                  cx="80"
-                  cy="80"
-                  r={rWater}
-                  fill="none"
-                  stroke="#38bdf8"
-                  strokeWidth="10"
-                  strokeLinecap="round"
-                  strokeDasharray={cWater}
-                  initial={{ strokeDashoffset: cWater }}
-                  animate={{ strokeDashoffset: offsetWater }}
-                  transition={{ duration: 1, delay: 0.3, ease: 'easeOut' }}
-                  style={{
-                    filter: activeRing === 'water' ? 'drop-shadow(0 0 6px #38bdf8)' : 'none'
-                  }}
-                />
-              </svg>
-
-              {/* Center Icon in Ring */}
-              <div style={{
-                position: 'absolute',
-                inset: 0,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                pointerEvents: 'none'
-              }}>
-                <Flame className="w-5 h-5" style={{ color: '#f43f5e' }} />
-                <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '2px' }}>
-                  {Math.round(calProgress * 100)}%
+        <article className="forma-bento-card" data-tier="secondary" data-span="2">
+          <div className="forma-bento-card-body">
+            <div className="forma-widget-header" style={{ padding: 0 }}>
+              <h3 className="forma-widget-title">
+                <span className="forma-widget-icon" style={{ color: 'var(--accent-emerald)' }}>
+                  <Zap size={15} aria-hidden="true" />
                 </span>
-              </div>
-            </div>
-
-            {/* Interactive Legend List */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', flex: 1 }}>
-              {/* Calories Item */}
-              <div 
-                onMouseEnter={() => setActiveRing('calories')}
-                onMouseLeave={() => setActiveRing(null)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '0.35rem 0.5rem',
-                  borderRadius: '0.5rem',
-                  backgroundColor: activeRing === 'calories' ? 'rgba(244, 63, 94, 0.1)' : 'rgba(255,255,255,0.02)',
-                  transition: 'background-color 0.15s ease'
-                }}
+                <span>{isRTL ? 'توازن الطاقة والبروتين' : 'Energy & Protein Balance'}</span>
+              </h3>
+              <span
+                className="forma-badge"
+                style={
+                  netCalories <= dailyCaloriesTarget
+                    ? { color: 'var(--color-success)', background: 'rgba(16,185,129,0.14)', borderColor: 'rgba(16,185,129,0.32)' }
+                    : { color: 'var(--color-warning)', background: 'rgba(245,158,11,0.14)', borderColor: 'rgba(245,158,11,0.32)' }
+                }
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#f43f5e' }} />
-                  <span style={{ fontSize: '0.73rem', color: 'var(--text-secondary)' }}>{isRTL ? 'حرق السعرات' : 'Move (Cal)'}</span>
-                </div>
-                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)', direction: 'ltr' }}>
-                  {todayBurnedCalories} <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>/ {calorieBurnTarget}</span>
-                </span>
-              </div>
-
-              {/* Exercise Minutes Item */}
-              <div 
-                onMouseEnter={() => setActiveRing('workout')}
-                onMouseLeave={() => setActiveRing(null)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '0.35rem 0.5rem',
-                  borderRadius: '0.5rem',
-                  backgroundColor: activeRing === 'workout' ? 'rgba(190, 242, 100, 0.1)' : 'rgba(255,255,255,0.02)',
-                  transition: 'background-color 0.15s ease'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#bef264' }} />
-                  <span style={{ fontSize: '0.73rem', color: 'var(--text-secondary)' }}>{isRTL ? 'التمارين' : 'Exercise'}</span>
-                </div>
-                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)', direction: 'ltr' }}>
-                  {workoutMinutes} <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>/ {workoutMinutesTarget}m</span>
-                </span>
-              </div>
-
-              {/* Water Item */}
-              <div 
-                onMouseEnter={() => setActiveRing('water')}
-                onMouseLeave={() => setActiveRing(null)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '0.35rem 0.5rem',
-                  borderRadius: '0.5rem',
-                  backgroundColor: activeRing === 'water' ? 'rgba(56, 189, 248, 0.1)' : 'rgba(255,255,255,0.02)',
-                  transition: 'background-color 0.15s ease'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#38bdf8' }} />
-                  <span style={{ fontSize: '0.73rem', color: 'var(--text-secondary)' }}>{isRTL ? 'الترطيب' : 'Water'}</span>
-                </div>
-                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)', direction: 'ltr' }}>
-                  {todayWater} <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>/ {waterGoal}ml</span>
-                </span>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* ========================================================
-            CARD 2: TODAY'S FOCUS TARGET MUSCLE & READINESS
-           ======================================================== */}
-        <motion.div
-          className="forma-bento-card bento-card-muscle"
-          whileHover={{ y: -2 }}
-          transition={{ duration: 0.2 }}
-          style={{
-            gridColumn: 'span 1',
-            minHeight: '230px',
-            padding: '1.25rem',
-            borderRadius: '1.25rem',
-            backgroundColor: 'var(--bg-secondary)',
-            border: '1px solid var(--border-color)',
-            boxShadow: '0 8px 24px -6px rgba(0, 0, 0, 0.25)',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            position: 'relative',
-            overflow: 'hidden'
-          }}
-        >
-          {/* Top Title & Score */}
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <div style={{
-                  width: '26px',
-                  height: '26px',
-                  borderRadius: '8px',
-                  backgroundColor: 'rgba(190, 242, 100, 0.15)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  <Dumbbell className="w-3.5 h-3.5" style={{ color: '#bef264' }} />
-                </div>
-                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                  {isRTL ? 'العضلة المستهدفة اليوم' : 'Target Focus Muscle'}
-                </span>
-              </div>
-
-              <span style={{
-                fontSize: '0.7rem',
-                fontWeight: 700,
-                padding: '0.2rem 0.55rem',
-                borderRadius: '9999px',
-                backgroundColor: 'rgba(56, 189, 248, 0.12)',
-                color: '#38bdf8',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.25rem'
-              }}>
-                <ShieldCheck className="w-3 h-3" />
-                <span>{isRTL ? `جاهزية ${recoveryScore}%` : `${recoveryScore}% Ready`}</span>
+                {netCalories <= dailyCaloriesTarget ? (isRTL ? 'في نطاق الهدف' : 'On track') : (isRTL ? 'فائض سعرات' : 'Surplus')}
               </span>
             </div>
 
-            {/* Muscle Name Highlight */}
-            <div style={{ marginTop: '0.5rem' }}>
-              <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em', lineHeight: 1.3 }}>
-                {isRTL ? focusMuscleInfo.nameAr : focusMuscleInfo.nameEn}
-              </div>
-              <p style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: '0.35rem', lineHeight: 1.4 }}>
-                {isRTL ? focusMuscleInfo.statusTextAr : focusMuscleInfo.statusTextEn}
-              </p>
-            </div>
-          </div>
-
-          {/* Muscle Anatomy Mini Badge & Action Button */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginTop: '0.85rem' }}>
-            <span style={{
-              fontSize: '0.72rem',
-              fontWeight: 600,
-              padding: '0.3rem 0.65rem',
-              borderRadius: '0.6rem',
-              backgroundColor: 'rgba(255, 255, 255, 0.05)',
-              color: 'var(--text-secondary)'
-            }}>
-              {focusMuscleInfo.badge}
-            </span>
-
-            <button
-              onClick={() => {
-                gymAudio.triggerSubtleHaptic([15]);
-                onScrollToHologram();
-              }}
-              className="btn btn-ghost"
-              style={{
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                padding: '0.4rem 0.75rem',
-                borderRadius: '0.6rem',
-                border: '1px solid var(--border-color)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-                color: 'var(--accent-primary)'
-              }}
-            >
-              <span>{isRTL ? 'فحص المجسم 3D' : '3D Hologram'}</span>
-              <ArrowUpRight className="w-3.5 h-3.5" style={{ transform: isRTL ? 'scaleX(-1)' : 'none' }} />
-            </button>
-          </div>
-        </motion.div>
-
-        {/* ========================================================
-            CARD 3: ATHLETE STREAK & 7-DAY WEEK COMMITMENT TRACKER
-           ======================================================== */}
-        <motion.div
-          className="forma-bento-card bento-card-streak"
-          whileHover={{ y: -2 }}
-          transition={{ duration: 0.2 }}
-          style={{
-            gridColumn: 'span 1',
-            minHeight: '230px',
-            padding: '1.25rem',
-            borderRadius: '1.25rem',
-            backgroundColor: 'var(--bg-secondary)',
-            border: '1px solid var(--border-color)',
-            boxShadow: '0 8px 24px -6px rgba(0, 0, 0, 0.25)',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            position: 'relative',
-            overflow: 'hidden'
-          }}
-        >
-          {/* Header */}
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <div style={{
-                  width: '26px',
-                  height: '26px',
-                  borderRadius: '8px',
-                  backgroundColor: 'rgba(249, 115, 22, 0.15)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  <Flame className="w-3.5 h-3.5 text-orange-500" style={{ color: '#f97316' }} />
-                </div>
-                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                  {isRTL ? 'الالتزام والستريك' : 'Consistency Streak'}
-                </span>
-              </div>
-
-              <span style={{
-                fontSize: '0.8rem',
-                fontWeight: 800,
-                color: streakDays > 0 ? '#f97316' : 'var(--text-muted)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.2rem'
-              }}>
-                🔥 {streakDays} {isRTL ? 'يوم' : 'Days'}
-              </span>
-            </div>
-
-            <p style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginBottom: '0.85rem' }}>
-              {streakDays > 0 
-                ? (isRTL ? 'أداء رائع! حافظ على الزخم وسلسلة التمارين.' : 'Crushing it! Keep the training momentum going.')
-                : (isRTL ? 'ابدأ جلستك التدريبية اليوم لبدء سلسلتك الجديدة!' : 'Start today\'s session to ignite your new streak!')}
-            </p>
-          </div>
-
-          {/* 7-Day Dot Tracker */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(7, 1fr)',
-            gap: '0.35rem',
-            padding: '0.65rem 0.5rem',
-            borderRadius: '0.75rem',
-            backgroundColor: 'rgba(255, 255, 255, 0.02)',
-            border: '1px solid rgba(255, 255, 255, 0.05)',
-            textAlign: 'center'
-          }}>
-            {weekDays.map((d, index) => {
-              const bg = d.hasWorkout 
-                ? 'rgba(16, 185, 129, 0.2)' 
-                : d.dayIsFriday 
-                ? 'rgba(56, 189, 248, 0.12)' 
-                : d.isCurrentDay 
-                ? 'rgba(249, 115, 22, 0.15)' 
-                : 'rgba(255, 255, 255, 0.04)';
-
-              const border = d.isCurrentDay 
-                ? '1px solid #f97316' 
-                : d.hasWorkout 
-                ? '1px solid #10b981' 
-                : '1px solid transparent';
-
-              return (
-                <div key={index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
-                  <span style={{ fontSize: '0.64rem', color: d.isCurrentDay ? '#f97316' : 'var(--text-muted)', fontWeight: d.isCurrentDay ? 700 : 500 }}>
-                    {d.dayName}
-                  </span>
-                  <div style={{
-                    width: '26px',
-                    height: '26px',
-                    borderRadius: '50%',
-                    backgroundColor: bg,
-                    border: border,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '0.68rem',
-                    fontWeight: 700,
-                    color: d.hasWorkout ? '#10b981' : d.dayIsFriday ? '#38bdf8' : 'var(--text-primary)'
-                  }}>
-                    {d.hasWorkout ? (
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                    ) : d.dayIsFriday ? (
-                      <Moon className="w-3 h-3 text-sky-400" />
-                    ) : (
-                      <span>{d.dayNumber}</span>
-                    )}
+            {status !== 'ready' ? (
+              renderCardStates(isRTL ? 'جارٍ تحميل توازن الطاقة' : 'Loading energy balance')
+            ) : (
+              <>
+                <div className="today-bento-fuel-grid">
+                  <div className="today-bento-metric">
+                    <span className="today-bento-metric-label">{isRTL ? 'السعرات' : 'Calories'}</span>
+                    <strong className="today-bento-metric-value tabular-nums" dir="ltr">
+                      {todayCalories}
+                      <small> / {dailyCaloriesTarget}</small>
+                    </strong>
+                    <div className="today-progress-track" role="img" aria-label={`${isRTL ? 'السعرات' : 'Calories'}: ${caloriePct}%`}>
+                      <span style={{ width: `${caloriePct}%`, background: 'linear-gradient(90deg, var(--accent-emerald), var(--accent-cyan))' }} />
+                    </div>
+                  </div>
+                  <div className="today-bento-metric">
+                    <span className="today-bento-metric-label">{isRTL ? 'البروتين' : 'Protein'}</span>
+                    <strong className="today-bento-metric-value tabular-nums" dir="ltr">
+                      {todayProtein}
+                      <small> / {dailyProteinTarget} g</small>
+                    </strong>
+                    <div className="today-progress-track" role="img" aria-label={`${isRTL ? 'البروتين' : 'Protein'}: ${proteinPct}%`}>
+                      <span style={{ width: `${proteinPct}%`, background: 'linear-gradient(90deg, var(--accent-emerald), #059669)' }} />
+                    </div>
                   </div>
                 </div>
-              );
-            })}
-          </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.5rem' }}>
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-              {isRTL ? 'الجمعة عطلة استشفاء 🌙' : 'Friday Recovery 🌙'}
-            </span>
-            <button
-              onClick={onNavigatePlan}
-              className="text-xs"
-              style={{
-                background: 'none',
-                border: 'none',
-                fontSize: '0.72rem',
-                color: 'var(--accent-primary)',
-                cursor: 'pointer',
-                fontWeight: 600
-              }}
-            >
-              {isRTL ? 'الجدول الكامل ←' : 'Full Schedule →'}
-            </button>
-          </div>
-        </motion.div>
-
-        {/* ========================================================
-            CARD 4: QUICK FUEL SNAPSHOT & SPEED ACTIONS
-           ======================================================== */}
-        <motion.div
-          className="forma-bento-card bento-card-fuel"
-          whileHover={{ y: -2 }}
-          transition={{ duration: 0.2 }}
-          style={{
-            gridColumn: 'span 1',
-            minHeight: '230px',
-            padding: '1.25rem',
-            borderRadius: '1.25rem',
-            backgroundColor: 'var(--bg-secondary)',
-            border: '1px solid var(--border-color)',
-            boxShadow: '0 8px 24px -6px rgba(0, 0, 0, 0.25)',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            position: 'relative',
-            overflow: 'hidden'
-          }}
-        >
-          {/* Header */}
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <div style={{
-                  width: '26px',
-                  height: '26px',
-                  borderRadius: '8px',
-                  backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  <Zap className="w-3.5 h-3.5 text-emerald-500" style={{ color: '#10b981' }} />
+                <div className="today-bento-quick-actions" role="group" aria-label={isRTL ? 'إجراءات سريعة' : 'Quick actions'}>
+                  <button
+                    type="button"
+                    className="forma-quick-tile is-cyan"
+                    onClick={() => {
+                      gymAudio.triggerVibration([15]);
+                      onLogWater(250);
+                    }}
+                  >
+                    <Droplet size={15} aria-hidden="true" />
+                    <span>{isRTL ? 'ماء +250 مل' : '+250 ml water'}</span>
+                  </button>
+                  <button type="button" className="forma-quick-tile is-emerald" onClick={onNavigateNutrition}>
+                    <Camera size={15} aria-hidden="true" />
+                    <span>{isRTL ? 'مسح وجبة' : 'Scan meal'}</span>
+                  </button>
+                  <button type="button" className="forma-quick-tile is-lime" onClick={onOpenQuickWorkout}>
+                    <Zap size={15} aria-hidden="true" />
+                    <span>{isRTL ? 'تمرين حر' : 'Quick workout'}</span>
+                  </button>
                 </div>
-                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                  {isRTL ? 'توازن الطاقة والبروتين' : 'Energy & Protein Balance'}
-                </span>
-              </div>
+              </>
+            )}
+          </div>
+        </article>
 
-              <span style={{ fontSize: '0.72rem', fontWeight: 600, color: netCalories <= dailyCaloriesTarget ? '#10b981' : '#f59e0b' }}>
-                {netCalories <= dailyCaloriesTarget ? (isRTL ? 'في نطاق الهدف ✓' : 'On Track ✓') : (isRTL ? 'فائض سعرات' : 'Surplus')}
+        <article className="forma-bento-card" data-tier="tertiary">
+          <div className="forma-bento-card-body">
+            <div className="forma-widget-header" style={{ padding: 0 }}>
+              <h3 className="forma-widget-title">
+                <span className="forma-widget-icon" style={{ color: 'var(--accent-lime)' }}>
+                  <Dumbbell size={15} aria-hidden="true" />
+                </span>
+                <span>{isRTL ? 'العضلة المستهدفة' : 'Target focus'}</span>
+              </h3>
+              <span
+                className="forma-badge"
+                style={{ color: 'var(--accent-cyan)', background: 'rgba(56,189,248,0.14)', borderColor: 'rgba(56,189,248,0.32)' }}
+              >
+                <ShieldCheck size={12} aria-hidden="true" />
+                <span className="tabular-nums">{isRTL ? `جاهزية ${recoveryScore}%` : `${recoveryScore}% ready`}</span>
               </span>
             </div>
 
-            {/* Protein Progress Pill */}
-            <div style={{
-              padding: '0.55rem 0.75rem',
-              borderRadius: '0.75rem',
-              backgroundColor: 'rgba(255, 255, 255, 0.03)',
-              border: '1px solid rgba(255, 255, 255, 0.05)',
-              marginBottom: '0.65rem'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
-                  🥩 {isRTL ? 'البروتين المحقق' : 'Protein Target'}
-                </span>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                  {todayProtein} / {dailyProteinTarget}g
-                </span>
-              </div>
-              <div style={{ width: '100%', height: '6px', borderRadius: '9999px', backgroundColor: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
-                <div 
-                  style={{ 
-                    width: `${Math.min((todayProtein / (dailyProteinTarget || 1)) * 100, 100)}%`, 
-                    height: '100%', 
-                    borderRadius: '9999px', 
-                    backgroundColor: '#10b981',
-                    transition: 'width 0.4s ease'
-                  }} 
-                />
-              </div>
-            </div>
+            {status !== 'ready' ? (
+              renderCardStates(isRTL ? 'جارٍ تحميل العضلة المستهدفة' : 'Loading focus muscle')
+            ) : (
+              <>
+                <p className="today-bento-focus-name">{isRTL ? focusMuscle.nameAr : focusMuscle.nameEn}</p>
+                <p className="today-bento-focus-body">{isRTL ? focusMuscle.statusTextAr : focusMuscle.statusTextEn}</p>
+                <div className="forma-bento-card-footer">
+                  <span className="forma-chip">{focusMuscle.badge}</span>
+                  <button
+                    type="button"
+                    className="forma-quiet-button"
+                    onClick={() => {
+                      gymAudio.triggerSubtleHaptic([15]);
+                      onScrollToHologram();
+                    }}
+                  >
+                    <span>{isRTL ? 'خريطة العضلات' : 'Muscle map'}</span>
+                    <ArrowUpRight size={14} style={{ transform: isRTL ? 'scaleX(-1)' : 'none' }} aria-hidden="true" />
+                  </button>
+                </div>
+              </>
+            )}
           </div>
+        </article>
 
-          {/* Quick Actions Row */}
-          <div>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.45rem', fontWeight: 600 }}>
-              {isRTL ? 'إجراءات سريعة بنقرة واحدة:' : 'Quick Actions:'}
+        <article className="forma-bento-card" data-tier="tertiary">
+          <div className="forma-bento-card-body">
+            <div className="forma-widget-header" style={{ padding: 0 }}>
+              <h3 className="forma-widget-title">
+                <span className="forma-widget-icon" style={{ color: 'var(--accent-amber)' }}>
+                  <Flame size={15} aria-hidden="true" />
+                </span>
+                <span>{isRTL ? 'الالتزام الأسبوعي' : 'Weekly consistency'}</span>
+              </h3>
+              <span className="forma-badge is-amber">
+                <Flame size={12} aria-hidden="true" />
+                <span className="tabular-nums">{streakDays}</span>
+                <span>{isRTL ? 'يوم' : 'd'}</span>
+              </span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.4rem' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  gymAudio.triggerVibration([15]);
-                  onLogWater(250);
-                }}
-                className="btn btn-ghost"
-                style={{
-                  padding: '0.45rem 0.3rem',
-                  fontSize: '0.7rem',
-                  borderRadius: '0.6rem',
-                  border: '1px solid var(--border-color)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '0.2rem',
-                  color: '#38bdf8'
-                }}
-                title={isRTL ? 'تسجيل 250 مل ماء' : 'Log 250ml water'}
-              >
-                <Droplet className="w-3.5 h-3.5" />
-                <span style={{ fontSize: '0.65rem', fontWeight: 600 }}>+250ml</span>
-              </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  onNavigateNutrition();
-                }}
-                className="btn btn-ghost"
-                style={{
-                  padding: '0.45rem 0.3rem',
-                  fontSize: '0.7rem',
-                  borderRadius: '0.6rem',
-                  border: '1px solid var(--border-color)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '0.2rem',
-                  color: '#10b981'
-                }}
-                title={isRTL ? 'تسجيل وجبة غذائية' : 'Log a meal'}
-              >
-                <Camera className="w-3.5 h-3.5" />
-                <span style={{ fontSize: '0.65rem', fontWeight: 600 }}>{isRTL ? 'مسح وجبة' : 'Scan Meal'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  onOpenQuickWorkout();
-                }}
-                className="btn btn-ghost"
-                style={{
-                  padding: '0.45rem 0.3rem',
-                  fontSize: '0.7rem',
-                  borderRadius: '0.6rem',
-                  border: '1px solid var(--border-color)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '0.2rem',
-                  color: 'var(--accent-primary)'
-                }}
-                title={isRTL ? 'تمرين حر سريع' : 'Quick workout'}
-              >
-                <Zap className="w-3.5 h-3.5" />
-                <span style={{ fontSize: '0.65rem', fontWeight: 600 }}>{isRTL ? 'تمرين حر' : 'Quick'}</span>
-              </button>
-            </div>
+            {status !== 'ready' ? (
+              renderCardStates(isRTL ? 'جارٍ تحميل سجل الالتزام' : 'Loading streak')
+            ) : (
+              <>
+                <p className="today-bento-focus-body">
+                  {streakDays > 0
+                    ? isRTL
+                      ? 'أداء رائع! حافظ على الزخم وسلسلة التمارين.'
+                      : 'Crushing it. Keep the training momentum going.'
+                    : isRTL
+                      ? 'ابدأ جلستك التدريبية اليوم لبدء سلسلتك الجديدة.'
+                      : 'Start today’s session to ignite a new streak.'}
+                </p>
+                <ol className="today-week-strip" aria-label={isRTL ? 'أيام الأسبوع' : 'Days of the week'}>
+                  {weekDays.map((day) => (
+                    <li key={day.key} className="today-week-day" data-state={day.hasWorkout ? 'done' : day.dayIsFriday ? 'rest' : day.isCurrentDay ? 'today' : 'idle'}>
+                      <span className="today-week-day-name">{day.dayName}</span>
+                      <span className="today-week-day-marker">
+                        {day.hasWorkout ? (
+                          <CheckCircle2 size={14} aria-hidden="true" />
+                        ) : day.dayIsFriday ? (
+                          <Moon size={12} aria-hidden="true" />
+                        ) : (
+                          <span className="tabular-nums">{day.dayNumber}</span>
+                        )}
+                      </span>
+                      <span className="forma-sr-only">
+                        {day.hasWorkout
+                          ? isRTL ? ' تم التدريب' : ' completed'
+                          : day.dayIsFriday
+                            ? isRTL ? ' عطلة' : ' rest day'
+                            : isRTL ? ' لم يتم التدريب' : ' not trained'}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+                <p className="forma-sr-only">{weekSummary}</p>
+                <div className="forma-bento-card-footer">
+                  <span className="today-bento-footnote">{isRTL ? 'الجمعة عطلة استشفاء' : 'Friday is a recovery day'}</span>
+                  <button type="button" className="forma-quiet-button" onClick={onNavigatePlan}>
+                    <span>{isRTL ? 'الجدول الكامل' : 'Full schedule'}</span>
+                    <ArrowUpRight size={14} style={{ transform: isRTL ? 'scaleX(-1)' : 'none' }} aria-hidden="true" />
+                  </button>
+                </div>
+              </>
+            )}
           </div>
-        </motion.div>
+        </article>
       </div>
     </div>
   );

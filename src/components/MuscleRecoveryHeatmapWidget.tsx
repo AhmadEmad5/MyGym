@@ -1,10 +1,10 @@
-import { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useMemo, useCallback } from 'react';
 import { Activity, Zap, Clock, ChevronRight, Layers } from 'lucide-react';
 import { useData } from '../hooks/useData';
 import { useTranslation } from '../lib/i18n';
 import { computeMuscleRecovery, MuscleRecoveryStatus } from '../lib/recovery';
 import { InteractiveMuscleMapModal } from './InteractiveMuscleMapModal';
+import { WidgetFrame } from './TodayBentoGrid';
 
 type MuscleKey = 'chest' | 'shoulders' | 'biceps' | 'abs' | 'quads' | 'traps' | 'lats' | 'triceps' | 'lowerBack' | 'glutes' | 'hamstrings' | 'calves';
 
@@ -31,12 +31,29 @@ const MUSCLE_METAS: Record<MuscleKey, MuscleMeta> = {
   calves: { key: 'calves', nameAr: 'السمانة', nameEn: 'Calves', view: 'back', recoveryGroupId: 'legs' }
 };
 
+const TONE_COLORS: Record<'ready' | 'recovering' | 'fatigued', string> = {
+  ready: 'var(--accent-lime)',
+  recovering: 'var(--color-warning)',
+  fatigued: 'var(--color-danger)',
+};
+
+const toneForPercent = (percent: number): 'ready' | 'recovering' | 'fatigued' =>
+  percent < 40 ? 'fatigued' : percent < 80 ? 'recovering' : 'ready';
+
+const toneLabel = (isRTL: boolean, tone: 'ready' | 'recovering' | 'fatigued') => {
+  if (tone === 'fatigued') return isRTL ? 'مجهَد' : 'Fatigued';
+  if (tone === 'recovering') return isRTL ? 'قيد الاستشفاء' : 'Recovering';
+  return isRTL ? 'جاهز للتدريب' : 'Ready to train';
+};
+
 export function MuscleRecoveryHeatmapWidget() {
   const { data } = useData();
   const { isRTL } = useTranslation();
   const [activeView, setActiveView] = useState<'front' | 'back'>('front');
   const [selectedMuscle, setSelectedMuscle] = useState<MuscleKey>('chest');
   const [isFullModalOpen, setIsFullModalOpen] = useState(false);
+
+  const selectMuscle = useCallback((key: MuscleKey) => setSelectedMuscle(key), []);
 
   // Compute real recovery stats from past 72h history and sessions
   const recoveryOverview = useMemo(() => {
@@ -54,36 +71,40 @@ export function MuscleRecoveryHeatmapWidget() {
     return map;
   }, [recoveryOverview]);
 
-  // Color generator based on recovery percent
-  const getMuscleFillColor = (key: MuscleKey, isSelected: boolean) => {
-    const status = muscleRecoveryMap[key];
-    const pct = status ? status.percent : 100;
+  const getMuscleTone = (key: MuscleKey) => toneForPercent(muscleRecoveryMap[key]?.percent ?? 100);
 
-    if (isSelected) {
-      return '#38bdf8'; // Highlight selected with glowing cyan
-    }
-
-    if (pct < 40) {
-      return '#ef4444'; // Fatigued - Red
-    } else if (pct < 80) {
-      return '#f59e0b'; // Recovering - Amber
-    } else {
-      return '#c6f432'; // Ready to Train - Volt Neon
-    }
-  };
+  const getMuscleFillColor = (key: MuscleKey, isSelected: boolean) =>
+    isSelected ? 'var(--accent-cyan)' : TONE_COLORS[getMuscleTone(key)];
 
   const getMuscleOpacity = (key: MuscleKey, isSelected: boolean) => {
     if (isSelected) return 0.95;
-    const status = muscleRecoveryMap[key];
-    const pct = status ? status.percent : 100;
-    if (pct < 40) return 0.82;
-    if (pct < 80) return 0.75;
-    return 0.88;
+    const tone = getMuscleTone(key);
+    return tone === 'fatigued' ? 0.82 : tone === 'recovering' ? 0.75 : 0.88;
+  };
+
+  const groupProps = (key: MuscleKey) => {
+    const selected = selectedMuscle === key;
+    const meta = MUSCLE_METAS[key];
+    const percent = muscleRecoveryMap[key]?.percent ?? 100;
+    return {
+      role: 'button' as const,
+      tabIndex: 0,
+      'aria-pressed': selected,
+      'aria-label': `${isRTL ? meta.nameAr : meta.nameEn} — ${percent}% ${toneLabel(isRTL, getMuscleTone(key))}`,
+      onClick: () => selectMuscle(key),
+      onKeyDown: (event: React.KeyboardEvent<SVGGElement>) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          selectMuscle(key);
+        }
+      },
+    };
   };
 
   const selectedInfo = MUSCLE_METAS[selectedMuscle];
   const selectedStatus = muscleRecoveryMap[selectedMuscle];
   const readinessPercent = selectedStatus ? selectedStatus.percent : 100;
+  const selectedTone = toneForPercent(readinessPercent);
 
   // Ready muscles list for recommendation banner
   const readyMuscles = useMemo(() => {
@@ -91,194 +112,98 @@ export function MuscleRecoveryHeatmapWidget() {
     return ready.length > 0 ? ready : recoveryOverview.recommendedMuscles;
   }, [recoveryOverview]);
 
+  const recoveryRows = useMemo(
+    () => (Object.keys(MUSCLE_METAS) as MuscleKey[]).map((key) => ({
+      key,
+      name: isRTL ? MUSCLE_METAS[key].nameAr : MUSCLE_METAS[key].nameEn,
+      view: MUSCLE_METAS[key].view,
+      percent: muscleRecoveryMap[key]?.percent ?? 100,
+      tone: getMuscleTone(key),
+    })),
+    [isRTL, muscleRecoveryMap],
+  );
+
   return (
-    <div
+    <WidgetFrame
       id="today-muscle-hologram-section"
-      style={{
-        background: 'linear-gradient(145deg, rgba(16, 24, 42, 0.88) 0%, rgba(10, 15, 26, 0.95) 100%)',
-        border: '1px solid var(--border-card)',
-        borderRadius: '24px',
-        padding: 'clamp(1rem, 2.5vw, 1.65rem)',
-        position: 'relative',
-        overflow: 'hidden',
-        boxShadow: '0 16px 36px -10px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        marginBottom: '0'
-      }}
-    >
-      {/* Top Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.6rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-          <div style={{
-            width: '38px',
-            height: '38px',
-            borderRadius: '11px',
-            background: 'linear-gradient(135deg, rgba(198, 244, 50, 0.2), rgba(16, 185, 129, 0.2))',
-            border: '1px solid rgba(198, 244, 50, 0.35)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#c6f432'
-          }}>
-            <Activity size={19} />
-          </div>
-          <div>
-            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.01em' }}>
-              {isRTL ? 'خريطة جاهزية واستشفاء العضلات' : 'Muscle Readiness Heatmap'}
-            </h3>
-            <p style={{ margin: '0.15rem 0 0', fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-              {isRTL ? 'تحليل الحمل التدريبي لآخر 48–72 ساعة' : 'Calculated from last 48–72h training strain'}
-            </p>
-          </div>
-        </div>
-
-        {/* Global Recovery Badge & Full Map Button */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={{
-            fontSize: '0.74rem',
-            fontWeight: 800,
-            padding: '0.3rem 0.65rem',
-            borderRadius: '999px',
-            background: recoveryOverview.overallScore >= 75 ? 'rgba(198, 244, 50, 0.16)' : 'rgba(245, 158, 11, 0.16)',
-            color: recoveryOverview.overallScore >= 75 ? '#c6f432' : '#f59e0b',
-            border: `1px solid ${recoveryOverview.overallScore >= 75 ? 'rgba(198, 244, 50, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`
-          }}>
-            {recoveryOverview.overallScore}% {isRTL ? 'جاهزية عامة' : 'Readiness'}
+      title={isRTL ? 'خريطة جاهزية العضلات' : 'Muscle readiness heatmap'}
+      icon={<Activity size={15} aria-hidden="true" />}
+      tone="lime"
+      className="today-muscle-heatmap"
+      trailing={
+        <>
+          <span
+            className="forma-badge"
+            style={
+              recoveryOverview.overallScore >= 75
+                ? { color: 'var(--accent-lime)', background: 'rgba(190,242,100,0.16)', borderColor: 'rgba(190,242,100,0.32)' }
+                : { color: 'var(--color-warning)', background: 'rgba(245,158,11,0.16)', borderColor: 'rgba(245,158,11,0.32)' }
+            }
+          >
+            <span className="tabular-nums">{recoveryOverview.overallScore}%</span>
+            <span>{isRTL ? 'جاهزية' : 'readiness'}</span>
           </span>
-
           <button
             type="button"
-            className="btn-ghost"
-            style={{
-              padding: '0.3rem 0.65rem',
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              borderRadius: '8px',
-              border: '1px solid var(--border-color)',
-              color: 'var(--text-secondary)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.3rem',
-              cursor: 'pointer'
-            }}
+            className="forma-quiet-button"
             onClick={() => setIsFullModalOpen(true)}
             title={isRTL ? 'استكشاف تمارين العضلات' : 'Explore exercises'}
           >
-            <Layers size={13} />
+            <Layers size={13} aria-hidden="true" />
             <span>{isRTL ? 'التمارين' : 'Explore'}</span>
           </button>
+        </>
+      }
+    >
+      <div className="today-muscle-banner">
+        <div>
+          <Zap size={15} aria-hidden="true" />
+          <span>{isRTL ? 'مقترح اليوم (جاهز ومكتمل الطاقة):' : 'Prime for today (recovered):'}</span>
         </div>
-      </div>
-
-      {/* Recommended for Today Banner */}
-      <div style={{
-        background: 'linear-gradient(135deg, rgba(198, 244, 50, 0.08) 0%, rgba(16, 185, 129, 0.08) 100%)',
-        border: '1px solid rgba(198, 244, 50, 0.25)',
-        borderRadius: '12px',
-        padding: '0.6rem 0.85rem',
-        marginBottom: '1rem',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '0.6rem',
-        flexWrap: 'wrap',
-        fontSize: '0.78rem'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#c6f432', fontWeight: 700 }}>
-          <Zap size={15} />
-          <span>{isRTL ? 'مقترح اليوم (جاهز ومكتمل الطاقة):' : 'Prime for Today (Recovered):'}</span>
-        </div>
-        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+        <div className="today-muscle-banner-tags">
           {readyMuscles.slice(0, 3).map(m => (
-            <span
-              key={m.id}
-              style={{
-                fontSize: '0.72rem',
-                fontWeight: 700,
-                padding: '0.2rem 0.55rem',
-                borderRadius: '6px',
-                background: 'rgba(198, 244, 50, 0.15)',
-                color: '#c6f432',
-                border: '1px solid rgba(198, 244, 50, 0.3)'
-              }}
-            >
-              ✓ {isRTL ? m.nameAr : m.nameEn}
+            <span key={m.id}>
+              <span aria-hidden="true">✓</span> {isRTL ? m.nameAr : m.nameEn}
             </span>
           ))}
         </div>
       </div>
 
-      {/* Main Interactive Anatomy Body & Details Section */}
       <div className="muscle-heatmap-main-grid">
-        {/* Left/Center: Body Graphic with Front/Back Switcher */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          {/* Front / Back Toggle Pills */}
-          <div style={{
-            display: 'flex',
-            gap: '0.35rem',
-            background: 'rgba(255, 255, 255, 0.04)',
-            padding: '0.25rem',
-            borderRadius: '10px',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            marginBottom: '0.75rem'
-          }}>
+        <div className="today-muscle-figure-column">
+          <div className="today-muscle-map-toggle" role="group" aria-label={isRTL ? 'جهة العرض' : 'Body view'}>
             <button
               type="button"
+              aria-pressed={activeView === 'front'}
               onClick={() => {
                 setActiveView('front');
                 if (MUSCLE_METAS[selectedMuscle].view !== 'front') setSelectedMuscle('chest');
               }}
-              style={{
-                padding: '0.3rem 0.75rem',
-                borderRadius: '8px',
-                fontSize: '0.74rem',
-                fontWeight: 700,
-                border: 'none',
-                background: activeView === 'front' ? 'var(--accent-primary)' : 'transparent',
-                color: activeView === 'front' ? '#080c14' : 'var(--text-secondary)',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease'
-              }}
             >
-              {isRTL ? 'الجهة الأمامية' : 'Front'}
+              {isRTL ? 'الأمامية' : 'Front'}
             </button>
             <button
               type="button"
+              aria-pressed={activeView === 'back'}
               onClick={() => {
                 setActiveView('back');
                 if (MUSCLE_METAS[selectedMuscle].view !== 'back') setSelectedMuscle('lats');
               }}
-              style={{
-                padding: '0.3rem 0.75rem',
-                borderRadius: '8px',
-                fontSize: '0.74rem',
-                fontWeight: 700,
-                border: 'none',
-                background: activeView === 'back' ? 'var(--accent-primary)' : 'transparent',
-                color: activeView === 'back' ? '#080c14' : 'var(--text-secondary)',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease'
-              }}
             >
-              {isRTL ? 'الجهة الخلفية' : 'Back'}
+              {isRTL ? 'الخلفية' : 'Back'}
             </button>
           </div>
 
-          {/* SVG Silhouette */}
-          <div style={{
-            width: '100%',
-            maxWidth: '210px',
-            height: '260px',
-            position: 'relative',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <svg
-              viewBox="60 10 200 500"
-              style={{ width: '100%', height: '100%', filter: 'drop-shadow(0 4px 14px rgba(0,0,0,0.5))' }}
-            >
+          <div
+            className="today-muscle-map-figure"
+            role="img"
+            aria-label={
+              isRTL
+                ? `رسم جسدي يوضح استشفاء ${activeView === 'front' ? 'الجهة الأمامية' : 'الجهة الخلفية'}. يتبعه جدول نصي كامل داخل البطاقة.`
+                : `Muscle body map showing ${activeView === 'front' ? 'front' : 'back'} recovery. A full text table follows inside this card.`
+            }
+          >
+            <svg viewBox="60 10 200 500" aria-hidden="true" focusable="false">
               <defs>
                 <filter id="recoveryGlow" x="-30%" y="-30%" width="160%" height="160%">
                   <feGaussianBlur stdDeviation="5" result="blur" />
@@ -286,7 +211,6 @@ export function MuscleRecoveryHeatmapWidget() {
                 </filter>
               </defs>
 
-              {/* Base Body Silhouette Outline */}
               <path
                 d="M 160,20 C 148,20 144,32 144,48 C 144,60 148,70 152,74 C 140,78 124,86 112,96 C 98,92 90,102 84,116 C 78,130 78,150 82,170 C 86,188 94,220 98,240 C 96,252 90,266 86,276 C 82,284 88,290 94,286 C 102,280 108,262 110,250 C 114,234 116,216 118,200 C 122,216 124,242 124,258 C 116,280 114,310 116,340 C 118,364 126,380 130,388 C 124,410 120,440 124,470 C 126,486 132,496 136,498 C 142,488 144,460 146,436 C 148,406 150,380 154,360 C 158,358 162,358 166,360 C 170,380 172,406 174,436 C 176,460 178,488 184,498 C 188,496 194,486 196,470 C 200,440 196,410 190,388 C 194,380 202,364 204,340 C 206,310 204,280 196,258 C 196,242 198,216 202,200 C 204,216 206,234 210,250 C 212,262 218,280 226,286 C 232,290 238,284 234,276 C 230,266 224,252 222,240 C 226,220 234,188 238,170 C 242,150 242,130 236,116 C 230,102 222,92 208,96 C 196,86 180,78 168,74 C 172,70 176,60 176,48 C 176,32 172,20 160,20 Z"
                 fill="#0b111a"
@@ -297,7 +221,7 @@ export function MuscleRecoveryHeatmapWidget() {
               {activeView === 'front' ? (
                 <g>
                   {/* CHEST */}
-                  <g cursor="pointer" onClick={() => setSelectedMuscle('chest')}>
+                  <g {...groupProps('chest')} style={{ cursor: 'pointer' }}>
                     <path
                       d="M 158,102 L 126,108 C 116,110 112,122 114,136 C 116,146 128,150 144,148 L 158,144 Z"
                       fill={getMuscleFillColor('chest', selectedMuscle === 'chest')}
@@ -317,7 +241,7 @@ export function MuscleRecoveryHeatmapWidget() {
                   </g>
 
                   {/* SHOULDERS */}
-                  <g cursor="pointer" onClick={() => setSelectedMuscle('shoulders')}>
+                  <g {...groupProps('shoulders')} style={{ cursor: 'pointer' }}>
                     <path
                       d="M 108,98 C 96,95 91,102 85,112 C 81,122 83,136 88,144 C 94,146 102,136 106,126 C 110,116 112,105 108,98 Z"
                       fill={getMuscleFillColor('shoulders', selectedMuscle === 'shoulders')}
@@ -337,7 +261,7 @@ export function MuscleRecoveryHeatmapWidget() {
                   </g>
 
                   {/* BICEPS */}
-                  <g cursor="pointer" onClick={() => setSelectedMuscle('biceps')}>
+                  <g {...groupProps('biceps')} style={{ cursor: 'pointer' }}>
                     <path
                       d="M 91,148 C 86,156 85,172 88,186 C 94,188 101,185 104,178 C 108,168 107,154 102,146 C 98,146 94,146 91,148 Z"
                       fill={getMuscleFillColor('biceps', selectedMuscle === 'biceps')}
@@ -357,7 +281,7 @@ export function MuscleRecoveryHeatmapWidget() {
                   </g>
 
                   {/* ABS / CORE */}
-                  <g cursor="pointer" onClick={() => setSelectedMuscle('abs')}>
+                  <g {...groupProps('abs')} style={{ cursor: 'pointer' }}>
                     <path
                       d="M 158,153 L 140,154 C 137,162 137,171 140,173 L 158,173 Z"
                       fill={getMuscleFillColor('abs', selectedMuscle === 'abs')}
@@ -389,7 +313,7 @@ export function MuscleRecoveryHeatmapWidget() {
                   </g>
 
                   {/* QUADS */}
-                  <g cursor="pointer" onClick={() => setSelectedMuscle('quads')}>
+                  <g {...groupProps('quads')} style={{ cursor: 'pointer' }}>
                     <path
                       d="M 125,250 C 117,270 114,302 116,334 C 118,354 124,368 130,370 C 134,364 140,360 144,362 C 148,348 152,320 154,286 C 154,272 144,258 125,250 Z"
                       fill={getMuscleFillColor('quads', selectedMuscle === 'quads')}
@@ -411,7 +335,7 @@ export function MuscleRecoveryHeatmapWidget() {
               ) : (
                 <g>
                   {/* TRAPS */}
-                  <g cursor="pointer" onClick={() => setSelectedMuscle('traps')}>
+                  <g {...groupProps('traps')} style={{ cursor: 'pointer' }}>
                     <path
                       d="M 160,76 L 148,88 C 134,96 128,102 128,108 L 144,116 L 160,136 L 176,116 L 192,108 C 192,102 186,96 172,88 Z"
                       fill={getMuscleFillColor('traps', selectedMuscle === 'traps')}
@@ -423,7 +347,7 @@ export function MuscleRecoveryHeatmapWidget() {
                   </g>
 
                   {/* LATS */}
-                  <g cursor="pointer" onClick={() => setSelectedMuscle('lats')}>
+                  <g {...groupProps('lats')} style={{ cursor: 'pointer' }}>
                     <path
                       d="M 142,126 L 126,118 C 118,128 116,150 118,176 C 122,192 128,206 138,212 L 144,210 C 146,188 146,156 142,126 Z"
                       fill={getMuscleFillColor('lats', selectedMuscle === 'lats')}
@@ -443,7 +367,7 @@ export function MuscleRecoveryHeatmapWidget() {
                   </g>
 
                   {/* TRICEPS */}
-                  <g cursor="pointer" onClick={() => setSelectedMuscle('triceps')}>
+                  <g {...groupProps('triceps')} style={{ cursor: 'pointer' }}>
                     <path
                       d="M 94,142 C 88,150 86,166 88,180 C 94,182 100,180 102,174 C 104,164 104,152 100,142 Z"
                       fill={getMuscleFillColor('triceps', selectedMuscle === 'triceps')}
@@ -463,7 +387,7 @@ export function MuscleRecoveryHeatmapWidget() {
                   </g>
 
                   {/* GLUTES */}
-                  <g cursor="pointer" onClick={() => setSelectedMuscle('glutes')}>
+                  <g {...groupProps('glutes')} style={{ cursor: 'pointer' }}>
                     <path
                       d="M 124,228 C 120,240 120,260 126,274 C 132,284 146,288 156,284 L 158,236 C 146,230 134,226 124,228 Z"
                       fill={getMuscleFillColor('glutes', selectedMuscle === 'glutes')}
@@ -483,7 +407,7 @@ export function MuscleRecoveryHeatmapWidget() {
                   </g>
 
                   {/* HAMSTRINGS */}
-                  <g cursor="pointer" onClick={() => setSelectedMuscle('hamstrings')}>
+                  <g {...groupProps('hamstrings')} style={{ cursor: 'pointer' }}>
                     <path
                       d="M 126,286 C 122,306 122,336 124,360 C 128,370 136,372 142,370 C 146,358 148,332 150,300 C 150,290 142,284 126,286 Z"
                       fill={getMuscleFillColor('hamstrings', selectedMuscle === 'hamstrings')}
@@ -506,132 +430,114 @@ export function MuscleRecoveryHeatmapWidget() {
             </svg>
           </div>
 
-          {/* Micro Legend */}
-          <div style={{ display: 'flex', gap: '0.65rem', marginTop: '0.5rem', fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-              <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#c6f432' }} />
-              <span>{isRTL ? 'جاهز (100%)' : 'Ready'}</span>
+          <div className="today-muscle-legend" aria-hidden="true">
+            <div>
+              <i style={{ background: 'var(--accent-lime)' }} />
+              <span>{isRTL ? 'جاهز' : 'Ready'}</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-              <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#f59e0b' }} />
+            <div>
+              <i style={{ background: 'var(--color-warning)' }} />
               <span>{isRTL ? 'استشفاء جزئي' : 'Recovering'}</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-              <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#ef4444' }} />
+            <div>
+              <i style={{ background: 'var(--color-danger)' }} />
               <span>{isRTL ? 'مجهد' : 'Fatigued'}</span>
             </div>
           </div>
         </div>
 
-        {/* Right Side: Selected Muscle Details Card */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={selectedMuscle}
-            initial={{ opacity: 0, x: 10 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -10 }}
-            transition={{ duration: 0.2 }}
-            style={{
-              background: 'rgba(255, 255, 255, 0.03)',
-              border: '1px solid rgba(255, 255, 255, 0.07)',
-              borderRadius: '16px',
-              padding: '1rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.75rem'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  {isRTL ? 'العضلة المحددة' : 'Selected Muscle'}
-                </span>
-                <h4 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#ffffff' }}>
-                  {isRTL ? selectedInfo.nameAr : selectedInfo.nameEn}
-                </h4>
-              </div>
-
-              {/* Status Pill */}
-              <span style={{
-                fontSize: '0.74rem',
-                fontWeight: 800,
-                padding: '0.25rem 0.6rem',
-                borderRadius: '8px',
-                background: readinessPercent >= 80 ? 'rgba(198, 244, 50, 0.15)' : readinessPercent >= 40 ? 'rgba(245, 158, 11, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                color: readinessPercent >= 80 ? '#c6f432' : readinessPercent >= 40 ? '#f59e0b' : '#ef4444',
-                border: `1px solid ${readinessPercent >= 80 ? 'rgba(198, 244, 50, 0.35)' : readinessPercent >= 40 ? 'rgba(245, 158, 11, 0.35)' : 'rgba(239, 68, 68, 0.35)'}`
-              }}>
-                {readinessPercent >= 80 
-                  ? (isRTL ? 'جاهزة بكامل الطاقة 🟢' : 'Ready to Train 🟢')
-                  : readinessPercent >= 40 
-                  ? (isRTL ? 'قيد الاستشفاء 🟡' : 'Recovering 🟡')
-                  : (isRTL ? 'تحت الإجهاد 🔴' : 'Fatigued 🔴')}
-              </span>
-            </div>
-
-            {/* Readiness Progress Bar */}
+        <div className="today-muscle-detail">
+          <div className="today-muscle-detail-head">
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.35rem' }}>
-                <span style={{ color: 'var(--text-secondary)' }}>{isRTL ? 'نسبة الاستشفاء' : 'Recovery Level'}</span>
-                <span style={{ fontWeight: 800, color: readinessPercent >= 80 ? '#c6f432' : readinessPercent >= 40 ? '#f59e0b' : '#ef4444' }}>
-                  {readinessPercent}%
-                </span>
-              </div>
-              <div style={{ height: '6px', background: 'rgba(255, 255, 255, 0.08)', borderRadius: '999px', overflow: 'hidden' }}>
-                <div style={{
-                  height: '100%',
-                  width: `${readinessPercent}%`,
-                  background: readinessPercent >= 80 ? 'linear-gradient(90deg, #c6f432, #10b981)' : readinessPercent >= 40 ? '#f59e0b' : '#ef4444',
-                  borderRadius: '999px',
-                  transition: 'width 0.4s ease'
-                }} />
-              </div>
+              <span className="today-muscle-detail-eyebrow">{isRTL ? 'العضلة المحددة' : 'Selected muscle'}</span>
+              <h4 className="today-muscle-detail-name">{isRTL ? selectedInfo.nameAr : selectedInfo.nameEn}</h4>
             </div>
 
-            {/* Last Trained Time */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-              <Clock size={14} />
-              <span>
-                {selectedStatus?.hoursAgo !== null && selectedStatus?.hoursAgo !== undefined
-                  ? (isRTL ? `آخر تدريب: منذ ${selectedStatus.hoursAgo} ساعة` : `Last trained: ${selectedStatus.hoursAgo}h ago`)
-                  : (isRTL ? 'لم يتم تدريبها هذا الأسبوع (مرتاحة تماماً)' : 'Not trained recently (Fully fresh)')}
+            <span
+              className="forma-badge"
+              style={
+                selectedTone === 'ready'
+                  ? { color: 'var(--accent-lime)', background: 'rgba(190,242,100,0.16)', borderColor: 'rgba(190,242,100,0.34)' }
+                  : selectedTone === 'recovering'
+                    ? { color: 'var(--color-warning)', background: 'rgba(245,158,11,0.16)', borderColor: 'rgba(245,158,11,0.34)' }
+                    : { color: 'var(--color-danger)', background: 'rgba(239,68,68,0.16)', borderColor: 'rgba(239,68,68,0.34)' }
+              }
+            >
+              {toneLabel(isRTL, selectedTone)}
+            </span>
+          </div>
+
+          <div>
+            <div className="today-bento-metric-label" style={{ display: 'flex', justifyContent: 'space-between', marginBlockEnd: '0.35rem' }}>
+              <span>{isRTL ? 'نسبة الاستشفاء' : 'Recovery level'}</span>
+              <span className="tabular-nums" style={{ fontWeight: 800, color: `var(--accent-${selectedTone === 'ready' ? 'lime' : selectedTone === 'recovering' ? 'amber' : 'rose'})` }}>
+                {readinessPercent}%
               </span>
             </div>
-
-            {/* CTA to view exercises */}
-            <button
-              type="button"
-              className="btn btn-ghost"
-              style={{
-                marginTop: '0.25rem',
-                padding: '0.45rem 0.8rem',
-                borderRadius: '10px',
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                color: '#38bdf8',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.35rem',
-                cursor: 'pointer'
-              }}
-              onClick={() => setIsFullModalOpen(true)}
+            <div
+              className="today-progress-track"
+              role="img"
+              aria-label={`${isRTL ? 'نسبة الاستشفاء' : 'Recovery level'} ${readinessPercent}%`}
             >
-              <span>{isRTL ? `عرض أفضل تمارين ${selectedInfo.nameAr}` : `View exercises for ${selectedInfo.nameEn}`}</span>
-              <ChevronRight size={14} style={{ transform: isRTL ? 'rotate(180deg)' : 'none' }} />
-            </button>
-          </motion.div>
-        </AnimatePresence>
+              <span
+                style={{
+                  width: `${readinessPercent}%`,
+                  background:
+                    selectedTone === 'ready'
+                      ? 'linear-gradient(90deg, var(--accent-lime), var(--accent-emerald))'
+                      : selectedTone === 'recovering'
+                        ? 'var(--color-warning)'
+                        : 'var(--color-danger)',
+                }}
+              />
+            </div>
+          </div>
+
+          <p className="today-muscle-detail-meta">
+            <Clock size={14} aria-hidden="true" />
+            <span>
+              {selectedStatus?.hoursAgo !== null && selectedStatus?.hoursAgo !== undefined
+                ? (isRTL ? `آخر تدريب: منذ ${selectedStatus.hoursAgo} ساعة` : `Last trained: ${selectedStatus.hoursAgo}h ago`)
+                : (isRTL ? 'لم يتم تدريبها هذا الأسبوع (مرتاحة تماماً)' : 'Not trained recently (fully fresh)')}
+            </span>
+          </p>
+
+          <button type="button" className="today-muscle-cta" onClick={() => setIsFullModalOpen(true)}>
+            <span>{isRTL ? `عرض تمارين ${selectedInfo.nameAr}` : `View exercises for ${selectedInfo.nameEn}`}</span>
+            <ChevronRight size={14} style={{ transform: isRTL ? 'rotate(180deg)' : 'none' }} aria-hidden="true" />
+          </button>
+        </div>
       </div>
 
-      {/* Full Modal */}
+      <table className="forma-sr-only">
+        <caption>{isRTL ? 'نسبة الاستشفاء لكل عضلة' : 'Recovery percentage per muscle group'}</caption>
+        <thead>
+          <tr>
+            <th scope="col">{isRTL ? 'العضلة' : 'Muscle'}</th>
+            <th scope="col">{isRTL ? 'الجهة' : 'View'}</th>
+            <th scope="col">{isRTL ? 'النسبة' : 'Recovery'}</th>
+            <th scope="col">{isRTL ? 'الحالة' : 'Status'}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {recoveryRows.map(row => (
+            <tr key={row.key}>
+              <th scope="row">{row.name}</th>
+              <td>{row.view === 'front' ? (isRTL ? 'أمامية' : 'Front') : (isRTL ? 'خلفية' : 'Back')}</td>
+              <td>{row.percent}%</td>
+              <td>{toneLabel(isRTL, row.tone)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
       {isFullModalOpen && (
         <InteractiveMuscleMapModal
           isOpen={isFullModalOpen}
           onClose={() => setIsFullModalOpen(false)}
         />
       )}
-    </div>
+    </WidgetFrame>
   );
 }
+

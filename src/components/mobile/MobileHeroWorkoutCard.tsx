@@ -1,20 +1,21 @@
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Play, 
-  Dumbbell, 
-  Clock, 
-  ChevronDown, 
-  Sparkles, 
-  CheckCircle2, 
+import { AnimatePresence, motion } from 'framer-motion';
+import {
   ArrowRight,
+  CheckCircle2,
+  ChevronDown,
+  Clock,
+  Dumbbell,
+  Play,
+  Plus,
   RotateCcw,
-  Plus
+  Sparkles,
 } from 'lucide-react';
 import type { WorkoutSession } from '../../lib/api';
 import { useTranslation } from '../../lib/i18n';
 import { gymAudio } from '../../lib/audio';
+import { useFormaReducedMotion } from '../TodayBentoGrid';
 
 interface MobileHeroWorkoutCardProps {
   session: WorkoutSession | null;
@@ -23,6 +24,8 @@ interface MobileHeroWorkoutCardProps {
   streakDays?: number;
 }
 
+const enterTransition = { duration: 0.28, ease: [0.22, 1, 0.36, 1] as const };
+
 export function MobileHeroWorkoutCard({
   session,
   isCompletedToday,
@@ -30,302 +33,146 @@ export function MobileHeroWorkoutCard({
 }: MobileHeroWorkoutCardProps) {
   const navigate = useNavigate();
   const { tExercise, tMuscle, isRTL } = useTranslation();
+  const reduceMotion = useFormaReducedMotion();
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Fallback demo exercises if session has no exercises yet
-  const exercises = useMemo(() => {
-    if (session?.exercises && session.exercises.length > 0) {
-      return session.exercises;
-    }
-    return [
-      { id: 'ex-1', name: 'Seated Machine Chest Press', targetMuscle: 'Chest', sets: [1, 2, 3, 4] },
-      { id: 'ex-2', name: 'Incline Machine Chest Press', targetMuscle: 'Chest', sets: [1, 2, 3] },
-      { id: 'ex-3', name: 'High-to-Low Cable Crossover', targetMuscle: 'Chest', sets: [1, 2, 3] },
-      { id: 'ex-4', name: 'Cable Rope Triceps Pushdown', targetMuscle: 'Triceps', sets: [1, 2, 3, 4] },
-      { id: 'ex-5', name: 'Overhead Cable Triceps Extension', targetMuscle: 'Triceps', sets: [1, 2, 3] },
-      { id: 'ex-6', name: 'Triceps Dip Machine', targetMuscle: 'Triceps', sets: [1, 2, 3] },
-    ];
-  }, [session?.exercises]);
+  const exercises = useMemo(() => session?.exercises || [], [session?.exercises]);
 
   const targetMuscles = useMemo(() => {
     const muscles = new Set<string>();
-    for (const ex of exercises) {
-      if (ex.targetMuscle) muscles.add(ex.targetMuscle);
+    for (const exercise of exercises) {
+      if (exercise.targetMuscle) muscles.add(exercise.targetMuscle);
     }
     return Array.from(muscles).slice(0, 3);
   }, [exercises]);
 
   const exerciseCount = exercises.length;
-  const estimatedMinutes = Math.max(35, exerciseCount * 9);
-  const workoutTitle = session?.title || (isRTL ? 'تضخيم الصدر والترايسبس' : 'Chest & Triceps Hypertrophy');
+  const estimatedMinutes = session?.duration || (exerciseCount > 0 ? Math.max(35, exerciseCount * 9) : 0);
+  const workoutTitle = session?.title || (isRTL ? 'لا يوجد تمرين مجدول' : 'No workout scheduled');
+  const hasContent = Boolean(session) && exerciseCount > 0;
 
-  // Handle tap to start or resume workout session
   const handleOpenWorkout = () => {
     gymAudio.triggerSubtleHaptic([30, 40]);
-    if (session?.id) {
-      navigate(`/session/${session.id}`);
-    } else {
-      onQuickWorkout();
-    }
+    if (session?.id) navigate(`/session/${session.id}`);
+    else onQuickWorkout();
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      className="mobile-hero-workout"
+      data-state={isCompletedToday ? 'complete' : 'planned'}
+      initial={reduceMotion ? false : { opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      style={{
-        background: 'linear-gradient(145deg, rgba(13, 27, 46, 0.95) 0%, rgba(6, 15, 26, 0.95) 100%)',
-        border: isCompletedToday 
-          ? '1.5px solid rgba(16, 185, 129, 0.45)' 
-          : '1.5px solid rgba(56, 189, 248, 0.45)',
-        borderRadius: '26px',
-        padding: '1.4rem',
-        position: 'relative',
-        overflow: 'hidden',
-        boxShadow: isCompletedToday
-          ? '0 16px 40px rgba(0, 0, 0, 0.45), 0 0 28px rgba(16, 185, 129, 0.18)'
-          : '0 16px 40px rgba(0, 0, 0, 0.45), 0 0 28px rgba(56, 189, 248, 0.18)',
-        marginBottom: '1.15rem'
-      }}
+      transition={enterTransition}
     >
-      {/* Background ambient radial glow */}
-      <div style={{
-        position: 'absolute',
-        top: '-40px',
-        right: '-40px',
-        width: '130px',
-        height: '130px',
-        borderRadius: '50%',
-        background: isCompletedToday
-          ? 'radial-gradient(circle, rgba(16, 185, 129, 0.28) 0%, transparent 70%)'
-          : 'radial-gradient(circle, rgba(56, 189, 248, 0.28) 0%, transparent 70%)',
-        pointerEvents: 'none'
-      }} />
-
-      {/* Top Tagline / Category pill */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
-        <div style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '0.4rem',
-          background: isCompletedToday ? 'rgba(16, 185, 129, 0.15)' : 'rgba(56, 189, 248, 0.15)',
-          border: isCompletedToday ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(56, 189, 248, 0.4)',
-          borderRadius: '20px',
-          padding: '0.3rem 0.75rem',
-          fontSize: '0.74rem',
-          fontWeight: 800,
-          color: isCompletedToday ? '#34d399' : '#38bdf8',
-          letterSpacing: '0.05em'
-        }}>
-          {isCompletedToday ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Sparkles className="w-3.5 h-3.5" />}
-          <span>
-            {isCompletedToday 
-              ? (isRTL ? 'تمرين اليوم منجز ✓' : 'WORKOUT COMPLETED ✓') 
-              : (isRTL ? 'تمرين اليوم الموصى به' : "TODAY'S WORKOUT")}
-          </span>
-        </div>
-
-        <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 700 }}>
-          Day 1
+      <div className="mobile-hero-topline">
+        <span className="mobile-hero-tag">
+          {isCompletedToday ? <CheckCircle2 size={13} aria-hidden="true" /> : <Sparkles size={13} aria-hidden="true" />}
+          {isCompletedToday
+            ? isRTL ? 'تمرين اليوم منجز' : 'Workout completed'
+            : isRTL ? 'تمرين اليوم' : 'Today’s workout'}
         </span>
       </div>
 
-      {/* Workout Title */}
-      <h2 style={{
-        fontSize: '1.45rem',
-        fontWeight: 900,
-        color: '#ffffff',
-        margin: '0 0 0.45rem 0',
-        lineHeight: 1.25,
-        letterSpacing: '-0.02em'
-      }}>
-        {workoutTitle}
-      </h2>
+      <h2 className="mobile-hero-title">{workoutTitle}</h2>
 
-      {/* Stats Line: Exercises count + Estimated Time */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-          <Dumbbell className="w-4 h-4 text-cyan-400" />
-          <span>{exerciseCount} {isRTL ? 'تمارين' : 'Exercises'}</span>
-        </div>
-        <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'rgba(255, 255, 255, 0.3)' }} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-          <Clock className="w-4 h-4 text-emerald-400" />
-          <span>~{estimatedMinutes} min</span>
-        </div>
-      </div>
+      {hasContent ? (
+        <p className="mobile-hero-stats">
+          <span>
+            <Dumbbell size={14} aria-hidden="true" />
+            {exerciseCount} {isRTL ? 'تمارين' : 'exercises'}
+          </span>
+          {estimatedMinutes > 0 && (
+            <>
+              <i aria-hidden="true" />
+              <span>
+                <Clock size={14} aria-hidden="true" />
+                ~{estimatedMinutes} {isRTL ? 'دقيقة' : 'min'}
+              </span>
+            </>
+          )}
+        </p>
+      ) : (
+        <p className="mobile-hero-empty">
+          {isRTL
+            ? 'لا توجد تمارين في هذه الجلسة بعد — اختر روتيناً أو أضف جلسة سريعة.'
+            : 'This session has no exercises yet — pick a routine or log a quick workout.'}
+        </p>
+      )}
 
-      {/* Primary Action Button: Large Glowing CTA */}
       <motion.button
         type="button"
-        whileTap={{ scale: 0.98 }}
+        className="mobile-hero-cta"
+        data-variant={isCompletedToday ? 'review' : 'start'}
+        whileTap={reduceMotion ? undefined : { scale: 0.985 }}
         onClick={handleOpenWorkout}
-        style={{
-          width: '100%',
-          padding: '0.95rem 1.25rem',
-          borderRadius: '16px',
-          background: isCompletedToday
-            ? 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)'
-            : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-          border: 'none',
-          color: '#ffffff',
-          fontWeight: 900,
-          fontSize: '1.05rem',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '0.65rem',
-          cursor: 'pointer',
-          boxShadow: isCompletedToday
-            ? '0 8px 24px rgba(14, 165, 233, 0.45)'
-            : '0 8px 24px rgba(16, 185, 129, 0.45)',
-          letterSpacing: '0.02em',
-          marginBottom: '0.85rem'
-        }}
       >
         {isCompletedToday ? (
           <>
-            <RotateCcw className="w-5 h-5 text-white" />
-            <span>{isRTL ? 'مراجعة وتعديل التمرين' : 'Review / Reopen Session'}</span>
+            <RotateCcw size={17} aria-hidden="true" />
+            <span>{isRTL ? 'مراجعة وتعديل التمرين' : 'Review / reopen session'}</span>
           </>
         ) : (
           <>
-            <Play className="w-5 h-5 fill-white" />
-            <span>{isRTL ? 'بدء التمرين الآن' : 'Start Session'}</span>
-            <ArrowRight className={`w-4 h-4 ${isRTL ? 'rotate-180' : ''}`} style={{ opacity: 0.8 }} />
+            <Play size={17} fill="currentColor" aria-hidden="true" />
+            <span>{isRTL ? 'بدء التمرين الآن' : 'Start session'}</span>
+            <ArrowRight size={15} className={isRTL ? 'rotate-180' : ''} aria-hidden="true" />
           </>
         )}
       </motion.button>
 
-      {/* Target Muscle Pills */}
       {targetMuscles.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.85rem' }}>
-          {targetMuscles.map(m => (
-            <span
-              key={m}
-              style={{
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                background: 'rgba(255, 255, 255, 0.06)',
-                border: '1px solid rgba(255, 255, 255, 0.12)',
-                borderRadius: '8px',
-                padding: '0.2rem 0.55rem',
-                color: 'var(--text-secondary)'
-              }}
-            >
-              {tMuscle(m)}
-            </span>
+        <ul className="mobile-hero-muscles" aria-label={isRTL ? 'العضلات المستهدفة' : 'Target muscles'}>
+          {targetMuscles.map((muscle) => (
+            <li key={muscle}>{tMuscle(muscle)}</li>
           ))}
-        </div>
+        </ul>
       )}
 
-      {/* Collapsible Exercise Preview Drawer Toggle */}
       {exerciseCount > 0 && (
         <>
           <button
             type="button"
-            onClick={() => setIsExpanded(prev => !prev)}
-            style={{
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              background: 'rgba(255, 255, 255, 0.03)',
-              borderRadius: '12px',
-              border: '1px solid rgba(255, 255, 255, 0.06)',
-              padding: '0.55rem 0.75rem',
-              color: 'var(--text-muted)',
-              fontSize: '0.8rem',
-              fontWeight: 700,
-              cursor: 'pointer'
-            }}
+            className="mobile-hero-toggle"
+            aria-expanded={isExpanded}
+            aria-controls="mobile-hero-exercise-list"
+            onClick={() => setIsExpanded((prev) => !prev)}
           >
-            <span>{isRTL ? 'معاينة قائمة التمارين' : 'Preview Exercises'}</span>
-            <ChevronDown
-              className="w-4 h-4 transition-transform duration-200"
-              style={{ transform: isExpanded ? 'rotate(180deg)' : 'none' }}
-            />
+            <span>{isRTL ? 'معاينة قائمة التمارين' : 'Preview exercises'}</span>
+            <ChevronDown size={15} style={{ transform: isExpanded ? 'rotate(180deg)' : 'none' }} aria-hidden="true" />
           </button>
 
-          <AnimatePresence>
+          <AnimatePresence initial={false}>
             {isExpanded && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
+              <motion.ul
+                id="mobile-hero-exercise-list"
+                className="mobile-hero-exercises"
+                initial={reduceMotion ? false : { opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                style={{
-                  background: 'rgba(0, 0, 0, 0.35)',
-                  borderRadius: '14px',
-                  padding: '0.75rem',
-                  marginTop: '0.5rem',
-                  border: '1px solid rgba(255, 255, 255, 0.06)'
-                }}
+                exit={reduceMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
+                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
               >
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
-                  {exercises.map((ex, idx) => (
-                    <div
-                      key={ex.id || idx}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        fontSize: '0.82rem',
-                        color: 'var(--text-secondary)'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{
-                          width: '20px',
-                          height: '20px',
-                          borderRadius: '6px',
-                          background: 'rgba(255, 255, 255, 0.08)',
-                          fontSize: '0.7rem',
-                          fontWeight: 800,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'var(--text-muted)'
-                        }}>
-                          {idx + 1}
-                        </span>
-                        <span style={{ fontWeight: 600 }}>{tExercise(ex.name)}</span>
-                      </div>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                        {ex.sets?.length || 3} sets
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
+                {exercises.map((exercise, index) => (
+                  <li key={exercise.id || index}>
+                    <span className="mobile-hero-exercise-index tabular-nums" aria-hidden="true">
+                      {index + 1}
+                    </span>
+                    <span className="mobile-hero-exercise-name">{tExercise(exercise.name)}</span>
+                    <span className="mobile-hero-exercise-sets tabular-nums">
+                      {exercise.sets?.length || 0} {isRTL ? 'جولات' : 'sets'}
+                    </span>
+                  </li>
+                ))}
+              </motion.ul>
             )}
           </AnimatePresence>
         </>
       )}
 
-      {/* Secondary Extra Workout Button if session is completed */}
       {isCompletedToday && (
-        <button
-          type="button"
-          onClick={onQuickWorkout}
-          style={{
-            width: '100%',
-            marginTop: '0.75rem',
-            padding: '0.65rem',
-            borderRadius: '12px',
-            background: 'transparent',
-            border: '1px dashed rgba(255, 255, 255, 0.15)',
-            color: 'var(--text-muted)',
-            fontSize: '0.82rem',
-            fontWeight: 700,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.4rem',
-            cursor: 'pointer'
-          }}
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span>{isRTL ? 'بدء تمرين إضافي' : 'Log Extra Workout'}</span>
+        <button type="button" className="mobile-hero-secondary" onClick={onQuickWorkout}>
+          <Plus size={14} aria-hidden="true" />
+          <span>{isRTL ? 'بدء تمرين إضافي' : 'Log extra workout'}</span>
         </button>
       )}
     </motion.div>

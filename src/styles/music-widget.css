@@ -68,7 +68,7 @@
   outline: none;
 }
 
-/* Smooth spinning album art */
+/* Smooth spinning album art — compositor-only transform, never layout */
 @keyframes spin-slow {
   from {
     transform: rotate(0deg);
@@ -81,10 +81,30 @@
 .spin-slow {
   animation: spin-slow 10s linear infinite;
   animation-play-state: paused;
+  will-change: transform;
 }
 
 .spin-slow.playing {
   animation-play-state: running;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin-slow,
+  .spin-slow.playing {
+    animation: none;
+    will-change: auto;
+  }
+}
+
+[data-motion='reduced'] .spin-slow,
+[data-motion='reduced'] .spin-slow.playing {
+  animation: none;
+  will-change: auto;
+}
+
+.now-playing-glass[data-paused='true'] .spin-slow,
+.now-playing-pill-glass[data-paused='true'] .spin-slow {
+  animation-play-state: paused;
 }
 
 /* Subtle glowing pulse */
@@ -102,6 +122,16 @@
 
 .music-pulse-play {
   animation: music-pulse-ring 2.2s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .music-pulse-play {
+    animation: none;
+  }
+}
+
+[data-motion='reduced'] .music-pulse-play {
+  animation: none;
 }
 
 /* Animated Equalizer Bars for Nav button */
@@ -136,5 +166,23 @@
   }
   100% {
     height: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .equalizer-bars.is-playing .equalizer-bar {
+    animation: none;
+    height: 9px;
+  }
+}
+
+[data-motion='reduced'] .equalizer-bars.is-playing .equalizer-bar {
+  animation: none;
+  height: 9px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .now-playing-range::-webkit-slider-thumb:hover {
+    transform: none;
   }
 }
