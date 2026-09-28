@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Download, Share2, X, Smartphone, Check } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Check, Download, Share2, Smartphone, X } from 'lucide-react';
 import { useTranslation } from '../lib/i18n';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -8,67 +8,61 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
+const DISMISS_COOLDOWN_DAYS = 7;
+const APPEAR_DELAY_MS = 2500;
+
 export function InstallAppPrompt() {
-  const { t } = useTranslation();
+  const { t, isRTL } = useTranslation();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isIOS, setIsIOS] = useState(false);
-  const [isStandalone, setIsStandalone] = useState(false);
   const [isDismissed, setIsDismissed] = useState(true);
   const [installedSuccessfully, setInstalledSuccessfully] = useState(false);
+  const standalone = useRef(false);
 
   useEffect(() => {
-    // Check if app is already running in standalone mode (installed PWA)
-    const checkStandalone = 
+    standalone.current =
       window.matchMedia('(display-mode: standalone)').matches ||
-      (window.navigator as any).standalone === true;
+      (window.navigator as unknown as { standalone?: boolean }).standalone === true;
+    if (standalone.current) return;
 
-    setIsStandalone(checkStandalone);
-    if (checkStandalone) return;
+    setIsIOS(/iphone|ipad|ipod/i.test(window.navigator.userAgent.toLowerCase()));
 
-    // Check dismissal cooldown (7 days)
     const dismissedAt = localStorage.getItem('mygym_pwa_dismissed');
     if (dismissedAt) {
       const diffDays = (Date.now() - parseInt(dismissedAt, 10)) / (1000 * 60 * 60 * 24);
-      if (diffDays < 7) {
-        setIsDismissed(true);
-      } else {
-        setIsDismissed(false);
-      }
+      setIsDismissed(diffDays < DISMISS_COOLDOWN_DAYS);
     } else {
-      // Delay showing for 2.5 seconds so it doesn't disturb initial view
-      const timer = setTimeout(() => setIsDismissed(false), 2500);
-      return () => clearTimeout(timer);
+      setIsDismissed(true);
     }
 
-    // Detect iOS
-    const userAgent = window.navigator.userAgent.toLowerCase();
-    const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
-    setIsIOS(isIosDevice);
-
-    // Capture install prompt for Android / Chrome / Edge
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    const handleBeforeInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      setDeferredPrompt(event as BeforeInstallPromptEvent);
       setIsDismissed(false);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
   }, []);
 
+  useEffect(() => {
+    if (standalone.current || isDismissed) return;
+    if (!deferredPrompt && !isIOS) return;
+    const timer = window.setTimeout(() => setIsDismissed(false), APPEAR_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [deferredPrompt, isDismissed, isIOS]);
+
   const handleInstallClick = async () => {
-    if (deferredPrompt) {
-      await deferredPrompt.prompt();
-      const choice = await deferredPrompt.userChoice;
-      if (choice.outcome === 'accepted') {
-        setInstalledSuccessfully(true);
-        setTimeout(() => setIsDismissed(true), 2000);
-      }
-      setDeferredPrompt(null);
+    if (!deferredPrompt) return;
+    await deferredPrompt.prompt();
+    const choice = await deferredPrompt.userChoice;
+    if (choice.outcome === 'accepted') {
+      setInstalledSuccessfully(true);
+      window.setTimeout(() => setIsDismissed(true), 2000);
     }
+    setDeferredPrompt(null);
   };
 
   const handleDismiss = () => {
@@ -76,7 +70,7 @@ export function InstallAppPrompt() {
     localStorage.setItem('mygym_pwa_dismissed', Date.now().toString());
   };
 
-  if (isStandalone || isDismissed) return null;
+  if (standalone.current || isDismissed) return null;
   if (!deferredPrompt && !isIOS) return null;
 
   return (
@@ -86,25 +80,28 @@ export function InstallAppPrompt() {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 30, scale: 0.95 }}
         transition={{ duration: 0.3, ease: 'easeOut' }}
+        role="dialog"
+        aria-label={t('installAppTitle')}
         style={{
           position: 'fixed',
           bottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)',
-          left: '1rem',
-          right: '1rem',
+          insetInlineStart: 'max(1rem, env(safe-area-inset-left, 0px))',
+          insetInlineEnd: 'max(1rem, env(safe-area-inset-right, 0px))',
           maxWidth: '460px',
           margin: '0 auto',
           zIndex: 90,
-          backgroundColor: 'rgba(18, 24, 38, 0.95)',
+          backgroundColor: 'var(--surface-glass)',
           backdropFilter: 'blur(20px)',
           borderRadius: '18px',
-          border: '1px solid rgba(67, 220, 255, 0.3)',
-          boxShadow: '0 16px 40px rgba(0,0,0,0.6), 0 0 20px rgba(67, 220, 255, 0.15)',
+          border: '1px solid color-mix(in srgb, var(--accent-cyan) 32%, transparent)',
+          boxShadow: 'var(--shadow-modal)',
           padding: '1rem 1.15rem'
         }}
       >
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
             <div
+              aria-hidden="true"
               style={{
                 width: '44px',
                 height: '44px',
@@ -113,11 +110,10 @@ export function InstallAppPrompt() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                flexShrink: 0,
-                boxShadow: '0 6px 16px rgba(67, 220, 255, 0.3)'
+                flexShrink: 0
               }}
             >
-              <Smartphone className="w-6 h-6 text-slate-950" />
+              <Smartphone size={22} className="text-slate-950" />
             </div>
 
             <div>
@@ -137,25 +133,27 @@ export function InstallAppPrompt() {
               border: 'none',
               color: 'var(--text-muted)',
               cursor: 'pointer',
-              padding: '0.2rem',
-              borderRadius: '6px'
+              padding: '0.35rem',
+              borderRadius: '8px',
+              minWidth: 36,
+              minHeight: 36
             }}
             aria-label={t('dismissWord')}
           >
-            <X className="w-4 h-4" />
+            <X size={18} aria-hidden="true" />
           </button>
         </div>
 
-        {/* Action Button */}
         {!isIOS && deferredPrompt && (
           <div style={{ marginTop: '0.85rem', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
             <button
               onClick={handleDismiss}
               style={{
+                minHeight: 40,
                 padding: '0.45rem 0.85rem',
                 borderRadius: '9px',
-                backgroundColor: 'transparent',
-                border: '1px solid var(--border-color)',
+                background: 'transparent',
+                border: '1px solid var(--border-card)',
                 color: 'var(--text-secondary)',
                 fontSize: '0.8rem',
                 fontWeight: 600,
@@ -168,28 +166,28 @@ export function InstallAppPrompt() {
             <button
               onClick={handleInstallClick}
               style={{
+                minHeight: 40,
                 padding: '0.45rem 1.15rem',
                 borderRadius: '9px',
                 background: 'linear-gradient(135deg, #43dcff, #3b82f6)',
                 border: 'none',
                 color: '#06121e',
                 fontSize: '0.8rem',
-                fontWeight: 750,
-                display: 'flex',
+                fontWeight: 700,
+                display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.4rem',
-                cursor: 'pointer',
-                boxShadow: '0 4px 14px rgba(67, 220, 255, 0.4)'
+                cursor: 'pointer'
               }}
             >
               {installedSuccessfully ? (
                 <>
-                  <Check className="w-4 h-4" />
-                  <span>تم التثبيت بنجاح</span>
+                  <Check size={16} aria-hidden="true" />
+                  <span>{isRTL ? 'تم التثبيت بنجاح' : 'Installed'}</span>
                 </>
               ) : (
                 <>
-                  <Download className="w-4 h-4" />
+                  <Download size={16} aria-hidden="true" />
                   <span>{t('installNow')}</span>
                 </>
               )}
@@ -203,15 +201,15 @@ export function InstallAppPrompt() {
               marginTop: '0.75rem',
               padding: '0.5rem 0.75rem',
               borderRadius: '10px',
-              backgroundColor: 'rgba(255,255,255,0.06)',
+              background: 'color-mix(in srgb, var(--accent-cyan) 10%, transparent)',
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',
               fontSize: '0.75rem',
-              color: '#43dcff'
+              color: 'var(--accent-cyan)'
             }}
           >
-            <Share2 className="w-4 h-4 flex-shrink-0" />
+            <Share2 size={16} aria-hidden="true" className="flex-shrink-0" />
             <span>{t('iosInstallTip')}</span>
           </div>
         )}

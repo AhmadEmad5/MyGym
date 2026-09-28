@@ -1,692 +1,665 @@
-/* FORMA Premium Login View Styles */
+/* ==========================================================================
+   FORMA — Sign-in surface
+   Theme-aware (light + dark), RTL-safe, safe-area aware.
+   ========================================================================== */
 
 @layer components {
-.forma-login {
-  min-height: 100dvh;
-  width: 100%;
-  background: #080c14;
-  color: #f8fafc;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: clamp(12px, 2.5vw, 32px);
-  position: relative;
-  overflow-x: hidden;
-  font-family: 'Inter', 'Cairo', system-ui, sans-serif;
-}
+  .forma-login {
+    position: relative;
+    display: flex;
+    width: 100%;
+    min-height: 100dvh;
+    align-items: center;
+    justify-content: center;
+    overflow-x: hidden;
+    padding-block: max(1rem, env(safe-area-inset-top, 0px)) max(1rem, env(safe-area-inset-bottom, 0px));
+    padding-inline: max(1rem, env(safe-area-inset-left, 0px)) max(1rem, env(safe-area-inset-right, 0px));
+    background:
+      radial-gradient(60rem 40rem at 12% -10%, color-mix(in srgb, var(--accent-cyan) 14%, transparent), transparent 65%),
+      radial-gradient(50rem 36rem at 108% 112%, color-mix(in srgb, var(--accent-purple) 13%, transparent), transparent 62%),
+      var(--surface-canvas);
+    color: var(--text-primary);
+    font-family: 'Inter', 'Cairo', system-ui, -apple-system, sans-serif;
+  }
+
+  .forma-skip-link {
+    position: absolute;
+    inset-block-start: 0.75rem;
+    inset-inline-start: 50%;
+    z-index: 30;
+    translate: -50% -250%;
+    border-radius: 999px;
+    border: 1px solid var(--border-card);
+    background: var(--surface-elevated);
+    padding: 0.6rem 1.1rem;
+    color: var(--text-primary);
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: translate 0.18s ease;
+  }
+
+  [dir="rtl"] .forma-skip-link {
+    translate: 50% -250%;
+  }
+
+  .forma-skip-link:focus {
+    translate: -50% 0;
+  }
+
+  [dir="rtl"] .forma-skip-link:focus {
+    translate: 50% 0;
+  }
 
-/* Atmospheric ambient lights */
-.forma-login::before {
-  content: '';
-  position: absolute;
-  top: -15%;
-  left: 10%;
-  width: 550px;
-  height: 550px;
-  background: radial-gradient(circle, rgba(56, 189, 248, 0.12) 0%, transparent 70%);
-  filter: blur(80px);
-  pointer-events: none;
-}
-
-.forma-login::after {
-  content: '';
-  position: absolute;
-  bottom: -10%;
-  right: 15%;
-  width: 500px;
-  height: 500px;
-  background: radial-gradient(circle, rgba(198, 244, 50, 0.08) 0%, transparent 70%);
-  filter: blur(80px);
-  pointer-events: none;
-}
-
-/* Main Container Shell */
-.forma-shell {
-  position: relative;
-  z-index: 2;
-  width: 100%;
-  max-width: 1200px;
-  min-height: min(720px, calc(100dvh - 48px));
-  background: rgba(13, 17, 26, 0.88);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 28px;
-  box-shadow: 0 32px 80px -16px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  display: grid;
-  grid-template-columns: 1.15fr 1fr;
-  overflow: hidden;
-}
-
-[dir="rtl"] .forma-shell {
-  grid-template-columns: 1fr 1.15fr;
-}
-
-/* Hero Section (Atmospheric Visual) */
-.forma-hero {
-  position: relative;
-  background-image: 
-    linear-gradient(180deg, rgba(8, 12, 20, 0.4) 0%, rgba(8, 12, 20, 0.85) 60%, rgba(8, 12, 20, 0.98) 100%),
-    linear-gradient(90deg, rgba(8, 12, 20, 0.2) 0%, rgba(8, 12, 20, 0.75) 100%),
-    url('/forma-hero-bg.jpg');
-  background-size: cover;
-  background-position: center;
-  padding: clamp(32px, 4vw, 56px);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-[dir="rtl"] .forma-hero {
-  border-right: none;
-  border-left: 1px solid rgba(255, 255, 255, 0.06);
-  background-image: 
-    linear-gradient(180deg, rgba(8, 12, 20, 0.4) 0%, rgba(8, 12, 20, 0.85) 60%, rgba(8, 12, 20, 0.98) 100%),
-    linear-gradient(270deg, rgba(8, 12, 20, 0.2) 0%, rgba(8, 12, 20, 0.75) 100%),
-    url('/forma-hero-bg.jpg');
-}
-
-.forma-brand-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.forma-brand-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  background: rgba(15, 23, 42, 0.7);
-  padding: 6px 14px 6px 8px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(12px);
-}
-
-.forma-brand-gem {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #c6f432, #a3e635);
-  color: #0b1108;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 0 18px rgba(198, 244, 50, 0.45);
-}
-
-.forma-brand-name {
-  font-size: 1.15rem;
-  font-weight: 900;
-  letter-spacing: 0.06em;
-  color: #ffffff;
-}
-
-.forma-badge-pro {
-  font-size: 0.65rem;
-  font-weight: 800;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: #c6f432;
-  color: #0b1108;
-  letter-spacing: 0.05em;
-  margin-left: 4px;
-}
-
-[dir="rtl"] .forma-badge-pro {
-  margin-left: 0;
-  margin-right: 4px;
-}
-
-.forma-hero-content {
-  margin-top: auto;
-  padding-top: 40px;
-}
-
-.forma-hero-title {
-  font-family: 'Cairo', 'Impact', sans-serif;
-  font-size: clamp(2rem, 3.2vw, 3rem);
-  font-weight: 900;
-  line-height: 1.08;
-  color: #ffffff;
-  letter-spacing: -0.02em;
-  margin: 0 0 16px 0;
-  text-transform: uppercase;
-}
-
-.forma-hero-title strong {
-  color: #c6f432;
-  font-weight: inherit;
-}
-
-.forma-hero-desc {
-  font-size: 0.925rem;
-  line-height: 1.6;
-  color: #cbd5e1;
-  max-width: 440px;
-  margin: 0 0 28px 0;
-}
-
-/* Feature Highlights Grid */
-.forma-hero-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.forma-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #e2e8f0;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 6px 12px;
-  border-radius: 999px;
-  backdrop-filter: blur(8px);
-}
-
-.forma-pill-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #38bdf8;
-  box-shadow: 0 0 8px #38bdf8;
-}
-
-/* Form Section Panel */
-.forma-panel {
-  padding: clamp(32px, 4vw, 56px);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  background: #0d121c;
-}
-
-.forma-panel-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  margin-bottom: 24px;
-}
-
-.forma-lang-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #94a3b8;
-  padding: 5px 10px;
-  border-radius: 8px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.forma-lang-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-.forma-eyebrow {
-  display: block;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  color: #c6f432;
-  text-transform: uppercase;
-  margin-bottom: 6px;
-}
-
-.forma-panel-title {
-  font-size: clamp(1.6rem, 2.2vw, 2.2rem);
-  font-weight: 900;
-  color: #ffffff;
-  margin: 0 0 6px 0;
-  letter-spacing: -0.02em;
-}
-
-.forma-panel-subtitle {
-  font-size: 0.85rem;
-  color: #94a3b8;
-  margin: 0;
-  line-height: 1.5;
-}
-
-/* Form Fields */
-.forma-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin-top: 12px;
-}
-
-.forma-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.forma-field-label {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: #cbd5e1;
-}
-
-.forma-forgot-btn {
-  background: none;
-  border: none;
-  color: #38bdf8;
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  padding: 0;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.forma-forgot-btn:hover {
-  color: #7dd3fc;
-}
-
-.forma-input-wrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-  background: rgba(22, 27, 34, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  transition: all 0.2s;
-}
-
-.forma-input-wrap:focus-within {
-  border-color: #38bdf8;
-  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
-  background: rgba(22, 27, 34, 1);
-}
-
-.forma-input-wrap.has-error {
-  border-color: #f87171;
-  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.15);
-}
-
-.forma-input-icon {
-  padding: 0 14px;
-  color: #64748b;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.forma-input-wrap:focus-within .forma-input-icon {
-  color: #38bdf8;
-}
-
-.forma-input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  outline: none;
-  height: 48px;
-  color: #ffffff;
-  font-size: 0.9rem;
-  padding-right: 14px;
-}
-
-[dir="rtl"] .forma-input {
-  padding-right: 0;
-  padding-left: 14px;
-}
-
-.forma-input::placeholder {
-  color: #475569;
-}
-
-.forma-eye-btn {
-  background: transparent;
-  border: none;
-  color: #64748b;
-  cursor: pointer;
-  padding: 0 14px;
-  display: flex;
-  align-items: center;
-}
-
-.forma-eye-btn:hover {
-  color: #cbd5e1;
-}
-
-.forma-field-error {
-  font-size: 0.75rem;
-  color: #f87171;
-  margin: 2px 0 0 0;
-}
-
-/* Remember me toggle */
-.forma-remember-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  font-size: 0.8rem;
-  color: #94a3b8;
-  user-select: none;
-  margin: 4px 0;
-}
-
-.forma-switch {
-  position: relative;
-  width: 38px;
-  height: 22px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 999px;
-  transition: background 0.2s;
-  flex-shrink: 0;
-}
-
-.forma-switch.is-checked {
-  background: #38bdf8;
-}
-
-.forma-switch-knob {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: #ffffff;
-  transition: transform 0.2s;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-[dir="ltr"] .forma-switch.is-checked .forma-switch-knob {
-  transform: translateX(16px);
-}
-
-[dir="rtl"] .forma-switch.is-checked .forma-switch-knob {
-  transform: translateX(-16px);
-}
-
-/* Submit & Action Buttons */
-.forma-submit-btn {
-  width: 100%;
-  height: 50px;
-  border-radius: 12px;
-  border: none;
-  background: linear-gradient(135deg, #c6f432 0%, #a3e635 100%);
-  color: #0b1108;
-  font-size: 0.925rem;
-  font-weight: 850;
-  letter-spacing: 0.04em;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  box-shadow: 0 10px 24px -4px rgba(198, 244, 50, 0.25);
-  transition: all 0.2s;
-  margin-top: 6px;
-}
-
-.forma-submit-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 28px -4px rgba(198, 244, 50, 0.35);
-  background: #d9ff5a;
-}
-
-.forma-submit-btn:active:not(:disabled) {
-  transform: translateY(1px);
-}
-
-.forma-submit-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* Guest One-Click Access Button */
-.forma-guest-btn {
-  width: 100%;
-  height: 48px;
-  border-radius: 12px;
-  border: 1px solid rgba(56, 189, 248, 0.3);
-  background: rgba(56, 189, 248, 0.08);
-  color: #38bdf8;
-  font-size: 0.88rem;
-  font-weight: 750;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  transition: all 0.2s;
-}
-
-.forma-guest-btn:hover:not(:disabled) {
-  background: rgba(56, 189, 248, 0.16);
-  border-color: #38bdf8;
-  color: #7dd3fc;
-  transform: translateY(-1px);
-}
-
-/* Divider */
-.forma-divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: #64748b;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  margin: 18px 0;
-}
-
-.forma-divider::before,
-.forma-divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-/* Social Actions */
-.forma-social-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.forma-social-btn {
-  height: 44px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
-  color: #e2e8f0;
-  font-size: 0.82rem;
-  font-weight: 650;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.forma-social-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.16);
-  transform: translateY(-1px);
-}
-
-/* Password Reset Modal */
-.forma-reset-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(12px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-
-.forma-reset-modal {
-  position: relative;
-  width: 100%;
-  max-width: 420px;
-  background: #111724;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 20px;
-  padding: 32px 28px;
-  text-align: center;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
-}
-
-.forma-reset-icon {
-  width: 52px;
-  height: 52px;
-  margin: 0 auto 16px auto;
-  border-radius: 14px;
-  background: rgba(56, 189, 248, 0.12);
-  color: #38bdf8;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.forma-reset-title {
-  font-size: 1.25rem;
-  font-weight: 850;
-  color: #ffffff;
-  margin: 0 0 8px 0;
-}
-
-.forma-reset-desc {
-  font-size: 0.85rem;
-  color: #94a3b8;
-  line-height: 1.5;
-  margin: 0 0 20px 0;
-}
-
-.forma-modal-close {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  background: transparent;
-  border: none;
-  color: #64748b;
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-}
-
-[dir="rtl"] .forma-modal-close {
-  right: auto;
-  left: 16px;
-}
-
-.forma-modal-close:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-/* Responsive Media Queries */
-@media (max-width: 900px) {
   .forma-shell {
-    grid-template-columns: 1fr;
-    max-width: 480px;
-    border-radius: 24px;
-    min-height: auto;
+    position: relative;
+    z-index: 2;
+    display: grid;
+    width: 100%;
+    max-width: 68rem;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    overflow: hidden;
+    border: 1px solid var(--border-card);
+    border-radius: 1.75rem;
+    background: color-mix(in srgb, var(--surface-card) 92%, transparent);
+    box-shadow: var(--shadow-modal);
   }
 
   .forma-hero {
-    min-height: 200px;
-    padding: max(20px, env(safe-area-inset-top, 0px)) 24px 20px 24px;
-    border-right: none !important;
-    border-left: none !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 2rem;
+    border-inline-end: 1px solid var(--border-subtle);
+    background-image:
+      linear-gradient(180deg, rgba(6, 10, 20, 0.55) 0%, rgba(6, 10, 20, 0.86) 62%, rgba(6, 10, 20, 0.96) 100%),
+      url('/forma-hero-bg.jpg');
+    background-size: cover;
+    background-position: center;
+    padding: clamp(1.5rem, 3.2vw, 2.6rem);
+    color: #f8fafc;
   }
 
-  .forma-hero-title {
-    font-size: 1.75rem;
+  [data-theme="light"] .forma-hero {
+    background-image:
+      linear-gradient(180deg, rgba(6, 10, 20, 0.62) 0%, rgba(6, 10, 20, 0.82) 60%, rgba(6, 10, 20, 0.94) 100%),
+      url('/forma-hero-bg.jpg');
   }
 
-  .forma-hero-desc {
-    display: none;
+  [data-theme="paper"] .forma-hero {
+    background-image:
+      linear-gradient(180deg, rgba(24, 16, 10, 0.6) 0%, rgba(24, 16, 10, 0.84) 60%, rgba(24, 16, 10, 0.95) 100%),
+      url('/forma-hero-bg.jpg');
+  }
+
+  .forma-brand-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .forma-brand-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.85rem 0.4rem 0.4rem;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(12px);
+  }
+
+  [dir="rtl"] .forma-brand-pill {
+    padding: 0.4rem 0.4rem 0.4rem 0.85rem;
+  }
+
+  .forma-brand-gem {
+    display: grid;
+    width: 30px;
+    height: 30px;
+    place-items: center;
+    border-radius: 9px;
+    background: linear-gradient(135deg, #38bdf8, #8b5cf6);
+    color: #06121e;
+  }
+
+  .forma-brand-name {
+    font-size: 0.92rem;
+    font-weight: 900;
+    letter-spacing: 0.16em;
+  }
+
+  .forma-badge-pro {
+    border-radius: 999px;
+    background: rgba(56, 189, 248, 0.22);
+    padding: 0.15rem 0.5rem;
+    color: #7dd3fc;
+    font-size: 0.6rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+  }
+
+  .forma-lang-btn {
+    display: inline-flex;
+    min-height: 38px;
+    align-items: center;
+    gap: 0.35rem;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #e2e8f0;
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 0.35rem 0.8rem;
+    cursor: pointer;
+    transition: background-color 0.18s ease, color 0.18s ease;
+  }
+
+  .forma-lang-btn:hover {
+    background: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
   }
 
   .forma-hero-content {
-    padding-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
   }
 
-  .forma-panel {
-    padding: 24px 24px max(24px, env(safe-area-inset-bottom, 0px)) 24px;
-  }
-}
-
-@media (max-width: 480px) {
-  .forma-login {
-    padding: 0;
-    align-items: stretch;
-  }
-
-  .forma-shell {
-    border-radius: 0;
-    border: none;
-    min-height: 100dvh;
-    box-shadow: none;
-  }
-
-  .forma-hero {
-    padding: max(16px, env(safe-area-inset-top, 0px)) 16px 16px 16px;
-  }
-
-  .forma-panel {
-    padding: 20px 16px max(28px, env(safe-area-inset-bottom, 0px)) 16px;
-  }
-
-  .forma-reset-modal {
-    padding: 24px 18px;
-    border-radius: 16px;
-  }
-}
-
-@media (max-width: 360px) {
   .forma-hero-title {
-    font-size: 1.35rem;
+    margin: 0;
+    font-size: clamp(1.75rem, 4.4vw, 2.9rem);
+    font-weight: 800;
+    line-height: 1.08;
+    letter-spacing: -0.035em;
+  }
+
+  .forma-hero-title strong {
+    background: linear-gradient(120deg, #7dd3fc, #bef264);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+
+  [dir="rtl"] .forma-hero-title {
+    letter-spacing: 0;
+    line-height: 1.35;
+  }
+
+  .forma-hero-desc {
+    max-width: 30rem;
+    margin: 0;
+    color: #cbd5e1;
+    font-size: 0.9rem;
+    line-height: 1.65;
+  }
+
+  .forma-hero-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .forma-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+    padding: 0.35rem 0.8rem;
+    color: #e2e8f0;
+    font-size: 0.76rem;
+    font-weight: 650;
+    backdrop-filter: blur(10px);
+  }
+
+  .forma-pill-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+  }
+
+  .forma-trust-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.06);
+    padding: 0.85rem 1rem;
+    backdrop-filter: blur(10px);
+  }
+
+  .forma-trust-icon {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    place-items: center;
+    border-radius: 10px;
+    background: rgba(16, 185, 129, 0.2);
+    color: #6ee7b7;
+  }
+
+  .forma-trust-card strong {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 800;
+  }
+
+  .forma-trust-card p {
+    margin: 0.2rem 0 0;
+    color: #cbd5e1;
+    font-size: 0.78rem;
+    line-height: 1.5;
+  }
+
+  .forma-hero-foot {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0;
+    color: #94a3b8;
+    font-size: 0.75rem;
+  }
+
+  .forma-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+    padding: clamp(1.5rem, 3.2vw, 2.6rem);
+  }
+
+  .forma-eyebrow {
+    display: inline-block;
+    color: var(--accent-cyan);
+    font-size: 0.68rem;
+    font-weight: 900;
+    letter-spacing: 0.18em;
   }
 
   .forma-panel-title {
-    font-size: 1.4rem;
+    margin: 0.35rem 0 0;
+    font-size: clamp(1.4rem, 3.2vw, 1.9rem);
+    font-weight: 850;
+    letter-spacing: -0.03em;
+    color: var(--text-primary);
   }
 
-  .forma-submit-btn {
-    height: 46px;
-    font-size: 0.88rem;
+  [dir="rtl"] .forma-panel-title {
+    letter-spacing: 0;
   }
 
-  .forma-social-grid {
-    grid-template-columns: 1fr;
-    gap: 8px;
+  .forma-panel-subtitle {
+    margin: 0.4rem 0 0;
+    color: var(--text-secondary);
+    font-size: 0.86rem;
+    line-height: 1.6;
   }
 
-  .forma-input-wrap {
-    height: 44px;
+  .forma-mode-switch {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.25rem;
+    border: 1px solid var(--border-card);
+    border-radius: 0.9rem;
+    background: var(--surface-input);
+    padding: 0.25rem;
+  }
+
+  .forma-mode-switch button {
+    min-height: 42px;
+    border: 0;
+    border-radius: 0.7rem;
+    background: transparent;
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: 0.84rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.18s ease, color 0.18s ease;
+  }
+
+  .forma-mode-switch button:hover:not(:disabled) {
+    color: var(--text-primary);
+  }
+
+  .forma-mode-switch button.is-active {
+    background: var(--surface-card-hover);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    color: var(--text-primary);
+  }
+
+  .forma-mode-switch button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .forma-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--color-danger) 45%, transparent);
+    border-radius: 0.9rem;
+    background: color-mix(in srgb, var(--color-danger) 12%, transparent);
+    padding: 0.8rem 0.9rem;
+    color: color-mix(in srgb, var(--color-danger) 70%, var(--text-primary));
+    font-size: 0.84rem;
+    font-weight: 600;
+    line-height: 1.5;
+  }
+
+  .forma-alert:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--color-danger) 55%, transparent);
+    outline-offset: 2px;
+  }
+
+  .forma-alert-dismiss {
+    display: grid;
+    width: 28px;
+    height: 28px;
+    margin-inline-start: auto;
+    flex-shrink: 0;
+    place-items: center;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .forma-alert-dismiss:hover {
+    background: color-mix(in srgb, var(--color-danger) 18%, transparent);
+  }
+
+  .forma-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+  }
+
+  .forma-form[aria-busy='true'] {
+    cursor: progress;
+  }
+
+  .forma-field-action {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    place-items: center;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .forma-field-action:hover {
+    background: var(--surface-card-hover);
+    color: var(--text-primary);
+  }
+
+  .forma-form-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .forma-check {
+    display: inline-flex;
+    min-height: 40px;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .forma-check input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+  }
+
+  .forma-check-box {
+    display: grid;
+    width: 20px;
+    height: 20px;
+    place-items: center;
+    border: 1px solid var(--border-card);
+    border-radius: 6px;
+    background: var(--surface-input);
+    color: transparent;
+    transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+  }
+
+  .forma-check input:checked + .forma-check-box {
+    border-color: var(--accent-cyan);
+    background: var(--accent-cyan);
+    color: #06121e;
+  }
+
+  .forma-check input:focus-visible + .forma-check-box {
+    outline: 3px solid var(--accent-cyan-glow);
+    outline-offset: 2px;
+  }
+
+  .forma-forgot-btn {
+    min-height: 40px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--accent-cyan);
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 0.3rem 0.5rem;
+    cursor: pointer;
+  }
+
+  .forma-forgot-btn:hover:not(:disabled) {
+    text-decoration: underline;
+  }
+
+  .forma-forgot-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .forma-primary-cta {
+    margin-block-start: 0.35rem;
+    box-shadow: 0 10px 30px -10px color-mix(in srgb, var(--accent-cyan) 65%, transparent);
+  }
+
+  .forma-guest-note {
+    margin: -0.35rem 0 0;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    text-align: center;
+  }
+
+  .forma-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .forma-divider::before,
+  .forma-divider::after {
+    flex: 1;
+    height: 1px;
+    background: var(--border-subtle);
+    content: '';
+  }
+
+  [dir="rtl"] .forma-divider {
+    letter-spacing: 0;
+  }
+
+  .forma-social-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+
+  .forma-social-glyph {
+    color: #bef264;
+    font-weight: 900;
+  }
+
+  .forma-reset-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    background: rgba(3, 7, 18, 0.72);
+    backdrop-filter: blur(8px);
+  }
+
+  .forma-reset-modal {
+    position: relative;
+    width: 100%;
+    max-width: 26rem;
+    border: 1px solid var(--border-card);
+    border-radius: 1.35rem;
+    background: var(--surface-elevated);
+    padding: 1.75rem;
+    text-align: center;
+    box-shadow: var(--shadow-modal);
+  }
+
+  .forma-modal-close {
+    position: absolute;
+    inset-block-start: 0.75rem;
+    inset-inline-end: 0.75rem;
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .forma-modal-close:hover {
+    background: var(--surface-card-hover);
+    color: var(--text-primary);
+  }
+
+  .forma-reset-icon {
+    display: grid;
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 0.9rem;
+    place-items: center;
+    border: 1px solid color-mix(in srgb, var(--accent-cyan) 40%, transparent);
+    border-radius: 1.1rem;
+    background: color-mix(in srgb, var(--accent-cyan) 14%, transparent);
+    color: var(--accent-cyan);
+  }
+
+  .forma-reset-title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 850;
+    color: var(--text-primary);
+  }
+
+  .forma-reset-desc {
+    margin: 0.5rem 0 1.25rem;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    line-height: 1.6;
+  }
+
+  .forma-busy-overlay {
+    position: fixed;
+    inset-inline-end: max(1rem, env(safe-area-inset-right, 0px));
+    inset-block-end: calc(max(1rem, env(safe-area-inset-bottom, 0px)) + 4.75rem);
+    z-index: 10005;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid var(--border-card);
+    border-radius: 999px;
+    background: var(--surface-elevated);
+    padding: 0.5rem 1rem;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-weight: 700;
+    box-shadow: var(--shadow-card);
+  }
+
+  .forma-busy-spinner {
+    animation: forma-busy-spin 0.9s linear infinite;
+    color: var(--accent-cyan);
+  }
+
+  @keyframes forma-busy-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @media (max-width: 940px) {
+    .forma-shell {
+      grid-template-columns: minmax(0, 1fr);
+      max-width: 34rem;
+    }
+
+    .forma-hero {
+      border-inline-end: 0;
+      border-block-end: 1px solid var(--border-subtle);
+      gap: 1.35rem;
+    }
+
+    .forma-trust-card,
+    .forma-hero-pills,
+    .forma-hero-foot {
+      display: none;
+    }
+  }
+
+  @media (max-width: 520px) {
+    .forma-shell {
+      border-radius: 1.25rem;
+    }
+
+    .forma-hero-title {
+      font-size: 1.55rem;
+    }
+
+    .forma-social-row {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .forma-busy-spinner {
+      animation: none;
+    }
   }
 }
-}
-

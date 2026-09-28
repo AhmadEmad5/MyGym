@@ -1,0 +1,485 @@
+/* ==========================================================================
+   FORMA — Admin dossier drawer and governance panels
+   Logical properties throughout so Arabic RTL mirrors without breakage.
+   ========================================================================== */
+
+@layer components {
+  .admin-drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 10020;
+    display: flex;
+    justify-content: flex-end;
+    background: rgba(3, 7, 18, 0.62);
+    backdrop-filter: blur(4px);
+  }
+
+  [dir='rtl'] .admin-drawer-backdrop {
+    justify-content: flex-start;
+  }
+
+  .admin-drawer {
+    display: flex;
+    width: min(34rem, 100%);
+    height: 100%;
+    flex-direction: column;
+    border-inline-start: 1px solid var(--border-card);
+    background: var(--surface-primary);
+    outline: none;
+  }
+
+  .admin-drawer-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.8rem;
+    padding: 1rem 1.1rem;
+    padding-block-start: max(1rem, env(safe-area-inset-top, 0px));
+    border-block-end: 1px solid var(--border-subtle);
+  }
+
+  .admin-drawer-identity {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .admin-drawer-name-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .admin-drawer-name-row h2 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 850;
+  }
+
+  .admin-drawer-mail {
+    margin: 0.2rem 0 0;
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .admin-drawer-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin: 0.55rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .admin-drawer-tabs {
+    display: flex;
+    gap: 0.3rem;
+    overflow-x: auto;
+    padding: 0.6rem 1.1rem;
+    border-block-end: 1px solid var(--border-subtle);
+    scrollbar-width: none;
+  }
+
+  .admin-drawer-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .admin-drawer-tab {
+    display: inline-flex;
+    min-height: 36px;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0.35rem;
+    border: 1px solid var(--border-card);
+    border-radius: 999px;
+    background: var(--surface-card);
+    padding: 0.25rem 0.8rem;
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: 0.76rem;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .admin-drawer-tab.is-active {
+    border-color: color-mix(in srgb, var(--accent-cyan) 50%, transparent);
+    background: color-mix(in srgb, var(--accent-cyan) 14%, transparent);
+    color: var(--text-primary);
+  }
+
+  .admin-drawer-tab em {
+    border-radius: 999px;
+    background: var(--surface-elevated);
+    padding: 0 0.35rem;
+    font-size: 0.64rem;
+    font-style: normal;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .admin-drawer-body {
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0.9rem 1.1rem;
+    padding-block-end: max(1.5rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  .admin-record {
+    border: 1px solid var(--border-subtle);
+    border-radius: 0.8rem;
+    background: var(--surface-card);
+  }
+
+  .admin-record-head {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    border: 0;
+    background: transparent;
+    padding: 0.7rem 0.8rem;
+    color: inherit;
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+  }
+
+  .admin-record-main {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .admin-record-main time,
+  .admin-record.is-static time {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+  }
+
+  .admin-record-main strong,
+  .admin-record.is-static strong {
+    font-size: 0.84rem;
+  }
+
+  .admin-record.is-static {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: 0.7rem 0.8rem;
+  }
+
+  .admin-record-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+  }
+
+  .admin-record-meta em {
+    font-style: normal;
+  }
+
+  .admin-chevron {
+    flex-shrink: 0;
+    color: var(--text-muted);
+    transition: transform 0.2s ease;
+  }
+
+  .admin-chevron.is-open {
+    transform: rotate(180deg);
+  }
+
+  .admin-record-body {
+    border-block-start: 1px solid var(--border-subtle);
+    padding: 0.75rem 0.8rem;
+  }
+
+  .admin-record-body ul {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .admin-exercise {
+    border: 1px solid var(--border-subtle);
+    border-radius: 0.7rem;
+    padding: 0.55rem 0.65rem;
+  }
+
+  .admin-exercise-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .admin-exercise-head strong {
+    font-size: 0.8rem;
+  }
+
+  .admin-exercise-head span {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+  }
+
+  .admin-set-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-block-start: 0.45rem;
+  }
+
+  .admin-set-chips li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 999px;
+    padding: 0.15rem 0.55rem;
+    font-size: 0.7rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .admin-set-chips li.is-done {
+    border-color: color-mix(in srgb, var(--color-success) 40%, transparent);
+    color: color-mix(in srgb, var(--color-success) 80%, var(--text-primary));
+  }
+
+  .admin-set-index {
+    color: var(--text-muted);
+  }
+
+  .admin-pr-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  }
+
+  .admin-pr-cards li {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    border: 1px solid color-mix(in srgb, var(--accent-amber) 35%, transparent);
+    border-radius: 0.8rem;
+    background: color-mix(in srgb, var(--accent-amber) 8%, transparent);
+    padding: 0.7rem 0.8rem;
+  }
+
+  .admin-pr-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+    color: var(--accent-amber);
+  }
+
+  .admin-pr-card-top time {
+    color: var(--text-muted);
+    font-size: 0.66rem;
+  }
+
+  .admin-pr-card-value {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.25rem;
+    font-size: 1.05rem;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .admin-pr-card-value small {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+  }
+
+  .admin-pr-card-value em {
+    margin-inline-start: 0.3rem;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    font-style: normal;
+  }
+
+  /* ── Meals ───────────────────────────────────────────────────────── */
+  .admin-meal-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 0.75rem;
+    background: var(--surface-card);
+    padding: 0.6rem 0.7rem;
+  }
+
+  .admin-meal-body {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .admin-meal-body strong {
+    font-size: 0.8rem;
+  }
+
+  .admin-meal-macros {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+  }
+
+  .admin-meal-macros em {
+    font-style: normal;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .admin-meal-kcal {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--accent-amber);
+    font-size: 0.74rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .admin-meal-chip {
+    border: 1px solid var(--border-card);
+    border-radius: 999px;
+    padding: 0.15rem 0.55rem;
+    color: var(--text-secondary);
+    font-size: 0.66rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  .admin-meal-chip.is-breakfast { border-color: color-mix(in srgb, var(--accent-amber) 45%, transparent); color: var(--accent-amber); }
+  .admin-meal-chip.is-lunch { border-color: color-mix(in srgb, var(--accent-lime) 45%, transparent); color: var(--accent-lime); }
+  .admin-meal-chip.is-dinner { border-color: color-mix(in srgb, var(--accent-cyan) 45%, transparent); color: var(--accent-cyan); }
+  .admin-meal-chip.is-snack { border-color: color-mix(in srgb, var(--accent-purple) 45%, transparent); color: var(--accent-purple); }
+
+  .admin-meal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  }
+
+  .admin-meal-tile {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 0.8rem;
+    background: var(--surface-input);
+    padding: 0.7rem 0.8rem;
+  }
+
+  .admin-meal-tile-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+  }
+
+  .admin-meal-tile-title {
+    font-size: 0.84rem;
+  }
+
+  .admin-meal-tile-foot {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+  }
+
+  .admin-meal-tile-foot time {
+    margin-inline-start: auto;
+  }
+
+  .admin-chip {
+    border: 1px solid var(--border-card);
+    border-radius: 999px;
+    padding: 0.1rem 0.5rem;
+    color: var(--text-secondary);
+    font-size: 0.66rem;
+    font-weight: 700;
+    text-transform: capitalize;
+  }
+
+  /* ── Governance ──────────────────────────────────────────────────── */
+  .admin-definition {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    margin: 0;
+  }
+
+  .admin-definition > div {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    border-block-end: 1px solid var(--border-subtle);
+    padding-block-end: 0.6rem;
+  }
+
+  .admin-definition > div:last-child {
+    border-block-end: 0;
+    padding-block-end: 0;
+  }
+
+  .admin-definition dt {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+
+  .admin-definition dd {
+    margin: 0;
+  }
+
+  .admin-mono {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 0.78rem;
+  }
+
+  .admin-backup-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .admin-backup-row p {
+    margin: 0.25rem 0 0;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }
+
+  .admin-muted {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: var(--text-muted);
+    font-size: 0.76rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .admin-chevron {
+      transition: none;
+    }
+  }
+}
