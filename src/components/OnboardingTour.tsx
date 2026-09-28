@@ -1,492 +1,647 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Dumbbell, Sparkles, Activity, Timer, Camera, Barcode, 
-  Flame, Palette, Globe, Check, ArrowRight, ArrowLeft, X, 
-  Zap, HeartPulse, Smartphone, Layers
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Flame,
+  Gauge,
+  Palette,
+  Sparkles,
+  Timer,
+  X,
+  Zap
 } from 'lucide-react';
 import { useData } from '../hooks/useData';
 import { useTranslation } from '../lib/i18n';
 import { gymAudio } from '../lib/audio';
+import type { UserSettings } from '../lib/api';
 
 interface OnboardingTourProps {
   onFinish: () => void;
 }
 
-const THEME_OPTIONS = [
+type ThemeId = 'dark' | 'light' | 'midnight' | 'neon' | 'ocean' | 'forest' | 'sunset' | 'paper';
+
+const THEME_OPTIONS: Array<{ id: ThemeId; label: string; color: string }> = [
   { id: 'dark', label: 'Obsidian', color: '#38bdf8' },
+  { id: 'light', label: 'Cloud', color: '#facc15' },
   { id: 'midnight', label: 'Midnight', color: '#60a5fa' },
-  { id: 'ocean', label: 'Ocean', color: '#14b8a6' },
   { id: 'neon', label: 'Neon', color: '#e879f9' },
+  { id: 'ocean', label: 'Ocean', color: '#2dd4bf' },
   { id: 'forest', label: 'Forest', color: '#10b981' },
   { id: 'sunset', label: 'Sunset', color: '#f97316' },
+  { id: 'paper', label: 'Paper', color: '#a16207' }
 ];
+
+const TOTAL_STEPS = 4;
+const FOCUSABLE =
+  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export function OnboardingTour({ onFinish }: OnboardingTourProps) {
   const { data, updateSettings, theme, setTheme } = useData();
   const { isRTL, language, setLanguage } = useTranslation();
   const [currentStep, setCurrentStep] = useState(0);
+  const currentStepRef = useRef(0);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
   const settings = data?.settings;
+  const isLast = currentStep === TOTAL_STEPS - 1;
 
-  const totalSteps = 5;
+  useEffect(() => {
+    currentStepRef.current = currentStep;
+  }, [currentStep]);
 
-  const saveSettingsPatch = async (patch: Partial<NonNullable<typeof settings>>) => {
-    try {
-      await updateSettings({
-        weightUnit: settings?.weightUnit || 'kg',
-        theme: settings?.theme || 'midnight',
-        ...settings,
-        ...patch,
-      }, data?.user);
-      gymAudio.triggerSubtleHaptic([15]);
-    } catch {
-      // fallback smoothly
-    }
-  };
+  const labels = useMemo(
+    () =>
+      isRTL
+        ? {
+            step: (n: number) => `الخطوة ${n} من ${TOTAL_STEPS}`,
+            skip: 'تخطي الجولة',
+            close: 'إغلاق الجولة',
+            back: 'السابق',
+            next: 'التالي',
+            finish: 'ابدأ تمرينك',
+            progress: 'تقدّم الجولة',
+            s1Title: 'اضبط مساحتك التدريبية',
+            s1Desc: 'اختر اللغة ووحدة الأوزان مرة واحدة، وسيتبعك FORMA في كل شاشة وكل تقرير.',
+            s1Lang: 'لغة الواجهة',
+            s1Unit: 'وحدة قياس الأوزان',
+            kg: 'كيلوغرام',
+            lb: 'باوند',
+            s2Title: 'أتقن إيقاع الراحة',
+            s2Desc: 'اضبط المؤقت الافتراضي والتنبيهات، وستحصل على تنبيه حقيقي حتى مع ضجيج الصالة.',
+            s2Rest: 'مدة الراحة الافتراضية',
+            s2Alerts: 'تنبيهات انتهاء الراحة',
+            s2Sound: 'صوت',
+            s2Haptic: 'اهتزاز',
+            fast: 'سريعة',
+            standard: 'مثالية',
+            heavy: 'قوية',
+            s3Title: 'اجعل الواجهة لك',
+            s3Desc: 'اختر المظهر، وقرار الكثافة والحركة، لتصل إلى تجربة مريحة في الجوال وسط الصالة.',
+            s3Theme: 'المظهر',
+            s3Density: 'كثافة العرض',
+            s3Motion: 'الحركة',
+            comfortable: 'مريحة',
+            compact: 'مكثفة',
+            full: 'كاملة',
+            reduced: 'مخففة',
+            s4Title: 'كل شيء جاهز',
+            s4Desc: 'تم حفظ تفضيلاتك. ابدأ أول تمرين، وسنقيس كل جولة تضيفها.',
+            s4Unit: 'الوحدة',
+            s4Rest: 'الراحة',
+            s4Theme: 'المظهر',
+            s4Start: 'الإنجليزية',
+            s4Week: 'بداية الأسبوع',
+            sunday: 'الأحد',
+            monday: 'الاثنين',
+            s4Hint: 'يمكنك إعادة تشغيل الجولة أو تعديل أي إعداد في أي وقت.'
+          }
+        : {
+            step: (n: number) => `Step ${n} of ${TOTAL_STEPS}`,
+            skip: 'Skip tour',
+            close: 'Close tour',
+            back: 'Back',
+            next: 'Continue',
+            finish: 'Start training',
+            progress: 'Tour progress',
+            s1Title: 'Set up your training space',
+            s1Desc: 'Pick your language and weight unit once — FORMA follows you on every screen and in every report.',
+            s1Lang: 'Interface language',
+            s1Unit: 'Weight unit',
+            kg: 'Kilograms',
+            lb: 'Pounds',
+            s2Title: 'Own your rest rhythm',
+            s2Desc: 'Set the default rest interval and alerts so you get a real signal even in the loudest gym.',
+            s2Rest: 'Default rest timer',
+            s2Alerts: 'Rest-complete alerts',
+            s2Sound: 'Sound',
+            s2Haptic: 'Vibration',
+            fast: 'Fast',
+            standard: 'Optimal',
+            heavy: 'Heavy',
+            s3Title: 'Make the interface yours',
+            s3Desc: 'Choose a theme plus how dense and how animated the app should be on a phone in the gym.',
+            s3Theme: 'Theme',
+            s3Density: 'Layout density',
+            s3Motion: 'Motion',
+            comfortable: 'Comfortable',
+            compact: 'Compact',
+            full: 'Full',
+            reduced: 'Reduced',
+            s4Title: 'You are all set',
+            s4Desc: 'Your preferences are saved. Start your first session and every set you log gets measured.',
+            s4Unit: 'Unit',
+            s4Rest: 'Rest',
+            s4Theme: 'Theme',
+            s4Start: 'Language',
+            s4Week: 'Week starts',
+            sunday: 'Sunday',
+            monday: 'Monday',
+            s4Hint: 'You can replay this tour or change any preference in Settings at any time.'
+          },
+    [isRTL]
+  );
 
-  const handleNext = () => {
+  const saveSettingsPatch = useCallback(
+    async (patch: Partial<UserSettings>) => {
+      try {
+        await updateSettings(
+          {
+            weightUnit: settings?.weightUnit || 'kg',
+            theme: settings?.theme || 'midnight',
+            ...settings,
+            ...patch
+          },
+          data?.user
+        );
+        gymAudio.triggerSubtleHaptic([15]);
+      } catch {
+        void 0;
+      }
+    },
+    [data?.user, settings, updateSettings]
+  );
+
+  const goNext = useCallback(() => {
     gymAudio.triggerSubtleHaptic([20, 25]);
-    if (currentStep === totalSteps - 1) {
+    if (currentStepRef.current >= TOTAL_STEPS - 1) {
       gymAudio.triggerDualPulseHaptic();
       onFinish();
-    } else {
-      setCurrentStep(prev => prev + 1);
+      return;
+    }
+    setCurrentStep((prev) => Math.min(TOTAL_STEPS - 1, prev + 1));
+  }, [onFinish]);
+
+  const goPrev = useCallback(() => {
+    gymAudio.triggerSubtleHaptic([15]);
+    setCurrentStep((prev) => Math.max(0, prev - 1));
+  }, []);
+
+  const exit = useCallback(() => {
+    gymAudio.triggerSubtleHaptic([15]);
+    onFinish();
+  }, [onFinish]);
+
+  useEffect(() => {
+    restoreFocusRef.current = (document.activeElement as HTMLElement) ?? null;
+    return () => {
+      const target = restoreFocusRef.current;
+      if (target && typeof target.focus === 'function' && document.contains(target)) {
+        target.focus();
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    dialogRef.current?.focus({ preventScroll: true });
+  }, [currentStep]);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const forwardKey = isRTL ? 'ArrowLeft' : 'ArrowRight';
+    const backKey = isRTL ? 'ArrowRight' : 'ArrowLeft';
+
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      exit();
+      return;
+    }
+
+    if (event.key === forwardKey || event.key === 'ArrowDown') {
+      event.preventDefault();
+      goNext();
+      return;
+    }
+
+    if (event.key === backKey || event.key === 'ArrowUp') {
+      event.preventDefault();
+      goPrev();
+      return;
+    }
+
+    if (event.key === 'Home') {
+      event.preventDefault();
+      setCurrentStep(0);
+      return;
+    }
+
+    if (event.key === 'End') {
+      event.preventDefault();
+      setCurrentStep(TOTAL_STEPS - 1);
+      return;
+    }
+
+    if (event.key === ' ' || event.key === 'Spacebar') {
+      const target = event.target as HTMLElement | null;
+      if (target && target.closest('button, a, input, select, textarea')) return;
+      event.preventDefault();
+      goNext();
+      return;
+    }
+
+    if (event.key !== 'Tab') return;
+
+    const nodes = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []).filter(
+      (node) => node.offsetParent !== null || node === document.activeElement
+    );
+    if (nodes.length === 0) return;
+
+    const first = nodes[0];
+    const last = nodes[nodes.length - 1];
+    const active = document.activeElement as HTMLElement | null;
+
+    if (!event.shiftKey && (active === last || !dialogRef.current?.contains(active))) {
+      event.preventDefault();
+      first.focus();
+    } else if (event.shiftKey && (active === first || !dialogRef.current?.contains(active))) {
+      event.preventDefault();
+      last.focus();
     }
   };
 
-  const handlePrev = () => {
-    gymAudio.triggerSubtleHaptic([15]);
-    setCurrentStep(prev => Math.max(0, prev - 1));
-  };
+  const activeTheme = (theme || settings?.theme || 'dark') as ThemeId;
+  const activeWeek = settings?.weekStartsOn === 'monday' ? labels.monday : labels.sunday;
 
   return (
     <div className="forma-onboarding-backdrop" dir={isRTL ? 'rtl' : 'ltr'}>
-      <motion.section
+      <div
+        ref={dialogRef}
         className="forma-onboarding-card"
         role="dialog"
         aria-modal="true"
         aria-labelledby="forma-onboarding-title"
-        initial={{ opacity: 0, y: 24, scale: 0.96 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: 24, scale: 0.96 }}
-        transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+        aria-describedby="forma-onboarding-desc"
+        tabIndex={-1}
+        onKeyDown={handleKeyDown}
       >
-        {/* Glow Halo */}
-        <div className="forma-onboarding-glow" />
+        <div className="forma-onboarding-glow" aria-hidden="true" />
 
-        {/* Topline Bar */}
         <div className="forma-onboarding-topline">
           <div className="forma-onboarding-step-tag">
-            <Sparkles size={13} />
-            <span>{isRTL ? `الخطوة ${currentStep + 1} من ${totalSteps}` : `STEP ${currentStep + 1} OF ${totalSteps}`}</span>
+            <Sparkles size={13} aria-hidden="true" />
+            <span>{labels.step(currentStep + 1)}</span>
           </div>
-
-          <button
-            type="button"
-            className="forma-onboarding-close-btn"
-            onClick={() => {
-              gymAudio.triggerSubtleHaptic([15]);
-              onFinish();
-            }}
-            aria-label={isRTL ? 'تخطي الشرح' : 'Skip Tour'}
-            title={isRTL ? 'تخطي الشرح' : 'Skip Tour'}
-          >
-            <X size={16} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button type="button" className="forma-onboarding-skip-btn" onClick={exit}>
+              {labels.skip}
+            </button>
+            <button
+              type="button"
+              className="forma-onboarding-close-btn"
+              onClick={exit}
+              aria-label={labels.close}
+            >
+              <X size={16} aria-hidden="true" />
+            </button>
+          </div>
         </div>
 
-        {/* 5-Step Progress Indicators */}
-        <div className="forma-onboarding-route" aria-label="Tour progress">
-          {Array.from({ length: totalSteps }).map((_, index) => (
-            <div
+        <div
+          className="forma-onboarding-route"
+          role="progressbar"
+          aria-label={labels.progress}
+          aria-valuemin={1}
+          aria-valuemax={TOTAL_STEPS}
+          aria-valuenow={currentStep + 1}
+        >
+          {Array.from({ length: TOTAL_STEPS }).map((_, index) => (
+            <span
               key={index}
               className={`forma-onboarding-route-bar ${index <= currentStep ? 'is-active' : ''}`}
             />
           ))}
         </div>
 
-        {/* Animated Step Content */}
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={currentStep}
             className="forma-onboarding-content"
-            initial={{ opacity: 0, x: isRTL ? -20 : 20 }}
+            initial={{ opacity: 0, x: isRTL ? -18 : 18 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: isRTL ? 20 : -20 }}
-            transition={{ duration: 0.22, ease: 'easeOut' }}
+            exit={{ opacity: 0, x: isRTL ? 18 : -18 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
           >
-            {/* ── STEP 1: WELCOME & PILLARS ────────────────────────────── */}
             {currentStep === 0 && (
               <>
-                <div className="forma-onboarding-hero-head">
-                  <div className="forma-onboarding-icon-gem">
-                    <Dumbbell size={30} />
+                <header className="forma-onboarding-hero-head">
+                  <div className="forma-onboarding-icon-gem" style={{ color: '#38bdf8', borderColor: 'rgba(56, 189, 248, 0.4)' }}>
+                    <Zap size={28} aria-hidden="true" />
                   </div>
                   <h2 id="forma-onboarding-title" className="forma-onboarding-title">
-                    {isRTL ? 'مرحباً بك في FORMA PRO' : 'Welcome to FORMA PRO'}
+                    {labels.s1Title}
                   </h2>
-                  <p className="forma-onboarding-desc">
-                    {isRTL
-                      ? 'مساعدك الرياضي الهندسي المتكامل — مصمم لرفع مستواك البدني عبر التتبع الدقيق والذكاء الاصطناعي.'
-                      : 'Your elite athletic ecosystem — engineered for precision performance, 3D anatomy, and AI intelligence.'}
+                  <p id="forma-onboarding-desc" className="forma-onboarding-desc">
+                    {labels.s1Desc}
                   </p>
-                </div>
+                </header>
 
-                <div className="forma-showcase-box">
-                  <div className="forma-showcase-pills-row">
-                    <div className="forma-showcase-pill">
-                      <Layers size={18} />
-                      <span>{isRTL ? 'تتبع فوري للأوزان والجولات' : 'Live Sets & PR Tracking'}</span>
-                    </div>
-                    <div className="forma-showcase-pill">
-                      <HeartPulse size={18} />
-                      <span>{isRTL ? 'هولوغرام العضلات 3D' : '3D Muscle Anatomy'}</span>
-                    </div>
-                    <div className="forma-showcase-pill">
-                      <Barcode size={18} />
-                      <span>{isRTL ? 'ماسح الوجبات والباركود' : 'AI Meals & Barcode Scan'}</span>
-                    </div>
-                    <div className="forma-showcase-pill">
-                      <Smartphone size={18} />
-                      <span>{isRTL ? 'مؤقت شاشة القفل Live HUD' : 'Lock Screen Live HUD'}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Quick Language Selection */}
                 <div className="forma-choice-group">
-                  <div className="forma-choice-label">
-                    <Globe size={14} />
-                    <span>{isRTL ? 'اختر لغة الواجهة الأساسية' : 'Select your primary language'}</span>
+                  <div className="forma-choice-label" id="forma-tour-language">
+                    <Sparkles size={14} aria-hidden="true" />
+                    <span>{labels.s1Lang}</span>
                   </div>
-                  <div className="forma-choice-grid">
+                  <div className="forma-choice-grid" role="group" aria-labelledby="forma-tour-language">
                     <button
                       type="button"
                       className={`forma-choice-card ${language === 'ar' ? 'is-active' : ''}`}
+                      aria-pressed={language === 'ar'}
                       onClick={() => {
                         setLanguage('ar');
                         void saveSettingsPatch({ language: 'ar' });
                       }}
                     >
                       <strong className="forma-choice-title">العربية</strong>
-                      <span className="forma-choice-sub">الواجهة العربية الافتراضية</span>
+                      <span className="forma-choice-sub">RTL</span>
                     </button>
-
                     <button
                       type="button"
                       className={`forma-choice-card ${language === 'en' ? 'is-active' : ''}`}
+                      aria-pressed={language === 'en'}
                       onClick={() => {
                         setLanguage('en');
                         void saveSettingsPatch({ language: 'en' });
                       }}
                     >
                       <strong className="forma-choice-title">English</strong>
-                      <span className="forma-choice-sub">Global Standard LTR</span>
+                      <span className="forma-choice-sub">LTR</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="forma-choice-group">
+                  <div className="forma-choice-label" id="forma-tour-unit">
+                    <Gauge size={14} aria-hidden="true" />
+                    <span>{labels.s1Unit}</span>
+                  </div>
+                  <div className="forma-choice-grid" role="group" aria-labelledby="forma-tour-unit">
+                    <button
+                      type="button"
+                      className={`forma-choice-card ${(settings?.weightUnit || 'kg') === 'kg' ? 'is-active' : ''}`}
+                      aria-pressed={(settings?.weightUnit || 'kg') === 'kg'}
+                      onClick={() => void saveSettingsPatch({ weightUnit: 'kg' })}
+                    >
+                      <strong className="forma-choice-title">KG</strong>
+                      <span className="forma-choice-sub">{labels.kg}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`forma-choice-card ${settings?.weightUnit === 'lb' ? 'is-active' : ''}`}
+                      aria-pressed={settings?.weightUnit === 'lb'}
+                      onClick={() => void saveSettingsPatch({ weightUnit: 'lb' })}
+                    >
+                      <strong className="forma-choice-title">LB</strong>
+                      <span className="forma-choice-sub">{labels.lb}</span>
                     </button>
                   </div>
                 </div>
               </>
             )}
 
-            {/* ── STEP 2: 3D HOLOGRAM & DUAL-PULSE REST ───────────────── */}
             {currentStep === 1 && (
               <>
-                <div className="forma-onboarding-hero-head">
+                <header className="forma-onboarding-hero-head">
                   <div className="forma-onboarding-icon-gem" style={{ color: '#10b981', borderColor: 'rgba(16, 185, 129, 0.4)' }}>
-                    <Activity size={30} />
+                    <Timer size={28} aria-hidden="true" />
                   </div>
-                  <h2 className="forma-onboarding-title">
-                    {isRTL ? 'الهولوغرام العضلي 3D ومؤقت الراحة' : '3D Anatomy & Smart Rest Timer'}
+                  <h2 id="forma-onboarding-title" className="forma-onboarding-title">
+                    {labels.s2Title}
                   </h2>
-                  <p className="forma-onboarding-desc">
-                    {isRTL
-                      ? 'شاهد العضلات المستهدفة مباشرة في مجسم ثلاثي الأبعاد، واستقبل تنبيهات اهتزازية مزدوجة عند انتهاء الراحة تخترق صخب الصالة.'
-                      : 'Visualize activated muscles in real-time 3D, and receive piercing dual-pulse haptics through gym noise.'}
+                  <p id="forma-onboarding-desc" className="forma-onboarding-desc">
+                    {labels.s2Desc}
                   </p>
-                </div>
+                </header>
 
-                <div className="forma-muscle-mock">
-                  <div className="forma-muscle-radar-icon">
-                    <Zap size={22} />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#ffffff' }}>
-                      {isRTL ? 'نظام الاهتزاز المزدوج (Dual-Pulse)' : 'Dual-Pulse Haptics Active'}
-                    </div>
-                    <div style={{ fontSize: '0.74rem', color: '#94a3b8' }}>
-                      {isRTL ? 'اهتزاز قوي ونغمة ترددية عند 3 .. 2 .. 1 في جيبك' : 'Distinct vibration bursts & high-pitch chime at 3..2..1'}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Weight Unit Setup */}
                 <div className="forma-choice-group">
-                  <div className="forma-choice-label">
-                    <Dumbbell size={14} />
-                    <span>{isRTL ? 'وحدة قياس الأوزان المعتمدة' : 'Preferred Weight Unit'}</span>
+                  <div className="forma-choice-label" id="forma-tour-rest">
+                    <Timer size={14} aria-hidden="true" />
+                    <span>{labels.s2Rest}</span>
                   </div>
-                  <div className="forma-choice-grid">
-                    <button
-                      type="button"
-                      className={`forma-choice-card ${settings?.weightUnit === 'kg' ? 'is-active' : ''}`}
-                      onClick={() => void saveSettingsPatch({ weightUnit: 'kg' })}
-                    >
-                      <strong className="forma-choice-title">KG</strong>
-                      <span className="forma-choice-sub">{isRTL ? 'كيلوغرام (متري)' : 'Kilograms'}</span>
-                      {settings?.weightUnit === 'kg' && <Check size={14} style={{ color: '#38bdf8' }} />}
-                    </button>
-
-                    <button
-                      type="button"
-                      className={`forma-choice-card ${settings?.weightUnit === 'lb' ? 'is-active' : ''}`}
-                      onClick={() => void saveSettingsPatch({ weightUnit: 'lb' })}
-                    >
-                      <strong className="forma-choice-title">LB</strong>
-                      <span className="forma-choice-sub">{isRTL ? 'رطل (إمبريالي)' : 'Pounds'}</span>
-                      {settings?.weightUnit === 'lb' && <Check size={14} style={{ color: '#38bdf8' }} />}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Default Rest Timer Setup */}
-                <div className="forma-choice-group">
-                  <div className="forma-choice-label">
-                    <Timer size={14} />
-                    <span>{isRTL ? 'فترة الراحة الافتراضية بين الجولات' : 'Default Rest Timer'}</span>
-                  </div>
-                  <div className="forma-choice-grid">
-                    {[60, 90, 120].map((sec) => (
+                  <div className="forma-choice-grid" role="group" aria-labelledby="forma-tour-rest">
+                    {[60, 90, 120].map((seconds) => (
                       <button
-                        key={sec}
+                        key={seconds}
                         type="button"
-                        className={`forma-choice-card ${settings?.restTimerSeconds === sec ? 'is-active' : ''}`}
-                        onClick={() => void saveSettingsPatch({ restTimerSeconds: sec })}
+                        className={`forma-choice-card ${(settings?.restTimerSeconds || 90) === seconds ? 'is-active' : ''}`}
+                        aria-pressed={(settings?.restTimerSeconds || 90) === seconds}
+                        onClick={() => void saveSettingsPatch({ restTimerSeconds: seconds })}
                       >
-                        <strong className="forma-choice-title">{sec}s</strong>
+                        <strong className="forma-choice-title">{seconds}s</strong>
                         <span className="forma-choice-sub">
-                          {sec === 60 ? (isRTL ? 'تضخيم سريع' : 'Fast') : sec === 90 ? (isRTL ? 'قياسي موصى به' : 'Optimal') : (isRTL ? 'قوة عضلية' : 'Heavy')}
+                          {seconds === 60 ? labels.fast : seconds === 90 ? labels.standard : labels.heavy}
                         </span>
                       </button>
                     ))}
                   </div>
                 </div>
+
+                <div className="forma-choice-group">
+                  <div className="forma-choice-label" id="forma-tour-alerts">
+                    <Zap size={14} aria-hidden="true" />
+                    <span>{labels.s2Alerts}</span>
+                  </div>
+                  <div className="forma-alert-row">
+                    <AlertToggle
+                      legend={labels.s2Sound}
+                      enabled={settings?.soundAlerts !== false}
+                      onToggle={(next) => void saveSettingsPatch({ soundAlerts: next })}
+                    />
+                    <AlertToggle
+                      legend={labels.s2Haptic}
+                      enabled={settings?.vibrationAlerts !== false}
+                      onToggle={(next) => void saveSettingsPatch({ vibrationAlerts: next })}
+                    />
+                  </div>
+                </div>
               </>
             )}
 
-            {/* ── STEP 3: NUTRITION & BARCODE VISION ───────────────────── */}
             {currentStep === 2 && (
               <>
-                <div className="forma-onboarding-hero-head">
-                  <div className="forma-onboarding-icon-gem" style={{ color: '#38bdf8', borderColor: 'rgba(56, 189, 248, 0.4)' }}>
-                    <Camera size={30} />
-                  </div>
-                  <h2 className="forma-onboarding-title">
-                    {isRTL ? 'التغذية الذكية وماسح الباركود' : 'AI Nutrition & Barcode Scanner'}
-                  </h2>
-                  <p className="forma-onboarding-desc">
-                    {isRTL
-                      ? 'صوّر طبق طعامك لتحليله بالذكاء الاصطناعي، أو امسح باركود المكملات والأغذية بكاميرا الهاتف للحصول على الماكروز فوراً.'
-                      : 'Snap your meal plate for instant AI analysis, or scan food barcodes directly to log exact calories & macros.'}
-                  </p>
-                </div>
-
-                <div className="forma-showcase-box">
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
-                    <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#38bdf8' }}>
-                      {isRTL ? 'الماكروز اليومية المتزامنة' : 'Daily Macro Tracking'}
-                    </span>
-                    <span style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: 700 }}>
-                      {isRTL ? 'حاسبة TDEE دقيقة' : 'TDEE Engine'}
-                    </span>
-                  </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '0.45rem', textAlign: 'center' }}>
-                    <div style={{ background: 'rgba(255,255,255,0.04)', padding: '0.5rem', borderRadius: '10px' }}>
-                      <div style={{ fontSize: '0.62rem', color: '#94a3b8' }}>{isRTL ? 'السعرات' : 'Cals'}</div>
-                      <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#f59e0b' }}>{data?.nutritionGoals?.dailyCalories ?? 2200}</div>
-                    </div>
-                    <div style={{ background: 'rgba(255,255,255,0.04)', padding: '0.5rem', borderRadius: '10px' }}>
-                      <div style={{ fontSize: '0.62rem', color: '#94a3b8' }}>{isRTL ? 'بروتين' : 'Protein'}</div>
-                      <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#10b981' }}>{data?.nutritionGoals?.dailyProtein ?? 150}g</div>
-                    </div>
-                    <div style={{ background: 'rgba(255,255,255,0.04)', padding: '0.5rem', borderRadius: '10px' }}>
-                      <div style={{ fontSize: '0.62rem', color: '#94a3b8' }}>{isRTL ? 'كارب' : 'Carbs'}</div>
-                      <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#38bdf8' }}>{data?.nutritionGoals?.dailyCarbs ?? 220}g</div>
-                    </div>
-                    <div style={{ background: 'rgba(255,255,255,0.04)', padding: '0.5rem', borderRadius: '10px' }}>
-                      <div style={{ fontSize: '0.62rem', color: '#94a3b8' }}>{isRTL ? 'دهون' : 'Fats'}</div>
-                      <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#ec4899' }}>{data?.nutritionGoals?.dailyFats ?? 65}g</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Training Week Start */}
-                <div className="forma-choice-group">
-                  <div className="forma-choice-label">
-                    <Flame size={14} />
-                    <span>{isRTL ? 'بداية أسبوع التمرين المفضل لديك' : 'First Day of Training Week'}</span>
-                  </div>
-                  <div className="forma-choice-grid">
-                    <button
-                      type="button"
-                      className={`forma-choice-card ${settings?.weekStartsOn === 'sunday' ? 'is-active' : ''}`}
-                      onClick={() => void saveSettingsPatch({ weekStartsOn: 'sunday' })}
-                    >
-                      <strong className="forma-choice-title">{isRTL ? 'الأحد' : 'Sunday'}</strong>
-                      <span className="forma-choice-sub">{isRTL ? 'مناسب للشرق الأوسط' : 'Regional Default'}</span>
-                      {settings?.weekStartsOn === 'sunday' && <Check size={14} style={{ color: '#38bdf8' }} />}
-                    </button>
-
-                    <button
-                      type="button"
-                      className={`forma-choice-card ${settings?.weekStartsOn === 'monday' ? 'is-active' : ''}`}
-                      onClick={() => void saveSettingsPatch({ weekStartsOn: 'monday' })}
-                    >
-                      <strong className="forma-choice-title">{isRTL ? 'الاثنين' : 'Monday'}</strong>
-                      <span className="forma-choice-sub">{isRTL ? 'التقويم الدولي' : 'International'}</span>
-                      {settings?.weekStartsOn === 'monday' && <Check size={14} style={{ color: '#38bdf8' }} />}
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* ── STEP 4: LOCK SCREEN & THEMES ─────────────────────────── */}
-            {currentStep === 3 && (
-              <>
-                <div className="forma-onboarding-hero-head">
+                <header className="forma-onboarding-hero-head">
                   <div className="forma-onboarding-icon-gem" style={{ color: '#e879f9', borderColor: 'rgba(232, 121, 249, 0.4)' }}>
-                    <Palette size={30} />
+                    <Palette size={28} aria-hidden="true" />
                   </div>
-                  <h2 className="forma-onboarding-title">
-                    {isRTL ? 'شاشة القفل والمظهر الشخصي' : 'Lock Screen Live HUD & Themes'}
+                  <h2 id="forma-onboarding-title" className="forma-onboarding-title">
+                    {labels.s3Title}
                   </h2>
-                  <p className="forma-onboarding-desc">
-                    {isRTL
-                      ? 'تحكم بفترة الراحة وتخطّ الجولات مباشرة من شاشة القفل دون لمس قفل الهاتف، واختر المظهر اللوني الذي يعكس طاقتك.'
-                      : 'Control rest sets right from your device lock screen, and personalize your high-performance theme.'}
+                  <p id="forma-onboarding-desc" className="forma-onboarding-desc">
+                    {labels.s3Desc}
                   </p>
-                </div>
+                </header>
 
-                {/* Simulated Lock Screen Live HUD */}
-                <div className="forma-lockscreen-mock">
-                  <div className="forma-lockscreen-header">
-                    <span className="forma-lockscreen-title">
-                      {isRTL ? '🔥 جولة راحة — ضغط صدر بالبار' : '🔥 Rest Timer — Bench Press'}
-                    </span>
-                    <span className="forma-lockscreen-time">00:45</span>
-                  </div>
-                  <div className="forma-lockscreen-bar">
-                    <div className="forma-lockscreen-fill" />
-                  </div>
-                  <div className="forma-lockscreen-actions">
-                    <span className="forma-lockscreen-btn">{isRTL ? '+30 ثانية' : '+30s'}</span>
-                    <span className="forma-lockscreen-btn" style={{ color: '#10b981', borderColor: 'rgba(16, 185, 129, 0.4)' }}>
-                      {isRTL ? 'تخطي الراحة ⏭' : 'Skip Rest ⏭'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Theme Selector */}
                 <div className="forma-choice-group">
-                  <div className="forma-choice-label">
-                    <Palette size={14} />
-                    <span>{isRTL ? 'اختر مظهرك المفضل (يمكنك تغييره متى شئت)' : 'Select your favorite theme'}</span>
+                  <div className="forma-choice-label" id="forma-tour-theme">
+                    <Palette size={14} aria-hidden="true" />
+                    <span>{labels.s3Theme}</span>
                   </div>
-
-                  <div className="forma-themes-swatches">
-                    {THEME_OPTIONS.map((t) => (
+                  <div className="forma-themes-swatches" role="group" aria-labelledby="forma-tour-theme">
+                    {THEME_OPTIONS.map((option) => (
                       <button
-                        key={t.id}
+                        key={option.id}
                         type="button"
-                        className={`forma-theme-swatch-card ${theme === t.id ? 'is-active' : ''}`}
+                        className={`forma-theme-swatch-card ${activeTheme === option.id ? 'is-active' : ''}`}
+                        aria-pressed={activeTheme === option.id}
                         onClick={() => {
-                          setTheme(t.id);
-                          void saveSettingsPatch({ theme: t.id });
+                          setTheme(option.id);
+                          void saveSettingsPatch({ theme: option.id });
                         }}
                       >
-                        <span className="forma-theme-dot" style={{ backgroundColor: t.color, color: t.color }} />
-                        <span className="forma-theme-name">{t.label}</span>
+                        <span className="forma-theme-dot" style={{ backgroundColor: option.color, color: option.color }} />
+                        <span className="forma-theme-name">{option.label}</span>
                       </button>
                     ))}
                   </div>
                 </div>
+
+                <div className="forma-choice-group">
+                  <div className="forma-choice-label" id="forma-tour-density">
+                    <Gauge size={14} aria-hidden="true" />
+                    <span>{labels.s3Density}</span>
+                  </div>
+                  <div className="forma-choice-grid is-two" role="group" aria-labelledby="forma-tour-density">
+                    <button
+                      type="button"
+                      className={`forma-choice-card ${(settings?.density || 'comfortable') === 'comfortable' ? 'is-active' : ''}`}
+                      aria-pressed={(settings?.density || 'comfortable') === 'comfortable'}
+                      onClick={() => void saveSettingsPatch({ density: 'comfortable' })}
+                    >
+                      <strong className="forma-choice-title">{labels.comfortable}</strong>
+                    </button>
+                    <button
+                      type="button"
+                      className={`forma-choice-card ${settings?.density === 'compact' ? 'is-active' : ''}`}
+                      aria-pressed={settings?.density === 'compact'}
+                      onClick={() => void saveSettingsPatch({ density: 'compact' })}
+                    >
+                      <strong className="forma-choice-title">{labels.compact}</strong>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="forma-choice-group">
+                  <div className="forma-choice-label" id="forma-tour-motion">
+                    <Sparkles size={14} aria-hidden="true" />
+                    <span>{labels.s3Motion}</span>
+                  </div>
+                  <div className="forma-choice-grid is-two" role="group" aria-labelledby="forma-tour-motion">
+                    <button
+                      type="button"
+                      className={`forma-choice-card ${(settings?.motion || 'full') === 'full' ? 'is-active' : ''}`}
+                      aria-pressed={(settings?.motion || 'full') === 'full'}
+                      onClick={() => void saveSettingsPatch({ motion: 'full' })}
+                    >
+                      <strong className="forma-choice-title">{labels.full}</strong>
+                    </button>
+                    <button
+                      type="button"
+                      className={`forma-choice-card ${settings?.motion === 'reduced' ? 'is-active' : ''}`}
+                      aria-pressed={settings?.motion === 'reduced'}
+                      onClick={() => void saveSettingsPatch({ motion: 'reduced' })}
+                    >
+                      <strong className="forma-choice-title">{labels.reduced}</strong>
+                    </button>
+                  </div>
+                </div>
               </>
             )}
 
-            {/* ── STEP 5: READY TO DOMINATE ────────────────────────────── */}
-            {currentStep === 4 && (
+            {currentStep === 3 && (
               <>
-                <div className="forma-onboarding-hero-head">
+                <header className="forma-onboarding-hero-head">
                   <div className="forma-onboarding-icon-gem" style={{ color: '#f59e0b', borderColor: 'rgba(245, 158, 11, 0.4)' }}>
-                    <Flame size={32} />
+                    <Flame size={30} aria-hidden="true" />
                   </div>
-                  <h2 className="forma-onboarding-title">
-                    {isRTL ? 'أنت الآن جاهز لصنع الفارق!' : 'Ready to Dominate Your Training!'}
+                  <h2 id="forma-onboarding-title" className="forma-onboarding-title">
+                    {labels.s4Title}
                   </h2>
-                  <p className="forma-onboarding-desc">
-                    {isRTL
-                      ? 'تم ضبط كافة تفضيلاتك بنجاح. خطط لتمارينك، تتبع أوزانك، واستعن بالمساعد الذكي AI متى احتجت لاستشارة.'
-                      : 'All your preferences are synchronized. Log your workouts, beat personal records, and achieve your peak shape.'}
+                  <p id="forma-onboarding-desc" className="forma-onboarding-desc">
+                    {labels.s4Desc}
                   </p>
+                </header>
+
+                <div className="forma-summary-card">
+                  <div className="forma-summary-row">
+                    <span>{labels.s4Start}</span>
+                    <strong>{language === 'ar' ? 'العربية' : 'English'}</strong>
+                  </div>
+                  <div className="forma-summary-row">
+                    <span>{labels.s4Unit}</span>
+                    <strong>{(settings?.weightUnit || 'kg').toUpperCase()}</strong>
+                  </div>
+                  <div className="forma-summary-row">
+                    <span>{labels.s4Rest}</span>
+                    <strong>{settings?.restTimerSeconds || 90}s</strong>
+                  </div>
+                  <div className="forma-summary-row">
+                    <span>{labels.s4Theme}</span>
+                    <strong>{THEME_OPTIONS.find((option) => option.id === activeTheme)?.label ?? activeTheme}</strong>
+                  </div>
+                  <div className="forma-summary-row">
+                    <span>{labels.s4Week}</span>
+                    <strong>{activeWeek}</strong>
+                  </div>
                 </div>
 
-                <div className="forma-showcase-box" style={{ background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.08), rgba(16, 185, 129, 0.08))' }}>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                    <Check size={16} style={{ color: '#10b981' }} />
-                    <span>{isRTL ? 'ملخص إعداداتك الجاهزة' : 'Your Ready Profile'}</span>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem', fontSize: '0.76rem', color: '#cbd5e1' }}>
-                    <div>• {isRTL ? 'الوحدة:' : 'Unit:'} <strong>{settings?.weightUnit?.toUpperCase() || 'KG'}</strong></div>
-                    <div>• {isRTL ? 'المؤقت:' : 'Rest:'} <strong>{settings?.restTimerSeconds || 90}s</strong></div>
-                    <div>• {isRTL ? 'المظهر:' : 'Theme:'} <strong>{theme?.toUpperCase()}</strong></div>
-                    <div>• {isRTL ? 'الأسبوع يبدأ:' : 'Starts:'} <strong>{settings?.weekStartsOn === 'monday' ? (isRTL ? 'الاثنين' : 'Monday') : (isRTL ? 'الأحد' : 'Sunday')}</strong></div>
-                  </div>
-                </div>
-
-                <div style={{ padding: '0.2rem 0.5rem', fontSize: '0.74rem', color: '#94a3b8', textAlign: 'center' }}>
-                  {isRTL
-                    ? '💡 يمكنك في أي وقت إعادة تشغيل هذه الجولة أو تعديل الإعدادات من شاشة الإعدادات (Settings).'
-                    : '💡 You can replay this tour or tweak preferences anytime in Settings.'}
-                </div>
+                <p className="forma-onboarding-footnote">{labels.s4Hint}</p>
               </>
             )}
           </motion.div>
         </AnimatePresence>
 
-        {/* Footer Navigation */}
         <div className="forma-onboarding-footer">
-          {currentStep > 0 ? (
-            <button
-              type="button"
-              className="forma-onboarding-back-btn"
-              onClick={handlePrev}
-            >
-              {isRTL ? <ArrowRight size={15} /> : <ArrowLeft size={15} />}
-              <span>{isRTL ? 'السابق' : 'Back'}</span>
-            </button>
-          ) : (
-            <div />
-          )}
-
           <button
             type="button"
-            className="forma-onboarding-primary-btn"
-            onClick={handleNext}
+            className="forma-onboarding-back-btn"
+            onClick={goPrev}
+            disabled={currentStep === 0}
+            aria-hidden={currentStep === 0}
+            tabIndex={currentStep === 0 ? -1 : 0}
           >
-            <span>
-              {currentStep === totalSteps - 1
-                ? (isRTL ? 'ابدأ تمرينك الآن 🚀' : 'Start Training Now 🚀')
-                : (isRTL ? 'المتابعة' : 'Continue')}
-            </span>
-            {currentStep === totalSteps - 1 ? (
-              <Check size={16} />
-            ) : (
-              isRTL ? <ArrowLeft size={16} /> : <ArrowRight size={16} />
-            )}
+            {isRTL ? <ArrowRight size={15} aria-hidden="true" /> : <ArrowLeft size={15} aria-hidden="true" />}
+            <span>{labels.back}</span>
+          </button>
+
+          <button type="button" className="forma-onboarding-primary-btn" onClick={goNext}>
+            <span>{isLast ? labels.finish : labels.next}</span>
+            {isLast ? <Check size={16} aria-hidden="true" /> : isRTL ? <ArrowLeft size={16} aria-hidden="true" /> : <ArrowRight size={16} aria-hidden="true" />}
           </button>
         </div>
-      </motion.section>
+      </div>
+    </div>
+  );
+}
+
+function AlertToggle({
+  legend,
+  enabled,
+  onToggle
+}: {
+  legend: string;
+  enabled: boolean;
+  onToggle: (next: boolean) => void;
+}) {
+  return (
+    <div className="forma-alert-toggle">
+      <span className="forma-alert-legend">{legend}</span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={enabled}
+        aria-label={legend}
+        className={`forma-switch ${enabled ? 'is-on' : ''}`}
+        onClick={() => onToggle(!enabled)}
+      >
+        <span className="forma-switch-knob" />
+      </button>
     </div>
   );
 }
