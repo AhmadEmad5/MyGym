@@ -1,13 +1,10 @@
-interface PageSkeletonProps {
-  rows?: number;
-  className?: string;
+import { PageSkeleton as CanonicalPageSkeleton } from '../ui/PageSkeleton';
+import type { PageSkeletonProps as CanonicalPageSkeletonProps } from '../ui/PageSkeleton';
+
+export interface PageSkeletonProps extends Omit<CanonicalPageSkeletonProps, 'variant'> {
+  variant?: 'rows';
 }
 
-export function PageSkeleton({ rows = 4, className = '' }: PageSkeletonProps) {
-  return (
-    <div className={`forma-page-skeleton ${className}`.trim()} aria-label="Loading" role="status">
-      <span className="forma-skeleton-heading" />
-      {Array.from({ length: rows }, (_, index) => <span key={index} className="forma-skeleton-row" />)}
-    </div>
-  );
+export function PageSkeleton({ rows = 4, variant = 'rows', className }: PageSkeletonProps) {
+  return <CanonicalPageSkeleton variant={variant} rows={rows} className={className} />;
 }

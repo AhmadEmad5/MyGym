@@ -1,11 +1,15 @@
-import { useId } from 'react';
+import { useCallback, useId, useRef } from 'react';
+import type { KeyboardEvent } from 'react';
 import { motion } from 'framer-motion';
+import { cn } from './cn';
 
 export interface SegmentOption<T extends string | number> {
   value: T;
   label: string;
   icon?: React.ReactNode;
   badge?: string | number;
+  disabled?: boolean;
+  'aria-label'?: string;
 }
 
 export interface SegmentedControlProps<T extends string | number> {
@@ -15,51 +19,96 @@ export interface SegmentedControlProps<T extends string | number> {
   className?: string;
   size?: 'sm' | 'md';
   layoutId?: string;
+  'aria-label'?: string;
 }
 
 export function SegmentedControl<T extends string | number>({
   options,
   value,
   onChange,
-  className = '',
+  className,
   size = 'md',
-  layoutId: customLayoutId
+  layoutId: customLayoutId,
+  'aria-label': ariaLabel
 }: SegmentedControlProps<T>) {
   const generatedId = useId();
   const activeLayoutId = customLayoutId || `segmented-active-${generatedId}`;
+  const triggerRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const sizeClasses = size === 'sm' ? 'p-0.5 text-xs' : 'p-1 text-sm';
   const itemPadding = size === 'sm' ? 'py-1 px-2.5' : 'py-1.5 px-3.5';
 
+  const focusOption = useCallback(
+    (index: number) => {
+      const step = index >= options.length ? 0 : index < 0 ? options.length - 1 : index;
+      const next = options[step];
+      if (!next || next.disabled) return;
+      onChange(next.value);
+      triggerRefs.current[step]?.focus();
+    },
+    [onChange, options]
+  );
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const currentIndex = options.findIndex((option) => option.value === value);
+    if (currentIndex < 0) return;
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+      event.preventDefault();
+      focusOption(currentIndex + 1);
+    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      focusOption(currentIndex - 1);
+    } else if (event.key === 'Home') {
+      event.preventDefault();
+      focusOption(0);
+    } else if (event.key === 'End') {
+      event.preventDefault();
+      focusOption(options.length - 1);
+    }
+  };
+
   return (
     <div
-      className={`inline-flex items-center bg-[var(--surface-input)] border border-[var(--border-subtle)] rounded-full ${sizeClasses} ${className}`.trim()}
+      className={cn('ui-segmented items-center border rounded-full', sizeClasses, className)}
       role="tablist"
+      aria-label={ariaLabel}
+      onKeyDown={handleKeyDown}
     >
-      {options.map((option) => {
+      {options.map((option, index) => {
         const isSelected = option.value === value;
         return (
           <motion.button
             key={String(option.value)}
+            ref={(node) => {
+              triggerRefs.current[index] = node;
+            }}
             type="button"
             role="tab"
+            id={`${activeLayoutId}-tab-${index}`}
             aria-selected={isSelected}
+            aria-label={option['aria-label']}
+            disabled={option.disabled}
+            tabIndex={isSelected ? 0 : -1}
             onClick={() => onChange(option.value)}
-            whileTap={{ scale: 0.95 }}
-            className={`relative inline-flex items-center justify-center gap-1.5 font-bold rounded-full transition-colors z-10 select-none touch-manipulation ${itemPadding} ${
-              isSelected ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-            }`}
+            whileTap={option.disabled ? undefined : { scale: 0.95 }}
+            className={cn(
+              'ui-segmented-trigger',
+              itemPadding,
+              !isSelected && 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
+              option.disabled && 'opacity-50 cursor-not-allowed pointer-events-none'
+            )}
           >
             {isSelected && (
-              <motion.div
+              <motion.span
                 layoutId={activeLayoutId}
-                className="absolute inset-0 rounded-full bg-[var(--surface-card-hover)] border border-[var(--border-card)] shadow-sm z-[-1]"
+                aria-hidden="true"
+                className="ui-segmented-indicator"
                 transition={{ type: 'spring', stiffness: 500, damping: 36 }}
               />
             )}
             {option.icon && <span className="shrink-0">{option.icon}</span>}
             <span>{option.label}</span>
             {option.badge !== undefined && (
-              <span className="text-[0.65rem] px-1.5 py-0.2 rounded-full bg-white/10 tabular-nums">
+              <span className="text-[0.65rem] px-1.5 py-0.2 rounded-full bg-[var(--surface-elevated)] tabular-nums">
                 {option.badge}
               </span>
             )}

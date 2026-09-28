@@ -1,13 +1,15 @@
 import type { ReactNode } from 'react';
 import { motion } from 'framer-motion';
+import { cn } from './cn';
 
 export interface EmptyStateProps {
-  icon: ReactNode;
-  title: string;
-  description: string;
+  icon?: ReactNode;
+  title: ReactNode;
+  description?: ReactNode;
   action?: ReactNode;
   secondaryAction?: ReactNode;
   className?: string;
+  titleAs?: 'h2' | 'h3';
 }
 
 export function EmptyState({
@@ -16,25 +18,23 @@ export function EmptyState({
   description,
   action,
   secondaryAction,
-  className = ''
+  className,
+  titleAs = 'h3'
 }: EmptyStateProps) {
+  const Heading = titleAs;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`flex flex-col items-center justify-center text-center p-8 sm:p-12 rounded-2xl border border-dashed border-[var(--border-card)] bg-[var(--surface-primary)]/50 ${className}`.trim()}
+      transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
+      className={cn('ui-empty-state', className)}
     >
-      <div className="w-14 h-14 rounded-2xl bg-[var(--accent-cyan)]/10 border border-[var(--accent-cyan)]/25 text-[var(--accent-cyan)] flex items-center justify-center mb-4 shadow-[var(--shadow-glow-cyan)]">
-        {icon}
-      </div>
-      <h3 className="text-base sm:text-lg font-bold text-[var(--text-primary)] mb-1.5 tracking-tight">
-        {title}
-      </h3>
-      <p className="text-xs sm:text-sm text-[var(--text-secondary)] max-w-sm mb-6 leading-relaxed">
-        {description}
-      </p>
+      {icon && <div className="ui-empty-icon">{icon}</div>}
+      <Heading className="ui-empty-title">{title}</Heading>
+      {description && <p className="ui-empty-description">{description}</p>}
       {(action || secondaryAction) && (
-        <div className="flex flex-wrap items-center justify-center gap-3">
+        <div className="ui-empty-actions">
           {action}
           {secondaryAction}
         </div>
