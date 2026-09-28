@@ -6,6 +6,7 @@ import { useMusicPlayer } from '../context/MusicPlayerContext';
 import { useData } from '../hooks/useData';
 import { useTranslation } from '../lib/i18n';
 import { gymAudio } from '../lib/audio';
+import { useAnimationActive, useFormaReducedMotion } from './TodayBentoGrid';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -122,13 +123,20 @@ const FolderPlusIcon = () => (
 );
 
 // Mini SVG ring progress
-function Ring({ pct }: { pct: number }) {
+function Ring({ pct, label }: { pct: number; label: string }) {
   const r = 9;
   const c = 2 * Math.PI * r;
   const clampedPct = Math.max(0, Math.min(1, pct || 0));
 
   return (
-    <svg width="26" height="26" viewBox="0 0 26 26" style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
+    <svg
+      width="26"
+      height="26"
+      viewBox="0 0 26 26"
+      role="img"
+      aria-label={label}
+      style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}
+    >
       <circle cx="13" cy="13" r={r} fill="none" stroke="rgba(51,65,85,0.8)" strokeWidth="2.5" />
       <circle
         cx="13"
@@ -178,6 +186,7 @@ export function NowPlayingMusicWidget() {
   const { isRTL } = useTranslation();
   const { data } = useData();
   const location = useLocation();
+  const reduceMotion = useFormaReducedMotion();
   const isInSession = location.pathname.startsWith('/session/');
 
   const hasLiveWorkoutBar = useMemo(() => {
@@ -191,6 +200,8 @@ export function NowPlayingMusicWidget() {
 
   const [imgError, setImgError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const animationsLive = useAnimationActive(rootRef);
 
   if (!isOpen) return null;
 
@@ -251,10 +262,12 @@ export function NowPlayingMusicWidget() {
 
   return (
     <div
+      ref={rootRef}
+      data-paused={reduceMotion || !animationsLive ? 'true' : 'false'}
       style={{
         position: 'fixed',
-        bottom: hasLiveWorkoutBar 
-          ? 'calc(156px + max(0px, env(safe-area-inset-bottom, 0px)))' 
+        bottom: hasLiveWorkoutBar
+          ? 'calc(156px + max(0px, env(safe-area-inset-bottom, 0px)))'
           : 'calc(80px + max(0px, env(safe-area-inset-bottom, 0px)))',
         insetInlineEnd: 'clamp(8px, 2.5vw, 20px)',
         zIndex: 9998,
@@ -276,11 +289,13 @@ export function NowPlayingMusicWidget() {
           /* ─── Expanded Mode (Card) ─────────────────────────────────── */
           <motion.div
             key="expanded"
-            initial={{ opacity: 0, scale: 0.92, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.92, y: 20 }}
-            transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+            initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 16 }}
+            transition={reduceMotion ? { duration: 0.12 } : { type: 'spring', stiffness: 380, damping: 28 }}
             className="now-playing-glass"
+            role="region"
+            aria-label={isRTL ? 'مشغل الموسيقى' : 'Music player'}
             style={{
               width: 'min(350px, calc(100vw - 20px))',
               maxWidth: 'calc(100vw - 20px)',
@@ -365,17 +380,18 @@ export function NowPlayingMusicWidget() {
                 {/* Minimize to Pill */}
                 <button
                   type="button"
-                  onClick={() => setExpanded(false)}
-                  style={{
-                    padding: '0.3rem',
-                    borderRadius: '8px',
-                    border: 'none',
-                    background: 'transparent',
-                    color: '#64748b',
-                    cursor: 'pointer'
-                  }}
-                  title="Minimize"
-                >
+                    onClick={() => setExpanded(false)}
+                    style={{
+                      padding: '0.3rem',
+                      borderRadius: '8px',
+                      border: 'none',
+                      background: 'transparent',
+                      color: '#64748b',
+                      cursor: 'pointer'
+                    }}
+                    title="Minimize"
+                    aria-label={isRTL ? 'تصغير المشغل' : 'Minimize player'}
+                  >
                   <ChevronDown />
                 </button>
 
@@ -392,8 +408,9 @@ export function NowPlayingMusicWidget() {
                     cursor: 'pointer',
                     fontSize: '0.85rem'
                   }}
-                  title="Close"
-                >
+                    title="Close"
+                    aria-label={isRTL ? 'إغلاق المشغل' : 'Close player'}
+                  >
                   ✕
                 </button>
               </div>
@@ -498,7 +515,8 @@ export function NowPlayingMusicWidget() {
                   justifyContent: 'center',
                   flexShrink: 0
                 }}
-                aria-label="Favorite"
+                aria-label={isRTL ? 'إضافة إلى المفضلة' : 'Add to favourites'}
+                aria-pressed={likedTrackIds.has(currentTrack.id)}
               >
                 <HeartIcon on={likedTrackIds.has(currentTrack.id)} />
               </button>
@@ -515,7 +533,8 @@ export function NowPlayingMusicWidget() {
                 onChange={handleSeekChange}
                 className="now-playing-range"
                 style={{ width: '100%', ...sliderStyle(pct) }}
-                aria-label="Seek track"
+                aria-label={isRTL ? 'انتقال في المقطع' : 'Seek track'}
+                aria-valuetext={`${fmt(elapsed)} / ${fmt(duration)}`}
               />
               <div
                 style={{
@@ -546,6 +565,7 @@ export function NowPlayingMusicWidget() {
               <button
                 type="button"
                 onClick={toggleShuffle}
+                aria-label={isRTL ? 'إضافة مقطع صوتي من جهازك' : 'Add audio file from your device'}
                 style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '0.4rem' }}
                 title="Shuffle"
               >
@@ -555,6 +575,7 @@ export function NowPlayingMusicWidget() {
               <button
                 type="button"
                 onClick={prevTrack}
+                aria-label={isRTL ? 'المقطع السابق' : 'Previous track'}
                 style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0.4rem' }}
                 title="Previous"
               >
@@ -588,6 +609,7 @@ export function NowPlayingMusicWidget() {
               <button
                 type="button"
                 onClick={nextTrack}
+                aria-label={isRTL ? 'المقطع التالي' : 'Next track'}
                 style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0.4rem' }}
                 title="Next"
               >
@@ -597,6 +619,8 @@ export function NowPlayingMusicWidget() {
               <button
                 type="button"
                 onClick={toggleRepeat}
+                aria-label={isRTL ? `تكرار: ${repeatMode}` : `Repeat: ${repeatMode}`}
+                aria-pressed={repeatMode !== 'off'}
                 style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '0.4rem' }}
                 title={`Repeat: ${repeatMode}`}
               >
@@ -621,6 +645,8 @@ export function NowPlayingMusicWidget() {
                 type="button"
                 onClick={toggleMute}
                 style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}
+                aria-label={isRTL ? (isMuted ? 'إلغاء الكتم' : 'كتم الصوت') : isMuted ? 'Unmute' : 'Mute'}
+                aria-pressed={isMuted}
                 title={isMuted ? 'Unmute' : 'Mute'}
               >
                 <VolumeIcon />
@@ -675,11 +701,13 @@ export function NowPlayingMusicWidget() {
           /* ─── Mini Mode (Capsule Pill) ─────────────────────────────── */
           <motion.div
             key="mini"
-            initial={{ opacity: 0, scale: 0.9, y: 15 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 15 }}
-            transition={{ type: 'spring', stiffness: 420, damping: 30 }}
+            initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 14 }}
+            transition={reduceMotion ? { duration: 0.12 } : { type: 'spring', stiffness: 420, damping: 30 }}
             className="now-playing-pill-glass"
+            role="region"
+            aria-label={isRTL ? 'مشغل الموسيقى المصغّر' : 'Mini music player'}
             style={{
               height: 62,
               borderRadius: '999px',
@@ -694,11 +722,15 @@ export function NowPlayingMusicWidget() {
             }}
           >
             {/* Spinning Circular Album Art */}
-            <div
+            <button
+              type="button"
               onClick={() => setExpanded(true)}
+              aria-label={isRTL ? `توسيع المشغل — ${currentTrack.title}` : `Expand player — ${currentTrack.title}`}
               style={{
                 width: 52,
                 height: 52,
+                padding: 0,
+                border: 'none',
                 borderRadius: '50%',
                 overflow: 'hidden',
                 background: '#1e293b',
@@ -733,13 +765,10 @@ export function NowPlayingMusicWidget() {
                   <MusicIcon />
                 </div>
               )}
-            </div>
+            </button>
 
             {/* Track Title and Artist */}
-            <div
-              onClick={() => setExpanded(true)}
-              style={{ flex: 1, minWidth: 0, cursor: 'pointer' }}
-            >
+            <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                 <p
                   style={{
@@ -783,7 +812,10 @@ export function NowPlayingMusicWidget() {
 
             {/* Mini Progress Ring */}
             <div style={{ flexShrink: 0 }}>
-              <Ring pct={pct} />
+              <Ring
+                pct={pct}
+                label={isRTL ? `تقدم المقطع ${Math.round(pct * 100)} بالمئة` : `Track progress ${Math.round(pct * 100)} percent`}
+              />
             </div>
 
             {/* Play/Pause Button */}
@@ -813,21 +845,21 @@ export function NowPlayingMusicWidget() {
             </button>
 
             {/* Expand Chevron Button */}
-            <button
-              type="button"
-              onClick={() => setExpanded(true)}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: '#64748b',
-                padding: '0.3rem',
-                cursor: 'pointer',
-                display: 'flex'
-              }}
-              title="Expand player"
-            >
-              <ChevronUp />
-            </button>
+              <button
+                type="button"
+                onClick={() => setExpanded(true)}
+                aria-label={isRTL ? 'توسيع المشغل' : 'Expand player'}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#64748b',
+                  padding: '0.3rem',
+                  cursor: 'pointer',
+                  display: 'flex'
+                }}
+              >
+                <ChevronUp />
+              </button>
           </motion.div>
         )}
       </AnimatePresence>

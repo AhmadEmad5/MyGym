@@ -1,60 +1,75 @@
-import { useEffect, useMemo, useState } from 'react';
-import { format, addDays } from 'date-fns';
-import { notify } from '../lib/feedback';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { addDays, format } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 import {
+  AlertTriangle,
   ArrowUpRight,
   CalendarDays,
   Check,
   CheckCircle2,
   Dumbbell,
+  Flame,
   History,
   Moon,
   Play,
+  Plus,
+  RotateCcw,
   Sparkles,
-  Zap,
   Trophy,
-  Flame,
-  Plus
+  Zap,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
-import { QuickWorkoutModal } from '../components/QuickWorkoutModal';
-import { InteractiveHydrationWaveCard } from '../components/InteractiveHydrationWaveCard';
-import { RecoveryCard } from '../components/RecoveryCard';
-import { MuscleRecoveryHeatmapWidget } from '../components/MuscleRecoveryHeatmapWidget';
-import { DailyNutritionTargetsCard } from '../components/DailyNutritionTargetsCard';
-import { MetricPair } from '../components/primitives/MetricPair';
-import { PageFrame } from '../components/layout/PageFrame';
-import { Button } from '../components/ui/Button';
-import { EmptyState } from '../components/ui/EmptyState';
 import { useData } from '../hooks/useData';
-import { selectDailySummary, deriveSessionStatus, selectWorkoutStreak } from '../lib/selectors';
-import { formatDuration } from '../lib/formatters';
-import type { WorkoutSession } from '../lib/api';
 import { useTranslation } from '../lib/i18n';
 import { gymAudio } from '../lib/audio';
 import { computeMuscleRecovery } from '../lib/recovery';
+import { deriveSessionStatus, selectDailySummary, selectWorkoutStreak } from '../lib/selectors';
+import { formatDuration } from '../lib/formatters';
+import { notify } from '../lib/feedback';
+import type { WorkoutSession } from '../lib/api';
+import { PageFrame } from '../components/layout/PageFrame';
+import { Button } from '../components/ui/Button';
+import { EmptyState } from '../components/ui/EmptyState';
+import { MetricPair } from '../components/primitives/MetricPair';
+import { QuickWorkoutModal } from '../components/QuickWorkoutModal';
+import { DailyNutritionTargetsCard } from '../components/DailyNutritionTargetsCard';
+import { TodayBentoGrid, WidgetSkeleton, useFormaReducedMotion } from '../components/TodayBentoGrid';
+import { RecoveryCard } from '../components/RecoveryCard';
+import { MuscleRecoveryHeatmapWidget } from '../components/MuscleRecoveryHeatmapWidget';
+import { InteractiveHydrationWaveCard } from '../components/InteractiveHydrationWaveCard';
 import { MobileHeroWorkoutCard } from '../components/mobile/MobileHeroWorkoutCard';
 import { MobileFloorVitals } from '../components/mobile/MobileFloorVitals';
 
+const MAX_VISIBLE_EXERCISES = 4;
+
 export function TodayView() {
-  const { data, finishWorkoutSession, saveSession, logWater, resetWater } = useData();
-  const { formatDate, tExercise, tTitle, isRTL, language } = useTranslation();
+  const { data, loading, finishWorkoutSession, saveSession, logWater, resetWater, forceRefresh } = useData();
+  const { formatDate, tExercise, tTitle, isRTL } = useTranslation();
   const navigate = useNavigate();
+  const reduceMotion = useFormaReducedMotion();
   const [isQuickWorkoutOpen, setIsQuickWorkoutOpen] = useState(false);
+  const [isFinishing, setIsFinishing] = useState(false);
+  const [panelError, setPanelError] = useState<string | null>(null);
+  const [hydrationError, setHydrationError] = useState<string | null>(null);
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
 
-  if (!data) return null;
-
+  const locale = isRTL ? 'ar' : 'en-US';
   const today = useMemo(() => new Date(), []);
   const todayKey = format(today, 'yyyy-MM-dd');
   const isFriday = today.getDay() === 5;
-  const daily = useMemo(() => selectDailySummary(data, today), [data, todayKey]);
-  const todaySessions = useMemo(() => daily.sessions.filter((session) => !session.isCompleted), [daily.sessions]);
-  const todayHistory = daily.history;
+
+  const daily = useMemo(
+    () => (data ? selectDailySummary(data, today) : null),
+    [data, todayKey],
+  );
+
+  const todaySessions = useMemo(
+    () => (daily ? daily.sessions.filter((session) => !session.isCompleted) : []),
+    [daily],
+  );
+  const todayHistory = daily ? daily.history : [];
   const activeSession = todaySessions[0] || null;
   const isDayCompleted = todaySessions.length === 0 && todayHistory.length > 0;
-  
-  // Hero session to display on mobile: active uncompleted session, or today's completed session, or scheduled session
+
   const heroSession = useMemo(() => {
     if (activeSession) return activeSession;
     if (todayHistory[0]?.snapshot) return todayHistory[0].snapshot;
@@ -66,47 +81,129 @@ export function TodayView() {
     () => todayHistory.reduce((total, record) => total + (record.burnedCalories || 0), 0),
     [todayHistory],
   );
-  const completedTrainingRecords = (data.history || []).filter((record) => record.snapshot?.exercises?.some((exercise) => Boolean(exercise.targetMuscle))).length
-    + (data.sessions || []).filter((session) => session.isCompleted && session.exercises?.some((exercise) => Boolean(exercise.targetMuscle))).length;
+
+  const completedTrainingRecords = useMemo(
+    () =>
+      (data?.history || []).filter((record) => record.snapshot?.exercises?.some((exercise) => Boolean(exercise.targetMuscle))).length +
+      (data?.sessions || []).filter((session) => session.isCompleted && session.exercises?.some((exercise) => Boolean(exercise.targetMuscle))).length,
+    [data?.history, data?.sessions],
+  );
+
   const recoveryOverview = useMemo(
     () => computeMuscleRecovery(data?.history || [], data?.sessions || []),
-    [data?.history, data?.sessions]
+    [data?.history, data?.sessions],
   );
+
   const { todayCalories, todayProtein, todayCarbs, todayFats } = useMemo(() => {
-    let cal = 0, pro = 0, carb = 0, fat = 0;
-    for (const meal of daily.meals) {
-      cal += meal.calories || 0;
-      pro += meal.protein || 0;
-      carb += meal.carbs || 0;
-      fat += meal.fats || 0;
+    let calories = 0;
+    let protein = 0;
+    let carbs = 0;
+    let fats = 0;
+    for (const meal of daily?.meals || []) {
+      calories += meal.calories || 0;
+      protein += meal.protein || 0;
+      carbs += meal.carbs || 0;
+      fats += meal.fats || 0;
     }
-    return { todayCalories: cal, todayProtein: pro, todayCarbs: carb, todayFats: fat };
-  }, [daily.meals]);
-  const streakDays = useMemo(() => selectWorkoutStreak(data), [data]);
-  const weekStart = new Date(today);
-  weekStart.setDate(today.getDate() - today.getDay());
+    return { todayCalories: calories, todayProtein: protein, todayCarbs: carbs, todayFats: fats };
+  }, [daily]);
 
-  const handleQuickWater = async (amount: number) => {
-    await logWater(amount, todayKey);
-    gymAudio.triggerVibration([15]);
-  };
+  const streakDays = useMemo(() => (data ? selectWorkoutStreak(data) : 0), [data]);
+  const plannedMinutes = useMemo(
+    () => todaySessions.reduce((sum, session) => sum + (session.duration || 0), 0),
+    [todaySessions],
+  );
 
-  const handleResetWater = async () => {
-    await resetWater(todayKey);
-    gymAudio.triggerVibration([10]);
-  };
+  const openQuickWorkout = useCallback(() => {
+    if (isFriday) {
+      notify(
+        isRTL ? 'الجيم مغلق اليوم الجمعة — استمتع بالراحة التامة والاستشفاء.' : 'The gym is closed on Friday — enjoy full recovery and rest.',
+        'warning',
+      );
+      return;
+    }
+    setPanelError(null);
+    setIsQuickWorkoutOpen(true);
+  }, [isFriday, isRTL]);
 
-  const handleCompleteSession = async (session: WorkoutSession) => {
-    gymAudio.triggerSubtleHaptic([30, 50]);
-    await finishWorkoutSession({ ...session, isCompleted: true });
-    notify(isRTL ? 'تم إنهاء التمرين وحفظه في السجل بنجاح!' : 'Workout finished and logged to history!', 'success');
-  };
+  const handleQuickWater = useCallback(
+    async (amount: number) => {
+      try {
+        setPanelError(null);
+        setHydrationError(null);
+        await logWater(amount, todayKey);
+        gymAudio.triggerVibration([15]);
+      } catch {
+        const message = isRTL ? 'تعذّر تسجيل الماء. حاول مرة أخرى.' : 'Could not log water. Try again.';
+        setHydrationError(message);
+        setPanelError(message);
+      }
+    },
+    [isRTL, logWater, todayKey],
+  );
 
-  const handleQuickWorkout = async (session: Partial<WorkoutSession>) => {
-    const full = session as WorkoutSession;
-    await saveSession(full);
-    navigate(`/session/${full.id}`);
-  };
+  const handleResetWater = useCallback(async () => {
+    try {
+      setPanelError(null);
+      setHydrationError(null);
+      await resetWater(todayKey);
+      gymAudio.triggerVibration([10]);
+    } catch {
+      const message = isRTL ? 'تعذّر تصفير عداد الماء.' : 'Could not reset the hydration log.';
+      setHydrationError(message);
+      setPanelError(message);
+    }
+  }, [isRTL, resetWater, todayKey]);
+
+  const handleCompleteSession = useCallback(
+    async (session: WorkoutSession) => {
+      if (isFinishing) return;
+      setIsFinishing(true);
+      setPanelError(null);
+      setDashboardError(null);
+      try {
+        gymAudio.triggerSubtleHaptic([30, 50]);
+        await finishWorkoutSession({ ...session, isCompleted: true });
+        notify(isRTL ? 'تم إنهاء التمرين وحفظه في السجل بنجاح!' : 'Workout finished and logged to history!', 'success');
+      } catch {
+        const message = isRTL ? 'تعذّر حفظ التمرين. لم تتغيّر بياناتك.' : 'Could not save the workout. Your data is unchanged.';
+        setDashboardError(message);
+        setPanelError(message);
+      } finally {
+        setIsFinishing(false);
+      }
+    },
+    [finishWorkoutSession, isFinishing, isRTL],
+  );
+
+  const handleMoveToSaturday = useCallback(
+    async (session: WorkoutSession) => {
+      const saturday = addDays(new Date(session.date), 1);
+      saturday.setHours(18, 0, 0, 0);
+      const dateStr = new Date(saturday.getTime() - saturday.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+      try {
+        setPanelError(null);
+        setDashboardError(null);
+        await saveSession({ ...session, date: dateStr });
+        notify(isRTL ? 'تم نقل الجلسة إلى يوم السبت بنجاح!' : 'Session rescheduled to Saturday successfully!', 'success');
+      } catch {
+        const message = isRTL ? 'تعذّر نقل الجلسة. حاول مرة أخرى.' : 'Could not reschedule the session.';
+        setDashboardError(message);
+        setPanelError(message);
+      }
+    },
+    [isRTL, saveSession],
+  );
+
+  const handleQuickWorkout = useCallback(
+    async (session: Partial<WorkoutSession>) => {
+      const full = session as WorkoutSession;
+      setIsQuickWorkoutOpen(false);
+      await saveSession(full);
+      navigate(`/session/${full.id}`);
+    },
+    [navigate, saveSession],
+  );
 
   useEffect(() => {
     const shortcut = new URLSearchParams(window.location.search).get('shortcut');
@@ -123,15 +220,67 @@ export function TodayView() {
     }
     if (shortcut === 'water-500') void handleQuickWater(500);
     if (shortcut === 'scan-meal') navigate('/nutrition?action=scan-meal');
-    // PWA shortcuts intentionally run once for the current route.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [activeSession, handleQuickWater, isFriday, isRTL, navigate]);
+
+  if (!data || !daily) {
+    return (
+      <PageFrame
+        routeId="today"
+        title={isRTL ? 'الخطوة التالية' : 'The next move'}
+        eyebrow={formatDate(today, 'EEEE · MMMM d')}
+        subtitle={isRTL ? 'جارٍ تجهيز لوحة اليوم…' : 'Preparing your dashboard…'}
+      >
+        <div className="today-dashboard-stack" aria-busy="true">
+          <div className="forma-widget" style={{ minHeight: '16rem' }}>
+            <div className="forma-widget-header">
+              <h2 className="forma-widget-title">
+                <span className="forma-widget-icon" style={{ color: 'var(--accent-cyan)' }}>
+                  <Dumbbell size={15} aria-hidden="true" />
+                </span>
+                <span>{isRTL ? 'تمرين اليوم' : "Today's workout"}</span>
+              </h2>
+            </div>
+            <div className="forma-widget-body">
+              <WidgetSkeleton rows={4} label={isRTL ? 'جارٍ تحميل بيانات اليوم' : 'Loading today'} />
+            </div>
+          </div>
+          <div className="forma-bento-grid">
+            {[0, 1, 2].map((index) => (
+              <div className="forma-bento-card" data-tier="tertiary" key={index}>
+                <div className="forma-bento-card-body">
+                  <WidgetSkeleton rows={3} label={isRTL ? 'جارٍ تحميل البطاقات' : 'Loading cards'} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </PageFrame>
+    );
+  }
+
+  const statusLabel = activeSession
+    ? isRTL ? 'مخطط اليوم' : 'Planned today'
+    : isDayCompleted
+      ? isRTL ? 'مكتمل' : 'Complete'
+      : isFriday
+        ? isRTL ? 'عطلة أسبوعية' : 'Off-Day (Gym Closed)'
+        : isRTL ? 'لا توجد جلسة' : 'No session';
+
+  const statusTone = activeSession ? 'is-active' : isDayCompleted ? 'is-complete' : 'is-muted';
+
+  const commandHeading = activeSession
+    ? tTitle(activeSession.title)
+    : isDayCompleted
+      ? todayHistory[0] ? tTitle(todayHistory[0].title) : isRTL ? 'تمرين مكتمل' : 'Workout complete'
+      : isFriday
+        ? isRTL ? 'يوم راحة أسبوعي' : 'Weekly recovery day'
+        : isRTL ? 'لا يوجد تمرين مخطط' : 'Nothing scheduled yet';
 
   return (
     <PageFrame
       routeId="today"
       title={isRTL ? 'الخطوة التالية' : 'The next move'}
-      subtitle={isRTL ? 'سجل ما يحتاجه تمرينك الآن، واترك التحليلات للتقرير.' : 'Log what your training needs now. Keep the analysis in the report.'}
+      subtitle={isRTL ? 'سجّل ما يحتاجه تمرينك الآن، واترك التحليلات للتقرير.' : 'Log what your training needs now. Keep the analysis in the report.'}
       eyebrow={formatDate(today, 'EEEE · MMMM d')}
       actions={
         <>
@@ -146,41 +295,50 @@ export function TodayView() {
           <Button
             variant="cyan"
             size="sm"
-            onClick={() => {
-              if (isFriday) {
-                notify(isRTL ? 'الجيم مغلق اليوم الجمعة — استمتع بالراحة التامة.' : 'The gym is closed on Friday — enjoy your rest day.', 'warning');
-                return;
-              }
-              setIsQuickWorkoutOpen(true);
-            }}
+            onClick={openQuickWorkout}
             leftIcon={<Zap width={15} height={15} />}
             disabled={isFriday}
             title={isFriday ? (isRTL ? 'الجيم مغلق اليوم (عطلة أسبوعية)' : 'Gym is closed today (Weekly off-day)') : undefined}
           >
-            {isFriday ? (isRTL ? '🔒 الجيم مغلق' : '🔒 Gym Closed') : (isRTL ? 'تمرين سريع' : 'Quick workout')}
+            {isFriday ? (isRTL ? 'الجيم مغلق' : 'Gym closed') : isRTL ? 'تمرين سريع' : 'Quick workout'}
           </Button>
         </>
       }
     >
+      {panelError && (
+        <div className="today-inline-error" role="alert">
+          <AlertTriangle size={16} aria-hidden="true" />
+          <span>{panelError}</span>
+          <button type="button" className="forma-quiet-button" onClick={() => setPanelError(null)}>
+            {isRTL ? 'إخفاء' : 'Dismiss'}
+          </button>
+        </div>
+      )}
+
+      <a className="forma-skip-link" href="#today-command">
+        {isRTL ? 'تخطَّ إلى التمرين' : 'Skip to workout'}
+      </a>
+
       <div className="today-dashboard-stack">
-        {/* Mobile-First Floor Hero & Vitals Stack */}
         <div className="today-mobile-hero-stack">
-          {/* Top Athlete Greeting with Flame Streak (Matches Mockup) */}
           <div className="mobile-athlete-header">
             <div>
               <div className="mobile-greeting-label">{isRTL ? 'مرحباً بعودتك،' : 'Welcome back,'}</div>
-              <div className="mobile-athlete-name">{data?.user?.name || (isRTL ? 'البطل' : 'Athlete')}</div>
+              <div className="mobile-athlete-name">{data.user?.name || (isRTL ? 'البطل' : 'Athlete')}</div>
             </div>
-            <div className="mobile-streak-ring" title="Current streak">
-              <Flame className="w-5 h-5 fill-amber-500 text-amber-500" />
-              <span className="mobile-streak-text">{Math.max(1, streakDays)}d</span>
+            <div className="mobile-streak-ring" title={isRTL ? 'السلسلة الحالية' : 'Current streak'}>
+              <Flame className="w-5 h-5 fill-amber-500 text-amber-500" aria-hidden="true" />
+              <span className="mobile-streak-text tabular-nums">{Math.max(1, streakDays)}d</span>
+              <span className="forma-sr-only">
+                {isRTL ? `${streakDays} يوم متتالي` : `${streakDays} day streak`}
+              </span>
             </div>
           </div>
 
           <MobileHeroWorkoutCard
             session={heroSession}
             isCompletedToday={isDayCompleted}
-            onQuickWorkout={() => setIsQuickWorkoutOpen(true)}
+            onQuickWorkout={openQuickWorkout}
             streakDays={streakDays}
           />
           <MobileFloorVitals
@@ -192,64 +350,35 @@ export function TodayView() {
             protein={todayProtein}
             proteinGoal={daily.nutritionGoals.dailyProtein}
             onOpenNutrition={() => navigate('/nutrition')}
+            isBusy={isFinishing}
+            errorMessage={hydrationError || undefined}
           />
         </div>
 
-        {/* Tier 1: Training & Today's Workout Hero - Front & Center */}
-        <section className="today-training-section" aria-labelledby="today-training-title">
-          <div className="forma-section-kicker">
-            <span className="forma-section-line" />
-            <span id="today-training-title">{isRTL ? 'تمرين اليوم والنشاط التدريبي' : 'Daily Workout & Training'}</span>
-          </div>
+        <section className="today-tier today-tier-training" aria-labelledby="today-command-title">
+          <h2 className="forma-sr-only" id="today-command-title">
+            {isRTL ? 'إجراء اليوم' : 'Today’s action'}
+          </h2>
 
-          <div className="today-training-layout">
-            <div className="today-active-column" aria-labelledby="today-active-title">
-              <div className="today-active-surface">
+          <div className="today-command-grid" id="today-command">
+            <div className="today-active-column">
+              <div className={`today-active-surface ${isDayCompleted ? 'is-complete' : ''}`.trim()}>
                 <div className="today-surface-topline">
-                  <span className={`forma-status-label ${activeSession ? 'is-active' : isDayCompleted ? 'is-complete' : isFriday ? 'is-muted' : 'is-muted'}`}>
-                    {activeSession 
-                      ? (isRTL ? 'مخطط اليوم' : 'Planned today') 
-                      : isDayCompleted 
-                      ? (isRTL ? 'مكتمل' : 'Complete') 
-                      : isFriday
-                      ? (isRTL ? 'عطلة أسبوعية (الجيم مغلق)' : 'Off-Day (Gym Closed)')
-                      : (isRTL ? 'لا توجد جلسة' : 'No session')}
-                  </span>
+                  <span className={`forma-status-label ${statusTone}`}>{statusLabel}</span>
                   <span className="today-surface-date tabular-nums">{format(today, 'dd.MM')}</span>
                 </div>
 
                 {activeSession ? (
                   <>
                     {isFriday && (
-                      <div style={{
-                        marginBottom: '1rem',
-                        padding: '0.75rem 1rem',
-                        borderRadius: '12px',
-                        background: 'rgba(239, 68, 68, 0.12)',
-                        border: '1px solid rgba(239, 68, 68, 0.3)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        flexWrap: 'wrap',
-                        gap: '0.65rem'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span>🔒</span>
-                          <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ef4444' }}>
-                            {isRTL ? 'الجيم مغلق اليوم الجمعة — يُنصح بنقل هذه الجلسة إلى الغد (السبت).' : 'Gym is closed today (Friday) — we recommend moving this session to Saturday.'}
-                          </span>
-                        </div>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={async () => {
-                            const sat = addDays(new Date(activeSession.date), 1);
-                            sat.setHours(18, 0, 0, 0);
-                            const dateStr = new Date(sat.getTime() - (sat.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
-                            await saveSession({ ...activeSession, date: dateStr });
-                            notify(isRTL ? 'تم نقل الجلسة إلى يوم السبت بنجاح!' : 'Session rescheduled to Saturday successfully!', 'success');
-                          }}
-                        >
+                      <div className="today-friday-notice">
+                        <span className="today-friday-notice-copy">
+                          <Moon size={15} aria-hidden="true" />
+                          {isRTL
+                            ? 'الجيم مغلق اليوم الجمعة — يُنصح بنقل هذه الجلسة إلى الغد (السبت).'
+                            : 'Gym is closed today (Friday) — we recommend moving this session to Saturday.'}
+                        </span>
+                        <Button variant="secondary" size="sm" onClick={() => void handleMoveToSaturday(activeSession)}>
                           {isRTL ? 'نقل للسبت' : 'Move to Saturday'}
                         </Button>
                       </div>
@@ -257,8 +386,10 @@ export function TodayView() {
 
                     <div className="today-active-heading">
                       <div>
-                        <h2 id="today-active-title">{tTitle(activeSession.title)}</h2>
-                        <p>{activeSession.type} · {formatDuration(activeSession.duration, language === 'ar' ? 'ar' : 'en-US')}</p>
+                        <h3>{commandHeading}</h3>
+                        <p>
+                          {activeSession.type} · {formatDuration(activeSession.duration, locale)}
+                        </p>
                       </div>
                       <div className="today-active-index" aria-label={isRTL ? 'عدد التمارين' : 'Exercise count'}>
                         <strong className="tabular-nums">{activeSession.exercises?.length || 0}</strong>
@@ -267,22 +398,26 @@ export function TodayView() {
                     </div>
 
                     <div className="today-exercise-list">
-                      {(activeSession.exercises || []).slice(0, 4).map((exercise, index) => (
+                      {(activeSession.exercises || []).slice(0, MAX_VISIBLE_EXERCISES).map((exercise, index) => (
                         <div className="today-exercise-row" key={exercise.id || `${exercise.name}-${index}`}>
                           <span className="today-exercise-number tabular-nums">{String(index + 1).padStart(2, '0')}</span>
                           <span className="today-exercise-name">{tExercise(exercise.name)}</span>
-                          <span className="today-exercise-meta tabular-nums">{exercise.sets?.length || 0} {isRTL ? 'جولات' : 'sets'}</span>
+                          <span className="today-exercise-meta tabular-nums">
+                            {exercise.sets?.length || 0} {isRTL ? 'جولات' : 'sets'}
+                          </span>
                         </div>
                       ))}
-                      {(activeSession.exercises?.length || 0) > 4 && (
-                        <span className="today-more-exercises">+{(activeSession.exercises?.length || 0) - 4} {isRTL ? 'تمارين أخرى' : 'more exercises'}</span>
+                      {(activeSession.exercises?.length || 0) > MAX_VISIBLE_EXERCISES && (
+                        <span className="today-more-exercises">
+                          +{(activeSession.exercises?.length || 0) - MAX_VISIBLE_EXERCISES} {isRTL ? 'تمارين أخرى' : 'more exercises'}
+                        </span>
                       )}
                     </div>
 
                     <div className="today-primary-row">
                       <Button
                         variant="primary"
-                        size="md"
+                        size="lg"
                         leftIcon={<Play width={16} height={16} fill="currentColor" />}
                         disabled={isFriday}
                         onClick={() => navigate(`/session/${activeSession.id}`)}
@@ -291,7 +426,8 @@ export function TodayView() {
                       </Button>
                       <Button
                         variant="secondary"
-                        size="md"
+                        size="lg"
+                        isLoading={isFinishing}
                         leftIcon={<Check width={16} height={16} />}
                         onClick={() => void handleCompleteSession(activeSession)}
                       >
@@ -300,178 +436,81 @@ export function TodayView() {
                     </div>
                   </>
                 ) : isDayCompleted ? (
-                  <motion.div 
-                    initial={{ opacity: 0, scale: 0.96 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="today-completed-celebration-hero"
-                    style={{
-                      background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.14) 0%, rgba(6, 182, 212, 0.08) 100%)',
-                      border: '1.5px solid rgba(16, 185, 129, 0.4)',
-                      borderRadius: '20px',
-                      padding: '1.5rem',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '1.25rem',
-                      boxShadow: '0 20px 45px -10px rgba(16, 185, 129, 0.22)'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <div style={{
-                          width: '46px',
-                          height: '46px',
-                          borderRadius: '14px',
-                          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                          color: '#ffffff',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          boxShadow: '0 0 20px rgba(16, 185, 129, 0.5)'
-                        }}>
-                          <Trophy width={24} height={24} />
-                        </div>
-                        <div>
-                          <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#34d399', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                            {isRTL ? 'إنجاز تدريب اليوم' : "TODAY'S MISSION COMPLETE"}
-                          </div>
-                          <h2 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                            {todayHistory[0]?.title || (isRTL ? 'تمرين مكتمل' : 'Workout Complete')}
-                          </h2>
-                        </div>
+                  <div className="today-celebration">
+                    <div className="today-surface-topline">
+                      <div className="today-celebration-heading">
+                        <span className="today-celebration-icon" aria-hidden="true">
+                          <Trophy size={20} />
+                        </span>
+                        <span className="today-celebration-kicker">
+                          {isRTL ? 'إنجاز تدريب اليوم' : "Today’s session is done"}
+                        </span>
                       </div>
-                      <span style={{
-                        padding: '0.35rem 0.75rem',
-                        borderRadius: '20px',
-                        background: 'rgba(16, 185, 129, 0.2)',
-                        color: '#10b981',
-                        fontSize: '0.8rem',
-                        fontWeight: 700,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.35rem'
-                      }}>
-                        <CheckCircle2 width={14} height={14} />
-                        {isRTL ? 'محفوظ في السجل' : 'Logged to History'}
+                      <span className="forma-badge" style={{ color: 'var(--color-success)', background: 'rgba(16,185,129,0.16)', borderColor: 'rgba(16,185,129,0.34)' }}>
+                        <CheckCircle2 size={13} aria-hidden="true" />
+                        {isRTL ? 'محفوظ في السجل' : 'Logged to history'}
                       </span>
                     </div>
 
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',
-                      gap: '0.75rem',
-                      background: 'rgba(0, 0, 0, 0.25)',
-                      padding: '0.85rem',
-                      borderRadius: '14px',
-                      border: '1px solid rgba(255, 255, 255, 0.05)'
-                    }}>
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.15rem' }}>
-                          {isRTL ? 'السعرات المحروقة' : 'Burned Calories'}
-                        </div>
-                        <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
-                          <Flame width={15} height={15} />
-                          <span>~{todayBurnedCalories} kcal</span>
-                        </div>
-                      </div>
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.15rem' }}>
-                          {isRTL ? 'التمارين المنجزة' : 'Exercises Done'}
-                        </div>
-                        <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#38bdf8', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
-                          <Dumbbell width={15} height={15} />
-                          <span>{todayHistory[0]?.snapshot?.exercises?.length || 0}</span>
-                        </div>
-                      </div>
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.15rem' }}>
-                          {isRTL ? 'الحالة' : 'Status'}
-                        </div>
-                        <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#10b981' }}>
-                          {isRTL ? '100% مكتمل' : '100% Done'}
-                        </div>
-                      </div>
-                    </div>
+                    <h3 className="today-celebration-title">{commandHeading}</h3>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                      <Button
-                        variant="primary"
-                        size="md"
-                        leftIcon={<History width={16} height={16} />}
-                        onClick={() => navigate('/plan?tab=workouts')}
-                        style={{ flex: 1, minWidth: '160px' }}
-                      >
-                        {isRTL ? 'عرض في سجل التمارين' : 'View in Workout History'}
+                    <dl className="today-celebration-grid">
+                      <div className="today-celebration-cell">
+                        <dt>{isRTL ? 'السعرات المحروقة' : 'Burned'}</dt>
+                        <dd style={{ color: 'var(--color-warning)' }}>
+                          <Flame size={14} aria-hidden="true" />
+                          <span className="tabular-nums">~{todayBurnedCalories} kcal</span>
+                        </dd>
+                      </div>
+                      <div className="today-celebration-cell">
+                        <dt>{isRTL ? 'التمارين المنجزة' : 'Exercises'}</dt>
+                        <dd style={{ color: 'var(--accent-cyan)' }}>
+                          <Dumbbell size={14} aria-hidden="true" />
+                          <span className="tabular-nums">{todayHistory[0]?.snapshot?.exercises?.length || 0}</span>
+                        </dd>
+                      </div>
+                      <div className="today-celebration-cell">
+                        <dt>{isRTL ? 'الحالة' : 'Status'}</dt>
+                        <dd style={{ color: 'var(--color-success)' }}>{isRTL ? 'مكتمل' : '100% done'}</dd>
+                      </div>
+                    </dl>
+
+                    <div className="today-primary-row">
+                      <Button variant="primary" size="md" leftIcon={<History width={16} height={16} />} onClick={() => navigate('/plan?tab=workouts')}>
+                        {isRTL ? 'عرض في السجل' : 'View in history'}
                       </Button>
-                      <Button
-                        variant="secondary"
-                        size="md"
-                        leftIcon={<Plus width={16} height={16} />}
-                        onClick={() => setIsQuickWorkoutOpen(true)}
-                        style={{ flex: 1, minWidth: '160px' }}
-                      >
-                        {isRTL ? 'تسجيل تمرين إضافي' : 'Log Extra Workout'}
+                      <Button variant="secondary" size="md" leftIcon={<Plus width={16} height={16} />} onClick={openQuickWorkout}>
+                        {isRTL ? 'تمرين إضافي' : 'Log extra workout'}
                       </Button>
                     </div>
-                  </motion.div>
+                  </div>
                 ) : (
                   <EmptyState
-                    icon={
-                      isFriday 
-                        ? <Moon width={24} height={24} style={{ color: '#38bdf8' }} /> 
-                        : <Sparkles width={24} height={24} />
-                    }
+                    className="today-empty-state"
+                    icon={isFriday ? <Moon size={22} aria-hidden="true" /> : <Sparkles size={22} aria-hidden="true" />}
                     title={
-                      isFriday 
-                        ? (isRTL ? 'اليوم الجمعة — الجيم مغلق (عطلة أسبوعية)' : 'Friday — Gym Closed (Weekly Off-Day)')
-                        : (isRTL ? 'لا يوجد تمرين مخطط اليوم' : 'No workout planned today')
+                      isFriday
+                        ? isRTL ? 'الجمعة — عطلة أسبوعية' : 'Friday — weekly off-day'
+                        : isRTL ? 'لا يوجد تمرين مخطط اليوم' : 'No workout planned today'
                     }
                     description={
-                      isFriday 
-                        ? (isRTL ? 'الجيم مغلق دائماً كل يوم جمعة. استغل اليوم للراحة التامة، تغذية العضلات، وإعادة شحن طاقتك.' : 'The gym is closed every Friday. Enjoy full rest, optimal nutrition, and recovery for upcoming sessions.')
-                        : (isRTL ? 'اختر روتيناً أو أضف جلسة عندما تكون مستعداً.' : 'Choose a routine or add a session when you are ready.')
+                      isFriday
+                        ? isRTL
+                          ? 'الجيم مغلق دائماً كل يوم جمعة. استغل اليوم للراحة التامة، تغذية العضلات، وإعادة شحن طاقتك.'
+                          : 'The gym is closed every Friday. Use it for full rest, proper nutrition, and recovery for the week ahead.'
+                        : isRTL
+                          ? 'اختر روتيناً أو أضف جلسة عندما تكون مستعداً.'
+                          : 'Pick a routine or schedule a session when you are ready to train.'
                     }
                     action={
-                      <div className="today-empty-actions flex flex-wrap gap-2.5 justify-center">
-                        {isFriday ? (
-                          <>
-                            <Button
-                              variant="primary"
-                              size="md"
-                              leftIcon={<CalendarDays width={16} height={16} />}
-                              onClick={() => navigate('/plan')}
-                            >
-                              {isRTL ? 'عرض جدول الأسبوع' : 'View Weekly Schedule'}
-                            </Button>
-                            <Button
-                              variant="secondary"
-                              size="md"
-                              leftIcon={<Dumbbell width={16} height={16} />}
-                              onClick={() => navigate('/routines')}
-                            >
-                              {isRTL ? 'استكشاف الجداول' : 'Browse Routines'}
-                            </Button>
-                          </>
-                        ) : (
-                          <>
-                            <Button
-                              variant="primary"
-                              size="md"
-                              leftIcon={<Dumbbell width={16} height={16} />}
-                              onClick={() => navigate('/routines')}
-                            >
-                              {isRTL ? 'اختر روتيناً' : 'Choose a routine'}
-                            </Button>
-                            <Button
-                              variant="secondary"
-                              size="md"
-                              leftIcon={<CalendarDays width={16} height={16} />}
-                              onClick={() => navigate('/plan')}
-                            >
-                              {isRTL ? 'أضف جلسة' : 'Add session'}
-                            </Button>
-                          </>
-                        )}
-                      </div>
+                      <Button variant="primary" size="md" leftIcon={<Dumbbell width={16} height={16} />} onClick={() => navigate(isFriday ? '/plan' : '/routines')}>
+                        {isFriday ? (isRTL ? 'عرض جدول الأسبوع' : 'View weekly schedule') : isRTL ? 'اختر روتيناً' : 'Choose a routine'}
+                      </Button>
+                    }
+                    secondaryAction={
+                      <Button variant="secondary" size="md" leftIcon={<CalendarDays width={16} height={16} />} onClick={() => navigate('/plan')}>
+                        {isRTL ? 'استكشاف الجداول' : 'Browse schedule'}
+                      </Button>
                     }
                   />
                 )}
@@ -480,87 +519,152 @@ export function TodayView() {
 
             <aside className="today-sessions-sidebar" aria-label={isRTL ? 'مسار الجلسات' : 'Sessions timeline'}>
               <div>
-                <div className="forma-section-heading today-queue-heading" style={{ marginTop: 0, marginBottom: '0.85rem' }}>
+                <div className="forma-section-heading today-queue-heading">
                   <div>
                     <span className="forma-section-kicker-text">{isRTL ? 'المسار الزمني' : 'Training line'}</span>
-                    <h2 style={{ fontSize: '1.05rem', margin: 0 }}>{isRTL ? 'جلسات اليوم' : 'Today’s sessions'}</h2>
+                    <h3>{isRTL ? 'جلسات اليوم' : 'Today’s sessions'}</h3>
                   </div>
-                  <span className="forma-count-label tabular-nums">{todaySessions.length} {isRTL ? 'مخطط' : 'planned'}</span>
+                  <span className="forma-count-label tabular-nums">
+                    {todaySessions.length} {isRTL ? 'مخطط' : 'planned'}
+                  </span>
                 </div>
 
                 <div className="today-session-line">
-                  {todaySessions.length > 1 && todaySessions.slice(1).map((session) => {
+                  {todaySessions.slice(1).map((session) => {
                     const status = deriveSessionStatus(session, data);
                     return (
-                      <button type="button" className="today-session-line-item" key={session.id} onClick={() => navigate(`/session/${session.id}`)}>
+                      <button
+                        type="button"
+                        className="today-session-line-item"
+                        key={session.id}
+                        onClick={() => navigate(`/session/${session.id}`)}
+                      >
                         <span className={`today-line-marker is-${status}`} aria-hidden="true" />
                         <span className="today-line-copy">
                           <strong>{tTitle(session.title)}</strong>
-                          <small>{formatDuration(session.duration, language === 'ar' ? 'ar' : 'en-US')} · {session.exercises?.length || 0} {isRTL ? 'تمارين' : 'exercises'}</small>
+                          <small>
+                            {formatDuration(session.duration, locale)} · {session.exercises?.length || 0} {isRTL ? 'تمارين' : 'exercises'}
+                          </small>
                         </span>
-                        <ArrowUpRight width={15} height={15} aria-hidden="true" />
+                        <ArrowUpRight width={15} height={15} style={{ transform: isRTL ? 'scaleX(-1)' : 'none' }} aria-hidden="true" />
                       </button>
                     );
                   })}
                   {todayHistory.map((record) => (
                     <div className="today-session-line-item is-complete" key={record.id}>
-                      <span className="today-line-marker is-completed" aria-hidden="true"><Check width={11} height={11} /></span>
+                      <span className="today-line-marker is-completed" aria-hidden="true">
+                        <Check width={11} height={11} />
+                      </span>
                       <span className="today-line-copy">
                         <strong>{tTitle(record.title)}</strong>
-                        <small>{isRTL ? 'تمت الجلسة' : 'Completed'} · {record.burnedCalories || 0} kcal</small>
+                        <small>
+                          {isRTL ? 'تمت الجلسة' : 'Completed'} · {record.burnedCalories || 0} kcal
+                        </small>
                       </span>
                     </div>
                   ))}
                   {todaySessions.length <= 1 && todayHistory.length === 0 && (
-                    <div className="today-line-empty">{isRTL ? 'ستظهر الجلسات والإنجازات هنا.' : 'Sessions and completed work will appear here.'}</div>
+                    <p className="today-line-empty">
+                      {isRTL ? 'ستظهر الجلسات والإنجازات هنا.' : 'Sessions and completed work will appear here.'}
+                    </p>
                   )}
                 </div>
               </div>
 
               <div className="today-mini-stats">
                 <MetricPair label={isRTL ? 'الحرق' : 'Burned'} value={todayBurnedCalories} unit="kcal" tone="emerald" />
-                <MetricPair label={isRTL ? 'المدة' : 'Planned'} value={todaySessions.reduce((sum, session) => sum + session.duration, 0)} unit={isRTL ? 'د' : 'min'} />
+                <MetricPair label={isRTL ? 'المدة' : 'Planned'} value={plannedMinutes} unit={isRTL ? 'د' : 'min'} />
               </div>
             </aside>
           </div>
         </section>
 
-        {/* Tier 2: Unified Muscle Recovery & Physical Readiness */}
-        <section className="today-recovery-section" id="today-muscle-hologram-section" aria-labelledby="today-recovery-title">
-          <div className="forma-section-kicker">
-            <span className="forma-section-line" style={{ background: '#bef264', boxShadow: '0 0 10px #bef264' }} />
-            <span id="today-recovery-title">{isRTL ? 'مؤشر الجاهزية واستشفاء العضلات' : 'Muscle Recovery & Physical Readiness'}</span>
-          </div>
+        <section className="today-tier today-tier-targets" aria-labelledby="today-targets-title">
+          <p className="today-tier-kicker" id="today-targets-title">
+            <span className="today-tier-kicker-line" aria-hidden="true" />
+            {isRTL ? 'مستهدف اليوم' : 'Today’s targets'}
+          </p>
+          <TodayBentoGrid
+            status={loading ? 'loading' : dashboardError ? 'error' : 'ready'}
+            errorMessage={dashboardError || undefined}
+            onRetry={() => {
+              setDashboardError(null);
+              setPanelError(null);
+              void forceRefresh();
+            }}
+            todayBurnedCalories={todayBurnedCalories}
+            calorieBurnTarget={500}
+            workoutMinutes={plannedMinutes}
+            workoutMinutesTarget={45}
+            todayWater={daily.waterMl}
+            waterGoal={daily.waterTargetMl}
+            todayCalories={todayCalories}
+            dailyCaloriesTarget={daily.nutritionGoals?.dailyCalories || 2154}
+            todayProtein={todayProtein}
+            dailyProteinTarget={daily.nutritionGoals?.dailyProtein || 162}
+            activeSession={activeSession}
+            recoveryScore={recoveryOverview.overallScore}
+            streakDays={streakDays}
+            history={data.history || []}
+            sessions={data.sessions || []}
+            isFriday={isFriday}
+            onLogWater={(amount) => void handleQuickWater(amount)}
+            onOpenQuickWorkout={openQuickWorkout}
+            onNavigatePlan={() => navigate('/plan')}
+            onNavigateNutrition={() => navigate('/nutrition?action=scan-meal')}
+            onScrollToHologram={() => {
+              document.getElementById('today-recovery')?.scrollIntoView({
+                behavior: reduceMotion ? 'auto' : 'smooth',
+                block: 'start',
+              });
+            }}
+          />
+        </section>
 
-          <div className="today-recovery-stack">
+        <section className="today-tier today-tier-recovery" id="today-recovery" aria-labelledby="today-recovery-title">
+          <p className="today-tier-kicker is-lime" id="today-recovery-title">
+            <span className="today-tier-kicker-line" aria-hidden="true" />
+            {isRTL ? 'الجاهزية واستشفاء العضلات' : 'Recovery & readiness'}
+          </p>
+
+          <div className={`today-recovery-stack ${completedTrainingRecords > 0 ? '' : 'is-stacked'}`.trim()}>
             {completedTrainingRecords > 0 ? (
               <>
                 <RecoveryCard
                   recovery={recoveryOverview}
                   onExploreMuscles={() => {
-                    document.getElementById('today-muscle-hologram-section')?.scrollIntoView({ behavior: 'smooth' });
+                    document.getElementById('today-muscle-hologram-section')?.scrollIntoView({
+                      behavior: reduceMotion ? 'auto' : 'smooth',
+                      block: 'center',
+                    });
                   }}
                 />
                 <MuscleRecoveryHeatmapWidget />
               </>
             ) : (
               <div className="today-recovery-empty" role="status">
-                <Moon width={20} height={20} />
+                <Moon size={20} aria-hidden="true" />
                 <div>
                   <strong>{isRTL ? 'لا توجد بيانات استشفاء بعد' : 'Recovery not logged yet'}</strong>
-                  <span>{isRTL ? 'أكمل جلسة تدريب لتظهر حالة العضلات الفعلية هنا.' : 'Complete a workout to see muscle recovery from your actual training history.'}</span>
+                  <span>
+                    {isRTL
+                      ? 'أكمل جلسة تدريب لتظهر حالة العضلات الفعلية هنا.'
+                      : 'Complete a workout to see muscle recovery from your actual training history.'}
+                  </span>
                 </div>
+                <Button variant="secondary" size="sm" leftIcon={<RotateCcw size={14} />} onClick={openQuickWorkout}>
+                  {isRTL ? 'ابدأ تمريناً' : 'Start a session'}
+                </Button>
               </div>
             )}
           </div>
         </section>
 
-        {/* Tier 3: Daily Fuel, Nutrition & Hydration */}
-        <section className="today-fuel-section" aria-labelledby="today-fuel-title">
-          <div className="forma-section-kicker">
-            <span className="forma-section-line" style={{ background: '#10b981', boxShadow: '0 0 10px #10b981' }} />
-            <span id="today-fuel-title">{isRTL ? 'الوقود اليومي والتغذية والترطيب' : 'Daily Fuel, Nutrition & Hydration'}</span>
-          </div>
+        <section className="today-tier today-tier-fuel" aria-labelledby="today-fuel-title">
+          <p className="today-tier-kicker is-emerald" id="today-fuel-title">
+            <span className="today-tier-kicker-line" aria-hidden="true" />
+            {isRTL ? 'الوقود اليومي' : 'Daily fuel'}
+          </p>
 
           <div className="today-fuel-grid">
             <div className="today-fuel-column">
@@ -584,6 +688,12 @@ export function TodayView() {
                 waterGoal={daily.waterTargetMl}
                 onLogWater={(amount) => void handleQuickWater(amount)}
                 onResetWater={() => void handleResetWater()}
+                status={hydrationError ? 'error' : 'ready'}
+                errorMessage={hydrationError || undefined}
+                onRetry={() => {
+                  setHydrationError(null);
+                  setPanelError(null);
+                }}
               />
             </div>
           </div>

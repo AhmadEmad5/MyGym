@@ -3,16 +3,267 @@
     display: flex;
     align-items: center;
     gap: 0.8rem;
+    flex-wrap: wrap;
     min-height: 5.2rem;
     padding: 1rem 1.1rem;
-    border: 1px solid var(--premium-line);
+    border: 1px solid var(--border-card);
     border-inline-start: 2px solid var(--text-muted);
-    border-radius: 0.75rem;
+    border-radius: var(--radius-md);
     color: var(--text-muted);
-    background: color-mix(in srgb, var(--bg-secondary) 60%, transparent);
+    background: color-mix(in srgb, var(--surface-card) 60%, transparent);
   }
 
-  .today-recovery-empty > div { display: grid; gap: 0.2rem; }
-  .today-recovery-empty strong { color: var(--text-primary); font-size: 0.8rem; }
-  .today-recovery-empty span { color: var(--text-secondary); font-size: 0.72rem; }
+  .today-recovery-empty > div {
+    display: grid;
+    flex: 1 1 14rem;
+    gap: 0.2rem;
+    min-width: 0;
+  }
+
+  .today-recovery-empty strong {
+    color: var(--text-primary);
+    font-size: 0.82rem;
+    font-weight: 750;
+  }
+
+  .today-recovery-empty span {
+    color: var(--text-secondary);
+    font-size: 0.74rem;
+    line-height: 1.45;
+  }
+
+  .today-recovery-score {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    margin-block: 0.25rem 0.85rem;
+  }
+
+  .today-recovery-score strong {
+    color: var(--text-primary);
+    font-size: clamp(2rem, 4vw, 2.4rem);
+    line-height: 1;
+    letter-spacing: -0.04em;
+    font-weight: 900;
+  }
+
+  .today-recovery-score span {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    font-weight: 750;
+  }
+
+  .today-recovery-tags {
+    display: flex;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .today-recovery-tags li {
+    padding: 0.28rem 0.6rem;
+    border: 1px solid color-mix(in srgb, currentColor 32%, transparent);
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, currentColor 9%, transparent);
+    color: var(--text-secondary);
+    font-size: 0.76rem;
+    font-weight: 700;
+  }
+
+  .today-recovery-error {
+    margin: 0.65rem 0 0;
+    padding: 0.5rem 0.65rem;
+    border: 1px solid rgba(239, 68, 68, 0.32);
+    border-radius: var(--radius-sm);
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--color-danger);
+    font-size: 0.75rem;
+    font-weight: 650;
+  }
+
+  /* Muscle readiness heatmap body figure stays legible at every breakpoint. */
+  .today-muscle-figure-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 0;
+  }
+
+  .today-muscle-map-figure {
+    position: relative;
+    inline-size: 100%;
+    max-inline-size: 12.5rem;
+    aspect-ratio: 200 / 500;
+    margin-inline: auto;
+  }
+
+  .today-muscle-map-figure svg {
+    inline-size: 100%;
+    block-size: 100%;
+    display: block;
+  }
+
+  .today-muscle-map-toggle {
+    display: flex;
+    gap: 0.3rem;
+    padding: 0.22rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--text-primary) 4%, transparent);
+    margin-block-end: 0.7rem;
+  }
+
+  .today-muscle-map-toggle button {
+    min-height: 2.1rem;
+    padding: 0.25rem 0.7rem;
+    border: 0;
+    border-radius: var(--radius-xs);
+    background: transparent;
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: 0.74rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .today-muscle-map-toggle button[aria-pressed='true'] {
+    background: var(--accent-cyan);
+    color: var(--text-inverted);
+  }
+
+  .today-muscle-legend {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-block-start: 0.5rem;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+  }
+
+  .today-muscle-legend > div {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .today-muscle-legend i {
+    inline-size: 7px;
+    block-size: 7px;
+    border-radius: var(--radius-full);
+  }
+
+  .today-muscle-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    padding: 0.95rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--text-primary) 3%, transparent);
+  }
+
+  .today-muscle-detail-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+
+  .today-muscle-detail-eyebrow {
+    display: block;
+    color: var(--text-muted);
+    font-size: 0.66rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .today-muscle-detail-name {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 1.1rem;
+    font-weight: 800;
+  }
+
+  .today-muscle-detail-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--text-muted);
+    font-size: 0.76rem;
+  }
+
+  .today-muscle-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-height: 2.4rem;
+    padding: 0.45rem 0.8rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--accent-cyan);
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .today-muscle-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin-block-end: 0.9rem;
+    padding: 0.55rem 0.8rem;
+    border: 1px solid color-mix(in srgb, var(--accent-lime) 26%, transparent);
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--accent-lime) 8%, transparent);
+    font-size: 0.76rem;
+  }
+
+  .today-muscle-banner > div:first-child {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--accent-lime);
+    font-weight: 750;
+  }
+
+  .today-muscle-banner-tags {
+    display: flex;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+  }
+
+  .today-muscle-banner-tags span {
+    padding: 0.18rem 0.5rem;
+    border: 1px solid color-mix(in srgb, var(--accent-lime) 30%, transparent);
+    border-radius: var(--radius-xs);
+    background: color-mix(in srgb, var(--accent-lime) 14%, transparent);
+    color: var(--accent-lime);
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .today-hydration-wave,
+    .today-hydration-bubble,
+    .today-hydration-liquid {
+      animation: none;
+      transition: none;
+    }
+  }
+
+  [data-motion='reduced'] .today-hydration-wave,
+  [data-motion='reduced'] .today-hydration-bubble,
+  [data-motion='reduced'] .today-hydration-liquid {
+    animation: none;
+    transition: none;
+  }
 }
