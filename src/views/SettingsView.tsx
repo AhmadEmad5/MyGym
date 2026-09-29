@@ -34,7 +34,7 @@ import { auth } from '../lib/firebase';
 import type { UserSettings } from '../lib/api';
 import { useData } from '../hooks/useData';
 import { useTranslation } from '../lib/i18n';
-import { isUserAdmin } from '../lib/adminAuth';
+import { useAdminStatus } from '../lib/useAdminStatus';
 import { notify } from '../lib/feedback';
 import {
   getNotificationPermissionStatus,
@@ -112,6 +112,7 @@ export function SettingsView() {
   const [testSent, setTestSent] = useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [confirm, setConfirm] = useState<ConfirmConfig | null>(null);
+  const { isAdmin } = useAdminStatus();
 
   useEffect(
     () => () => {
@@ -534,7 +535,7 @@ export function SettingsView() {
               }}
               onImport={() => fileInputRef.current?.click()}
               onStartTour={() => setIsOnboardingOpen(true)}
-              onOpenAdmin={isUserAdmin(data.user?.email) ? () => navigate('/admin/dashboard') : undefined}
+              onOpenAdmin={isAdmin ? () => navigate('/admin/dashboard') : undefined}
               importStatus={importStatus}
             />
           )}

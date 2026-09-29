@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { exportAthletesToCSV, type AthleteSummary } from '../lib/adminData';
-import { ADMIN_CREDENTIALS } from '../lib/adminAuth';
+import { getCurrentUserEmail } from '../lib/adminAuth';
 import { notify } from '../lib/feedback';
 import { useTranslation } from '../lib/i18n';
 import { AdminShell } from '../components/admin/AdminShell';
@@ -43,7 +43,7 @@ export function AdminDashboard({ onLogout }: { onLogout: () => Promise<void> }) 
   const downloadBackup = useCallback(() => {
     const payload = {
       exportedAt: new Date().toISOString(),
-      adminEmail: ADMIN_CREDENTIALS.email,
+      adminEmail: getCurrentUserEmail(),
       stats,
       athletes
     };
@@ -93,7 +93,7 @@ export function AdminDashboard({ onLogout }: { onLogout: () => Promise<void> }) 
         return (
           <GovernancePanel
             {...panel}
-            adminEmail={ADMIN_CREDENTIALS.email}
+            adminEmail={getCurrentUserEmail()}
             stats={stats}
             athletes={athletes}
             lastSyncedAt={lastSyncedAt}
@@ -129,7 +129,7 @@ export function AdminDashboard({ onLogout }: { onLogout: () => Promise<void> }) 
         status={status}
         stats={stats}
         athletes={athletes}
-        adminEmail={ADMIN_CREDENTIALS.email}
+        adminEmail={getCurrentUserEmail()}
         onSwitchToAthlete={() => navigate('/today')}
         onLogout={() => void onLogout()}
         onToggleLanguage={() => void setLanguage(isRTL ? 'en' : 'ar')}

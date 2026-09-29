@@ -132,14 +132,6 @@ export function AIWorkoutGeneratorModal({ isOpen, onClose, onRoutineScheduled }:
   };
 
   const handleGenerate = async () => {
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) {
-      setErrorMessage(isRTL ? 'مفتاح Gemini API غير مهيأ.' : 'Gemini API key is not configured in environment.');
-      return;
-    }
-
-    abortRef.current = false;
-    setWasAborted(false);
     setIsGenerating(true);
     setGenerationStage(0);
     setErrorMessage(null);

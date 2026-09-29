@@ -1,292 +1,296 @@
-# FORMA ⚡ Next-Gen Fitness, Bodybuilding & Nutrition Platform
+# FORMA
+
+**An AI-powered, cross-platform fitness companion with interactive 3D muscle biomechanics, computer-vision meal analytics, intelligent workout generation, and offline-first cloud sync.**
+
+FORMA tracks training, nutrition, recovery, and performance for athletes who want their data to be legible and fast — on a phone mid-set, and on a desktop for analysis.
 
 <p align="center">
-  <img src="public/favicon.svg" width="96" height="96" alt="FORMA Logo" />
-</p>
-
-<p align="center">
-  <strong>An AI-powered, cross-platform fitness companion with interactive 3D muscle biomechanics, computer vision meal analytics, intelligent workout generation, and offline-first cloud synchronization.</strong>
+  <img src="public/favicon.svg" width="80" height="80" alt="FORMA logo" />
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/React-18.3-61dafb?style=for-the-badge&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/TypeScript-5.5-3178c6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
-  <img src="https://img.shields.io/badge/Vite-5.4-646cff?style=for-the-badge&logo=vite&logoColor=white" alt="Vite" />
+  <img src="https://img.shields.io/badge/Vite-5.4-646cff?style=for-the-badge&logo=vitedotjs&logoColor=white" alt="Vite" />
   <img src="https://img.shields.io/badge/TailwindCSS-4.3-38bdf8?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind CSS" />
   <img src="https://img.shields.io/badge/Three.js-0.186-black?style=for-the-badge&logo=three.js&logoColor=white" alt="Three.js" />
-  <img src="https://img.shields.io/badge/Google_Gemini-2.0-orange?style=for-the-badge&logo=google&logoColor=white" alt="Gemini AI" />
-  <img src="https://img.shields.io/badge/Firebase-v12-ffca28?style=for-the-badge&logo=firebase&logoColor=black" alt="Firebase" />
-  <img src="https://img.shields.io/badge/Platforms-Web_|_iOS_|_Android_|_Desktop-blueviolet?style=for-the-badge" alt="Cross Platform" />
+  <img src="https://img.shields.io/badge/Firebase-12-ffca28?style=for-the-badge&logo=firebase&logoColor=black" alt="Firebase" />
+  <img src="https://img.shields.io/badge/Platforms-Web%20%7C%20iOS%20%7C%20Android%20%7C%20Desktop-blueviolet?style=for-the-badge" alt="Cross platform" />
 </p>
 
 ---
 
-## 📖 Table of Contents
+## Table of contents
 
-- [Overview](#-overview)
-- [Key Features](#-key-features)
-- [Technology Stack](#️-technology-stack)
-- [Architecture & Folder Structure](#-architecture--folder-structure)
-- [Security & DevSecOps Hardening](#-security--devsecops-hardening)
-- [Quick Start & Local Setup](#-quick-start--local-setup)
-- [Environment Configuration](#-environment-configuration)
-- [Cross-Platform Builds](#-cross-platform-builds)
-- [Available Scripts](#-available-scripts)
-- [Internationalization (i18n & RTL)](#-internationalization-i18n--rtl)
-
----
-
-## ⚡ Overview
-
-**FORMA** (formerly *MyGym*) is a high-performance, sports-science backed fitness application engineered for athletes, bodybuilders, and fitness enthusiasts. It bridges real-time exercise telemetry with advanced generative AI and 3D computer graphics to deliver:
-
-1. **Intelligent Hypertrophy & Strength Workouts**: Adaptive split routines customized by experience, recovery state, and available equipment.
-2. **Biomechanical 3D Visualizer**: Real-time 3D muscle activation holograms powered by Three.js and WebGL.
-3. **AI Vision Nutrition**: Real-time camera food identification and macronutrient breakdown utilizing Google Gemini Multimodal Vision.
-4. **Unified Cross-Platform Experience**: Runs identically as a Progressive Web App (PWA), native iOS/Android mobile apps via Capacitor, and native desktop executables via Electron.
+- [Overview](#overview)
+- [Features](#features)
+- [Tech stack](#tech-stack)
+- [Quick start](#quick-start)
+- [Environment configuration](#environment-configuration)
+- [Security model](#security-model)
+- [Deployment](#deployment)
+- [Architecture](#architecture)
+- [Cross-platform builds](#cross-platform-builds)
+- [Scripts](#scripts)
+- [Internationalization](#internationalization)
+- [Known issues](#known-issues)
+- [Contributing](#contributing)
 
 ---
 
-## ✨ Key Features
+## Overview
 
-### 🏋️‍♂️ Smart Workout Engine & Live HUD
-- **AI Workout Generator**: Generate comprehensive personalized routines in seconds powered by Google Gemini.
-- **Dynamic Live Workout Bar**: Tracks elapsed time, rest intervals, active set telemetry, and 1RM estimations during training.
-- **Exercise Library & 3D Motion Guides**: 500+ curated movements with primary/secondary muscle highlights, step-by-step form cues, and video references.
-- **Warmup & Plate Calculators**: Automated barbell load calculations and progressive warm-up sets based on target working weights.
+FORMA is a sports-science-backed training app built around three ideas:
 
-### 🥩 AI Meal Vision & Nutrition Tracking
-- **Multimodal Meal Scanner**: Take a picture of your plate to detect food items, estimated gram weights, and calories/protein/carbs/fat ratios.
-- **TDEE & Macro Architect**: Calculates Basal Metabolic Rate (BMR) and Total Daily Energy Expenditure (TDEE) based on body composition.
-- **Hydration Wave Card**: Interactive water tracking with animated hydration levels and smart daily targets.
+1. **The in-session HUD comes first.** Logging a set must be possible one-handed, mid-workout, without navigating away or mis-tapping.
+2. **Progress should be legible at a glance.** Recovery, macro budget, and training load are designed to be read in a second, not studied.
+3. **Data belongs to the athlete.** Every user's records are isolated by Firestore security rules, with admin access gated on a cryptographically signed custom claim.
 
-### 🧬 Recovery, Biomechanics & 3D Anatomy
-- **Interactive 3D Muscle Hologram**: Interactive WebGL mesh viewer highlighting agonist, antagonist, and synergist muscles.
-- **Muscle Recovery Heatmap**: Muscle fatigue tracking that estimates systemic and localized recovery status based on training recency.
-- **Athletic Power Radar**: Multi-axis performance chart mapping strength, consistency, volume capacity, recovery, and metabolic conditioning.
-
-### 🎵 In-App Gym Audio & Workout Music Player
-- **Integrated Music Widget**: Built-in workout soundscapes and ambient gym tracks with zero background disruption.
-- **Local Audio Uploads**: Add personal audio files with safe client-side validation and responsive media playback controls.
-- **Haptic Audio Feedback**: Synthesized cues and sound effects for rest-timer completions and workout milestones.
-
-### 🌐 Dual-Language Support (English & Arabic RTL)
-- Seamless dynamic switching between **English (LTR)** and **Arabic (RTL)** with layout flipping and localized typography.
+It ships as an installable PWA, native iOS and Android apps via Capacitor, and a desktop application via Electron.
 
 ---
 
-## 🛠️ Technology Stack
+## Features
 
-| Domain | Frameworks & Libraries |
-| :--- | :--- |
-| **Core Frontend** | [React 18](https://react.dev/), [TypeScript 5.5](https://www.typescriptlang.org/), [Vite 5.4](https://vitejs.dev/) |
-| **Styling & Motion** | [Tailwind CSS v4](https://tailwindcss.com/), [Framer Motion 13](https://www.framer.com/motion/), [Lucide React](https://lucide.dev/) |
-| **3D Rendering & Canvas** | [Three.js](https://threejs.org/) (WebGL rendering, materials, orbital controls) |
-| **AI & Multimodal Intelligence**| [@google/genai](https://www.npmjs.com/package/@google/genai) (Google Gemini API: Multimodal Vision, Structured JSON) |
-| **Backend & Realtime Data** | [Firebase v12](https://firebase.google.com/) (Cloud Firestore, Firebase Authentication, Firebase Hosting) |
-| **Mobile Runtime** | [Capacitor 8](https://capacitorjs.com/) (iOS & Android native bindings, native storage, haptics) |
-| **Desktop Runtime** | [Electron 32](https://www.electronjs.org/) (Windows/macOS native window container) |
-| **Offline & PWA** | [vite-plugin-pwa](https://vite-pwa-org.netlify.app/), Workbox Service Worker caching |
-| **Data & Date Utilities** | [date-fns](https://date-fns.org/), [clsx](https://github.com/lukeed/clsx), [tailwind-merge](https://github.com/dcastil/tailwind-merge) |
+### Training
+
+- **One-thumb workout HUD** — large set checklist, fast numeric keypad with unit toggle, and a rest timer with real pause/resume.
+- **AI workout generation** — personalised splits from Google Gemini, adapted for equipment, experience, and current recovery.
+- **Program builder** — drag-to-reorder exercises and sets with full keyboard equivalents, optimistic saving, and visible unsaved state.
+- **Live telemetry** — elapsed time, rest intervals, set volume, and estimated 1RM during training.
+- **Exercise library** — 500+ movements with primary/secondary muscle attribution, form cues, and video references.
+- **Load calculators** — barbell plate loading and progressive warm-up sets from a target working weight.
+
+### Nutrition
+
+- **Camera meal scanner** — photograph a plate for calorie and macro estimation via Gemini vision, with a review-and-correct step before logging.
+- **Macro budget** — calories remaining as the hero number, with protein/carbs/fat as a single glanceable breakdown.
+- **Barcode scanner** — scan packaged food for instant macro entry.
+- **TDEE and macro targets** — BMR/TDEE from body composition, unit-aware entry (g/oz, kcal/kJ).
+- **Hydration tracking** with daily targets.
+
+### Performance and recovery
+
+- **Athletic power radar** — multi-axis view of strength, consistency, volume capacity, recovery, and conditioning, each with a screen-reader equivalent.
+- **Muscle recovery heatmap** — per-muscle fatigue estimated from training recency.
+- **Progress charts** — volume, bodyweight, and estimated 1RM over time, with table fallbacks for every visualisation.
+
+### 3D biomechanics
+
+- **Interactive muscle hologram** — WebGL mesh highlighting agonists, antagonists, and synergists.
+- **Motion simulator and 3D exercise viewer** with graceful non-WebGL and reduced-motion fallbacks.
+- **Muscle map** — tap any muscle to see its role in a movement.
+
+### Platform
+
+- **8 themes** — dark, light, midnight, neon, ocean, forest, sunset, paper.
+- **Bilingual English / Arabic with full RTL mirroring**, using logical CSS properties throughout.
+- **Offline-first PWA** with service-worker precaching and stale-chunk recovery.
+- **Accessibility** — reduced-motion honoured from both the OS and the in-app setting, focus-visible rings on interactive primitives, and keyboard paths for every drag interaction.
+- **Density and motion preferences** applied via `data-density` / `data-motion` on the document root.
 
 ---
 
-## 📂 Architecture & Folder Structure
+## Tech stack
+
+| Domain | Choice |
+| --- | --- |
+| Core | React 18, TypeScript 5.5, Vite 5.4 |
+| Styling & motion | Tailwind CSS v4, CSS custom-property design tokens, Framer Motion 13, Lucide React |
+| 3D | Three.js 0.186 (WebGL) |
+| AI | Google Gemini via `@google/genai`, proxied through Cloud Functions |
+| Backend | Firebase 12 — Firestore, Authentication, Storage, Cloud Functions |
+| Mobile | Capacitor 8 (iOS, Android) |
+| Desktop | Electron 32 |
+| PWA | `vite-plugin-pwa` with Workbox |
+| Utilities | date-fns, clsx, tailwind-merge |
+
+---
+
+## Quick start
+
+**Prerequisites:** Node.js 20+ (developed on 24.x) and npm 10+.
+
+```bash
+git clone https://github.com/AhmadEmad5/MyGym.git
+cd MyGym
+npm install
+cp .env.example .env      # then fill in your values
+npm run dev
+```
+
+The dev server runs on **http://localhost:1420** (not 5173 — the port is pinned in `vite.config.ts`).
+
+---
+
+## Environment configuration
+
+Copy `.env.example` to `.env`. **`.env` is gitignored and must never be committed.**
+
+```bash
+# Firebase client config — from Console > Project Settings
+# These are public-by-design: they are protected by Firestore rules, not by secrecy.
+VITE_FIREBASE_API_KEY=""
+VITE_FIREBASE_AUTH_DOMAIN=""
+VITE_FIREBASE_PROJECT_ID=""
+VITE_FIREBASE_STORAGE_BUCKET=""
+VITE_FIREBASE_MESSAGING_SENDER_ID=""
+VITE_FIREBASE_APP_ID=""
+
+# Admin identity — the EMAIL is public; the password is NOT used client-side.
+# Admin authority is granted via a signed Firestore custom claim, not a client check.
+VITE_ADMIN_EMAIL="admin@example.com"
+
+# Gemini — SERVER SIDE ONLY. Never prefix a secret with VITE_.
+# Set this as a Functions secret, not in the client .env:
+#   firebase functions:secrets:set GEMINI_API_KEY
+GEMINI_API_KEY=""
+```
+
+> **The `VITE_` prefix is not cosmetic.** Vite inlines every `VITE_`-prefixed variable into the shipped JavaScript bundle. Anything named that way is public the moment the app is deployed, regardless of `.gitignore`. See [Security model](#security-model).
+
+---
+
+## Security model
+
+FORMA treats the client bundle as **fully public**. There is no secret in it.
+
+**What is protected and how**
+
+| Asset | Protection |
+| --- | --- |
+| User records (sessions, meals, routines, history, body metrics) | Firestore rules isolate by owner: `allow read, write: if isOwner(userId)` |
+| Admin data access | A signed Firebase Auth custom claim — `request.auth.token.get('admin', false) == true`. Cannot be forged client-side. |
+| Gemini API key | Held server-side in Cloud Functions; the client calls a callable function that authenticates the caller first. |
+| Admin password | **Not used in the client at all.** Authentication is claim-based. |
+| Firebase web config | Public by design; security comes from rules, not from hiding the key. |
+| File uploads | Client-side size and MIME validation (`src/lib/fileValidation.ts`), plus Storage rules. |
+
+**Rules of thumb for contributors**
+
+- Never read a secret from `import.meta.env`. If it must be a secret, it does not belong in the client.
+- Never compare passwords in the browser. Use Firebase Auth and claims.
+- Never add a `VITE_` prefix to anything confidential.
+- Verify after building:
+
+  ```bash
+  npm run build
+  # then confirm your secret is not in the output
+  grep -rl "YOUR_SECRET_VALUE" dist/assets/
+  ```
+
+- Response headers (CSP, HSTS, `X-Frame-Options`, `Permissions-Policy`) are set in `firebase.json` and applied on every deploy.
+
+---
+
+## Deployment
+
+Deploy **hosting only** unless you intend to change rules or functions:
+
+```bash
+npm run build
+firebase deploy --only hosting
+```
+
+Running a bare `firebase deploy` also pushes `firestore.rules`, `storage.rules`, and the Cloud Functions code. Those are production access-control rules — review them deliberately before deploying them.
+
+A previous deployment can be restored with `firebase hosting:rollback`.
+
+---
+
+## Architecture
 
 ```
 MyGym/
-├── .github/
-│   └── workflows/
-│       └── ci-security.yml       # Automated GitHub Actions type-check & build gate
-├── android/                      # Native Android project generated by Capacitor
-├── ios/                          # Native iOS project generated by Capacitor
-├── electron/
-│   ├── main.js                   # Electron main process lifecycle & native window
-│   └── preload.js                # Context bridge & secure IPC handlers
-├── public/                       # Static public assets (3D GLTF models, audio, icons)
-│   ├── models/                   # 3D anatomy and muscle meshes
-│   ├── music/                    # In-app background soundtrack stems
-│   └── manifest.webmanifest      # PWA application metadata
+├── functions/                 # Cloud Functions — Gemini proxy, server-side secrets
 ├── src/
-│   ├── app/                      # Application routes & configuration
-│   ├── components/               # Modular UI components
-│   │   ├── ui/                   # Reusable atomic design system (Buttons, Cards, Badges)
-│   │   ├── layout/               # Navigation bar, headers, shells
-│   │   ├── performance/          # Radar charts, recovery heatmaps, activity rings
-│   │   ├── AIMealVisionModal.tsx # Camera & image upload scanner for Gemini
-│   │   ├── AIWorkoutGeneratorModal.tsx # Prompt-to-workout generator
-│   │   ├── ExerciseMuscleHologram.tsx  # Three.js 3D muscle render widget
-│   │   └── NowPlayingMusicWidget.tsx   # Floating interactive music player
-│   ├── context/                  # Global Context Providers (MusicPlayerContext, etc.)
-│   ├── hooks/                    # Custom React hooks (useAI, useData, useActiveCardio)
-│   ├── lib/                      # Core business logic & SDK integrations
-│   │   ├── adminAuth.ts          # Admin session management & credentials handling
-│   │   ├── api.ts                # Firestore repository, DTO mappings & transformers
-│   │   ├── audio.ts              # Web Audio API procedural sound synthesizer & haptics
-│   │   ├── fileValidation.ts     # OWASP client-side upload & MIME validation
-│   │   ├── firebase.ts           # Firebase App, Auth, and Firestore initialization
-│   │   ├── gemini.ts             # Google GenAI SDK client & prompt contracts
-│   │   ├── i18n.tsx              # Bilingual translation dictionaries & RTL controller
-│   │   └── recovery.ts           # Muscle fatigue calculations & algorithms
-│   ├── views/                    # Primary top-level screen views
-│   │   ├── TodayView.tsx         # Dashboard, active session, quick metrics
-│   │   ├── RoutinesView.tsx      # Training split builder and routine organizer
-│   │   ├── SessionDetailView.tsx # Live workout session execution HUD
-│   │   ├── NutritionView.tsx     # Meal diary, TDEE calculator, camera vision
-│   │   ├── CalendarView.tsx      # Workout history & frequency heatmaps
-│   │   ├── PerformanceHubView.tsx# Analytics, 1RM progression, recovery scores
-│   │   └── SettingsView.tsx      # Language, theme, units, cloud backup
-│   ├── App.tsx                   # Main route switchboard & modal providers
-│   ├── main.tsx                  # React DOM root entrypoint
-│   └── index.css                 # Global Tailwind design tokens & utility styles
-├── .env.example                  # Sanitized template for environment variables
-├── capacitor.config.ts           # Capacitor mobile runtime configuration
-├── firebase.json                 # Firebase Hosting configuration & CSP security headers
-├── firestore.rules               # Production Firestore Security Rules (RBAC & constraints)
-├── package.json                  # Dependencies & execution scripts
-└── vite.config.ts                # Vite bundler, PWA, and code-splitting configuration
+│   ├── app/                   # Routes, route metadata, app shell
+│   ├── components/
+│   │   ├── ui/                # Design-system primitives (Button, Card, Modal, Input…)
+│   │   ├── primitives/        # Small single-purpose primitives
+│   │   ├── layout/            # Page frame, route transitions, nav rail
+│   │   ├── performance/       # Chart and table chrome, shared hooks
+│   │   ├── routines/          # Program builder, schedule modal, calendar
+│   │   ├── admin/             # Admin dashboard sub-components and data hook
+│   │   └── mobile/            # Mobile-specific widgets
+│   ├── context/               # React context providers
+│   ├── hooks/                 # Shared hooks (useData, useAI, timers)
+│   ├── lib/                   # Firebase, Gemini client, formatters, recovery math
+│   ├── styles/                # Design tokens and feature stylesheets
+│   ├── types/                 # Shared TypeScript types
+│   └── views/                 # Top-level screens
+├── electron/                  # Desktop main and preload
+├── firestore.rules            # Production rules (RBAC + structural validation)
+├── storage.rules              # Storage rules
+├── firebase.json              # Hosting, headers, CSP
+└── vite.config.ts             # PWA, code-splitting, dev server
 ```
 
----
-
-## 🔒 Security & DevSecOps Hardening
-
-The codebase complies with rigorous DevSecOps and OWASP standards:
-
-1. **Firestore Role-Based Security Rules (`firestore.rules`)**:
-   - Enforces strict user isolation: `allow read, write: if isOwner(userId)`.
-   - Prevents Broken Object-Level Authorization (BOLA): Administrative access requires a cryptographically verified custom claim (`request.auth.token.get('admin', false) == true`).
-   - Deep structural validation of all incoming documents (lengths, types, permitted keys).
-
-2. **Secrets Hygiene**:
-   - Hardened `.gitignore` excludes `.env*`, mobile keystores, and private certificates.
-   - Client code (`src/lib/adminAuth.ts`) does not contain hardcoded plaintext credentials.
-
-3. **Content Security Policy (`firebase.json`)**:
-   - Strict `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, and `HSTS` preloading.
-   - Tight CSP restricting origins to trusted Google Firebase and Gemini endpoints, with explicit `object-src 'none'` and `base-uri 'self'`.
-
-4. **Client-Side File Upload Guard (`src/lib/fileValidation.ts`)**:
-   - File size limits (12MB max for images, 50MB max for audio) and strict MIME-type checking prevent client memory exhaustion, unhandled exceptions, and UI thread blocking.
+**Design system.** Tokens live in `src/styles/design-tokens.css` and are consumed through `var()`. Themes redefine the token set rather than hardcoding colours. Use logical CSS properties (`margin-inline`, `inset-inline-start`, `padding-block`) so the Arabic RTL layout mirrors without special cases.
 
 ---
 
-## 🚀 Quick Start & Local Setup
+## Cross-platform builds
 
-### Prerequisites
-- [Node.js](https://nodejs.org/) (version **18.x** or **20.x** recommended)
-- `npm` (version 9+ or 10+)
-- A [Firebase Project](https://console.firebase.google.com/) with Cloud Firestore and Authentication enabled.
-- A [Google Gemini API Key](https://aistudio.google.com/) for AI features.
-
-### Installation
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/your-username/MyGym.git
-   cd MyGym
-   ```
-
-2. **Install project dependencies:**
-   ```bash
-   npm install
-   ```
-
-3. **Setup environment variables:**
-   ```bash
-   cp .env.example .env
-   ```
-   Open `.env` and fill in your Firebase and Gemini API credentials (see [Environment Configuration](#-environment-configuration)).
-
-4. **Start the local Vite development server:**
-   ```bash
-   npm run dev
-   ```
-   Open [http://localhost:5173](http://localhost:5173) in your browser.
-
----
-
-## 🔑 Environment Configuration
-
-Configure your `.env` based on `.env.example`:
-
-```env
-# Firebase Client Configuration (From Firebase Console > Project Settings)
-VITE_FIREBASE_API_KEY="AIzaSy..."
-VITE_FIREBASE_AUTH_DOMAIN="your-project-id.firebaseapp.com"
-VITE_FIREBASE_PROJECT_ID="your-project-id"
-VITE_FIREBASE_STORAGE_BUCKET="your-project-id.appspot.com"
-VITE_FIREBASE_MESSAGING_SENDER_ID="123456789012"
-VITE_FIREBASE_APP_ID="1:123456789012:web:abcdef..."
-VITE_FIREBASE_MEASUREMENT_ID="G-XXXXXXXXXX"
-
-# Google Gemini API Key (From Google AI Studio)
-VITE_GEMINI_API_KEY="AIzaSy..."
-
-# Administrator Account Email (Optional override)
-VITE_ADMIN_EMAIL="admin@yourgym.com"
-```
-
----
-
-## 📱 Cross-Platform Builds
-
-### 1. Progressive Web App (PWA)
-The app is configured as a fully offline-capable PWA with automatic service-worker updates.
+**PWA**
 ```bash
-npm run build
-npm run preview
+npm run build && npm run preview
 ```
 
-### 2. Desktop Application (Electron)
-Run FORMA inside an Electron desktop window:
+**Desktop (Electron)**
 ```bash
-# Development mode (concurrently runs Vite dev server and Electron)
-npm run electron:dev
-
-# Run Electron against existing build
-npm run electron:start
+npm run electron:dev     # Vite + Electron together
+npm run electron:start   # Electron against an existing build
 ```
 
-### 3. Mobile Applications (iOS & Android via Capacitor)
+**Mobile (Capacitor)**
 ```bash
-# 1. Build web distribution and sync assets with native projects
-npm run build:mobile
-
-# 2. Open native IDEs
-npx cap open android    # Opens Android Studio
-npx cap open ios        # Opens Xcode (macOS only)
+npm run build:mobile     # build + npx cap sync
+npx cap open android     # Android Studio
+npx cap open ios         # Xcode (macOS)
 ```
 
 ---
 
-## 📜 Available Scripts
+## Scripts
 
 | Command | Purpose |
-| :--- | :--- |
-| `npm run dev` | Starts Vite local development server with HMR. |
-| `npm run typecheck` | Runs TypeScript compiler (`tsc --noEmit`) to verify types. |
-| `npm run build` | Runs type-checking and produces optimized production bundles in `dist/`. |
-| `npm run build:mobile` | Runs production build and synchronizes assets with Capacitor iOS/Android. |
-| `npm run cap:sync` | Syncs plugins and web assets into native mobile directories. |
-| `npm run preview` | Serves the production build locally for testing. |
-| `npm run electron:dev` | Concurrently launches Vite dev server and the Electron desktop window. |
-| `npm run electron:start` | Launches the Electron desktop shell. |
+| --- | --- |
+| `npm run dev` | Vite dev server with HMR on port 1420 |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm run build` | Type-check and produce an optimised build in `dist/` |
+| `npm run build:mobile` | Production build and Capacitor sync |
+| `npm run cap:sync` | Sync web assets into the native projects |
+| `npm run preview` | Serve the production build locally |
+| `npm run electron:dev` | Vite and Electron together |
+| `npm run electron:start` | Launch the desktop shell |
 
 ---
 
-## 🌍 Internationalization (i18n & RTL)
+## Internationalization
 
-FORMA features a built-in localization engine ([`src/lib/i18n.tsx`](file:///c:/Users/ahmad/OneDrive/Desktop/Projects/MyGym/src/lib/i18n.tsx)):
-
-- **Languages Supported**:
-  - 🇺🇸 **English** (`en`) — Left-to-Right (LTR)
-  - 🇸🇦 **العربية (Arabic)** (`ar`) — Right-to-Left (RTL)
-- **Automatic Direction Flipping**: Switching languages automatically updates the `dir="rtl"` or `dir="ltr"` attribute on `document.documentElement`, mirroring grids, navigations, cards, and animations without CSS breakage.
-- **Persistence**: Language selection is saved to `localStorage` and synchronized with user cloud profiles.
+English and Arabic, switchable at runtime and persisted per user. Switching sets `dir="rtl"` on the document root; because the layout is built on logical properties, mirroring is automatic. New UI must use logical properties and add strings to `src/lib/i18n.tsx` rather than inlining ternaries.
 
 ---
 
-<p align="center">
-  Crafted with passion for athletic excellence and high-performance software engineering. 🏋️‍♂️⚡
-</p>
+## Known issues
+
+- **Multi-session programs lose sessions on save.** `Routine` has no `sessions` field, so only the first session of a program is persisted. The lossless converter (`draftToPredefinedRoutine`) exists but has nothing to write into. Fixing the write path alone would not be user-visible, because the read path would still return one session — this needs a `Routine` contract change.
+- **Plate and warmup calculators are not wired in.** The components were removed as unreachable; if the calculators are wanted, they need a host in the session flow.
+- **`--radius-*` is defined in two files** (`index.css` in `rem`, `design-tokens.css` in `px`). Import order decides the winner. Consolidate to one.
+
+---
+
+## Contributing
+
+1. Branch from `main`.
+2. Run `npm run typecheck` and `npm run build` before opening a PR.
+3. Keep new UI on the design tokens — no hardcoded colours in components.
+4. Honour reduced motion from both the OS media query and the in-app `data-motion` setting.
+5. Never commit secrets, and never introduce a `VITE_`-prefixed secret.
+
+---
+
+## License
+
+See [LICENSE](./LICENSE).

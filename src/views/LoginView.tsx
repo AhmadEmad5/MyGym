@@ -36,7 +36,7 @@ import {
 } from 'firebase/auth';
 import { notify } from '../lib/feedback';
 import { Button } from '../components/ui/Button';
-import { isUserAdmin, ADMIN_CREDENTIALS } from '../lib/adminAuth';
+import { isUserAdmin } from '../lib/adminAuth';
 
 type LoginProps = {
   onLogin: (user?: { email: string; name: string; isAdmin?: boolean }) => Promise<void> | void;
@@ -342,55 +342,34 @@ export function LoginView({ onLogin }: LoginProps) {
 
     try {
       const userEmail = email.trim();
-      const isAdmin = isUserAdmin(userEmail);
 
       if (mode === 'signin') {
         let displayName = userEmail.split('@')[0] || 'Athlete';
-
-        if (isAdmin) {
-          if (password !== ADMIN_CREDENTIALS.password) {
-            failWith(copy.genericError);
-            return;
-          }
-
-          if (auth) {
-            try {
-              await setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence);
-              const cred = await signInWithEmailAndPassword(auth, userEmail, password);
-              displayName = cred.user?.displayName || 'Admin';
-            } catch (authErr: unknown) {
-              if ((authErr as { code?: string })?.code === 'auth/user-not-found' || (authErr as { code?: string })?.code === 'auth/invalid-credential') {
-                try {
-                  const newCred = await createUserWithEmailAndPassword(auth, userEmail, password);
-                  displayName = newCred.user?.displayName || 'Admin';
-                } catch {
-                  displayName = 'Admin';
-                }
-              } else {
-                displayName = 'Admin';
-              }
-            }
-          }
-
-          await onLogin({ email: userEmail, name: displayName || 'Admin', isAdmin: true });
-          notify(isRTL ? 'مرحباً بك في لوحة التحكم.' : 'Welcome to Admin Dashboard.', 'success');
-          return;
-        }
+        let isAdmin = false;
 
         if (auth) {
-          await setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence);
-          const cred = await signInWithEmailAndPassword(auth, userEmail, password);
-          displayName = cred.user?.displayName || displayName;
+          let signedInUser = auth.currentUser;
+          try {
+            await setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence);
+            const cred = await signInWithEmailAndPassword(auth, userEmail, password);
+            signedInUser = cred.user;
+            displayName = cred.user?.displayName || displayName;
+          } catch (authErr: unknown) {
+            failWith(authError(authErr, isRTL, mode) ?? copy.genericError);
+            return;
+          }
+          isAdmin = await isUserAdmin(signedInUser, true);
         }
-        await onLogin({ email: userEmail, name: displayName, isAdmin: false });
-        notify(isRTL ? 'مرحباً بك مجدداً في FORMA.' : 'Welcome back to FORMA.', 'success');
+
+        await onLogin({ email: userEmail, name: displayName, isAdmin });
+        notify(
+          isAdmin
+            ? (isRTL ? 'مرحباً بك في لوحة التحكم.' : 'Welcome to Admin Dashboard.')
+            : (isRTL ? 'مرحباً بك مجدداً في FORMA.' : 'Welcome back to FORMA.'),
+          'success'
+        );
       } else {
         let displayName = name.trim() || 'Athlete';
-
-        if (isAdmin && password !== ADMIN_CREDENTIALS.password) {
-          failWith(copy.genericError);
-          return;
-        }
 
         if (auth) {
           await setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence);
@@ -400,7 +379,8 @@ export function LoginView({ onLogin }: LoginProps) {
           }
           displayName = cred.user?.displayName || displayName;
         }
-        await onLogin({ email: userEmail, name: displayName, isAdmin });
+        const signupIsAdmin = await isUserAdmin();
+        await onLogin({ email: userEmail, name: displayName, isAdmin: signupIsAdmin });
         notify(isRTL ? 'تم إنشاء الحساب بنجاح! مرحباً بك في FORMA ⚡' : 'Account created successfully! Welcome to FORMA ⚡', 'success');
       }
     } catch (error) {
@@ -446,10 +426,11 @@ export function LoginView({ onLogin }: LoginProps) {
           userEmail = cred.user.email || userEmail;
           userName = cred.user.displayName || userName;
         }
+        const isAdmin = await isUserAdmin(cred.user, true);
+        await onLogin({ email: userEmail, name: userName, isAdmin });
+      } else {
+        await onLogin({ email: userEmail, name: userName, isAdmin: false });
       }
-
-      const isAdmin = isUserAdmin(userEmail);
-      await onLogin({ email: userEmail, name: userName, isAdmin });
       notify(isRTL ? `تم تسجيل الدخول عبر ${provider === 'google' ? 'Google' : 'Apple'}.` : `Signed in with ${provider === 'google' ? 'Google' : 'Apple'}.`, 'success');
     } catch (error) {
       const message = authError(error, isRTL, mode);

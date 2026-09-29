@@ -81,14 +81,6 @@ export function WeeklyCoachDigestModal({ isOpen, onClose }: WeeklyCoachDigestMod
   }, [isOpen, storageKey]);
 
   const generateDigest = async () => {
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) {
-      setErrorMessage(isRTL ? 'مفتاح Gemini API غير مهيأ في الإعدادات.' : 'Gemini API key is not configured.');
-      return;
-    }
-
-    abortRef.current = false;
-    setWasAborted(false);
     setIsGenerating(true);
     setErrorMessage(null);
 

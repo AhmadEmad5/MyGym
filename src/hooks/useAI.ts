@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Type } from '@google/genai';
 import { useData } from './useData';
 import { callWithModelFallback } from '../lib/gemini';
 
@@ -200,10 +199,6 @@ export function useAI(fallbackData: any = null) {
       
       setTimeout(async () => {
         try {
-          if (!import.meta.env.VITE_GEMINI_API_KEY) {
-            throw new Error("API Key is missing. Please add VITE_GEMINI_API_KEY to your .env file.");
-          }
-
           const sanitized = sanitizeAIContext(contextData);
           const systemInstruction = `You are an elite, encouraging fitness AI assistant in the FORMA app.
 ${isArabic ? 'CRITICAL: The user has selected Arabic. Respond primarily in natural, motivating Arabic unless asked otherwise.' : 'Respond in helpful, motivating English.'}
@@ -222,12 +217,12 @@ Only use tools if explicitly requested by the user or if it's the clear intent. 
                 name: "add_workout_session",
                 description: "Schedules a new workout session for a specific date.",
                 parameters: {
-                  type: Type.OBJECT,
+                  type: 'object',
                   properties: {
-                    title: { type: Type.STRING, description: "The title/name of the workout (e.g. Chest Day)" },
-                    date: { type: Type.STRING, description: "The ISO date string of when the workout should be scheduled. e.g. 2023-10-25T18:00:00Z" },
-                    type: { type: Type.STRING, description: "The type of workout: Strength, Cardio, Yoga, or Mixed" },
-                    duration: { type: Type.INTEGER, description: "Duration in minutes" }
+                    title: { type: 'string', description: "The title/name of the workout (e.g. Chest Day)" },
+                    date: { type: 'string', description: "The ISO date string of when the workout should be scheduled. e.g. 2023-10-25T18:00:00Z" },
+                    type: { type: 'string', description: "The type of workout: Strength, Cardio, Yoga, or Mixed" },
+                    duration: { type: 'integer', description: "Duration in minutes" }
                   },
                   required: ["title", "date", "type", "duration"]
                 }
@@ -236,15 +231,15 @@ Only use tools if explicitly requested by the user or if it's the clear intent. 
                 name: "suggest_meal",
                 description: "Suggests a specific healthy meal with calculated nutritional macros (calories, protein, carbs, fats) and recipe notes.",
                 parameters: {
-                  type: Type.OBJECT,
+                  type: 'object',
                   properties: {
-                    title: { type: Type.STRING, description: "The name of the meal (e.g., 'Salmon with Quinoa and Asparagus')" },
-                    mealType: { type: Type.STRING, description: "Meal type: breakfast, lunch, dinner, or snack" },
-                    calories: { type: Type.INTEGER, description: "Estimated total calories (kcal)" },
-                    protein: { type: Type.INTEGER, description: "Protein in grams" },
-                    carbs: { type: Type.INTEGER, description: "Carbohydrates in grams" },
-                    fats: { type: Type.INTEGER, description: "Fats in grams" },
-                    notes: { type: Type.STRING, description: "Brief recipe description, ingredients or health highlights" }
+                    title: { type: 'string', description: "The name of the meal (e.g., 'Salmon with Quinoa and Asparagus')" },
+                    mealType: { type: 'string', description: "Meal type: breakfast, lunch, dinner, or snack" },
+                    calories: { type: 'integer', description: "Estimated total calories (kcal)" },
+                    protein: { type: 'integer', description: "Protein in grams" },
+                    carbs: { type: 'integer', description: "Carbohydrates in grams" },
+                    fats: { type: 'integer', description: "Fat in grams" },
+                    notes: { type: 'string', description: "Brief recipe description, ingredients or health highlights" }
                   },
                   required: ["title", "mealType", "calories", "protein", "carbs", "fats"]
                 }
@@ -253,9 +248,9 @@ Only use tools if explicitly requested by the user or if it's the clear intent. 
                 name: "delete_workout_session",
                 description: "Deletes a scheduled workout session from the calendar.",
                 parameters: {
-                  type: Type.OBJECT,
+                  type: 'object',
                   properties: {
-                    sessionId: { type: Type.STRING, description: "The ID of the session to delete" }
+                    sessionId: { type: 'string', description: "The ID of the session to delete" }
                   },
                   required: ["sessionId"]
                 }
@@ -264,9 +259,9 @@ Only use tools if explicitly requested by the user or if it's the clear intent. 
                 name: "complete_workout_session",
                 description: "Marks a workout session as completed.",
                 parameters: {
-                  type: Type.OBJECT,
+                  type: 'object',
                   properties: {
-                    sessionId: { type: Type.STRING, description: "The ID of the session to mark as completed" }
+                    sessionId: { type: 'string', description: "The ID of the session to mark as completed" }
                   },
                   required: ["sessionId"]
                 }

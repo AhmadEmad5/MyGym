@@ -12,7 +12,6 @@ import { checkAndTriggerWorkoutReminder } from './lib/notifications';
 import { ToastViewport } from './components/ToastViewport';
 import { DynamicLiveWorkoutBar } from './components/DynamicLiveWorkoutBar';
 import { GlobalCardioBar } from './components/GlobalCardioBar';
-import { isUserAdmin } from './lib/adminAuth';
 
 // Lazy loaded views with automatic retry and cache bust on new deployments
 function lazyWithRetry(
@@ -171,7 +170,7 @@ function App() {
 
 
   const handleLogin = async (user?: { email: string, name: string; isAdmin?: boolean }) => {
-    const isAdmin = Boolean(user?.isAdmin || isUserAdmin(user?.email));
+    const isAdmin = user?.isAdmin === true;
     if (data) {
       await updateSettings(
         data.settings,
