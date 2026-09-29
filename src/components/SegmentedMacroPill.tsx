@@ -22,7 +22,6 @@ const MACRO_STYLE: Record<MacroKey, { color: string; tint: string; label: string
 };
 
 const OVER_COLOR = '#f43f5e';
-const NEAR_RATIO = 0.9;
 
 function safeRatio(value: number, target: number) {
   if (!target || target <= 0) return 0;
@@ -146,7 +145,7 @@ export function SegmentedMacroPill({
             ? `${isRTL ? 'تجاوز' : '+'}${delta}g`
             : `${isRTL ? 'متبقٍ' : 'left'} ${delta}g`;
           const isSelected = selectedMacro === row.key;
-          const barColor = over ? OVER_COLOR : ratio >= NEAR_RATIO ? style.color : style.color;
+          const barColor = over ? OVER_COLOR : style.color;
 
           return (
             <motion.button
