@@ -44,7 +44,10 @@ import {
 import { Button, SegmentedControl } from '../components/ui';
 import { InlineSaveStatus } from '../components/primitives/InlineSaveStatus';
 import { OnboardingTour } from '../components/OnboardingTour';
+import { validateClientFile, ALLOWED_IMAGE_MIME_TYPES } from '../lib/fileValidation';
 import type { SaveState } from '../types/ui';
+
+const MAX_PFP_UPLOAD_BYTES = 2 * 1024 * 1024;
 
 type ThemeId = 'dark' | 'light' | 'midnight' | 'neon' | 'ocean' | 'forest' | 'sunset' | 'paper';
 
@@ -315,8 +318,16 @@ export function SettingsView() {
   const handlePfpChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !data?.user || !settings) return;
-    if (file.size > 2 * 1024 * 1024) {
-      notify(t('imageSizeLimitAlert'), 'warning');
+    const validation = validateClientFile(file, {
+      maxSizeBytes: MAX_PFP_UPLOAD_BYTES,
+      allowedMimeTypes: ALLOWED_IMAGE_MIME_TYPES
+    });
+    if (!validation.valid) {
+      notify(
+        file.size > MAX_PFP_UPLOAD_BYTES ? t('imageSizeLimitAlert') : (validation.error ?? t('imageSizeLimitAlert')),
+        'warning'
+      );
+      event.target.value = '';
       return;
     }
     const reader = new FileReader();

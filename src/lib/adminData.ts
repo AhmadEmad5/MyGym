@@ -1,5 +1,6 @@
 import { collection, getDocs } from 'firebase/firestore';
 import { db, auth } from './firebase';
+import { getCurrentUserEmail } from './adminAuth';
 import type { 
   WorkoutSession, 
   HistoryRecord, 
@@ -269,7 +270,7 @@ export async function loadAdminPlatformData(): Promise<{
 
         athletes.push({
           uid: 'local-master',
-          email: local.user?.email || (import.meta.env.VITE_ADMIN_EMAIL || 'admin@mygym.app'),
+          email: local.user?.email || getCurrentUserEmail() || 'local-user',
           name: local.user?.name || 'Master Athlete',
           pfp: local.user?.pfp,
           tier,
