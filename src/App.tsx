@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, lazy, Suspense } from 'react';
+import type { ReactNode } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Dumbbell } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -6,6 +7,7 @@ import { AppShell } from './app/AppShell';
 import { APP_ROUTES } from './app/routes';
 import { useData } from './hooks/useData';
 import { useTranslation } from './lib/i18n';
+import { useAdminStatus } from './lib/useAdminStatus';
 import { NetworkStatusIndicator } from './components/NetworkStatusIndicator';
 import { InstallAppPrompt } from './components/InstallAppPrompt';
 import { checkAndTriggerWorkoutReminder } from './lib/notifications';
@@ -120,6 +122,42 @@ function GlobalLoading() {
       </div>
     </div>
   );
+}
+
+/**
+ * Route guard for admin-only surfaces. The signed `admin` custom claim is the
+ * real authority (firestore.rules `isAdmin()`); this keeps a non-admin from
+ * rendering the admin shell at all, and waits for the claim before deciding.
+ */
+function RequireAdmin({ children }: { children: ReactNode }) {
+  const { isRTL } = useTranslation();
+  const { user, isAdmin, refresh } = useAdminStatus();
+  const [resolved, setResolved] = useState(() => !user);
+
+  useEffect(() => {
+    if (!user) {
+      setResolved(true);
+      return;
+    }
+    let active = true;
+    setResolved(false);
+    void refresh(true).finally(() => {
+      if (active) setResolved(true);
+    });
+    return () => {
+      active = false;
+    };
+  }, [user, refresh]);
+
+  if (!resolved) {
+    return <GlobalLoading />;
+  }
+
+  if (!isAdmin) {
+    return <Navigate to={APP_ROUTES.today} replace state={{ denied: isRTL }} />;
+  }
+
+  return <>{children}</>;
 }
 
 function App() {
@@ -244,10 +282,16 @@ function App() {
             <Route path={APP_ROUTES.performance} element={<RouteTransition><PerformanceHubView /></RouteTransition>} />
             <Route path="/history" element={<Navigate to={APP_ROUTES.plan} replace />} />
             <Route path={APP_ROUTES.settings} element={<RouteTransition><SettingsView /></RouteTransition>} />
-            {/* Admin Dashboard Route */}
+            {/* Admin Dashboard Route (guarded by the signed admin custom claim) */}
             <Route
               path={APP_ROUTES.adminDashboard}
-              element={<RouteTransition><AdminDashboard onLogout={async () => { await navigate('/today'); }} /></RouteTransition>}
+              element={(
+                <RequireAdmin>
+                  <RouteTransition>
+                    <AdminDashboard onLogout={async () => { await navigate('/today'); }} />
+                  </RouteTransition>
+                </RequireAdmin>
+              )}
             />
           </Routes>
         </AnimatePresence>
