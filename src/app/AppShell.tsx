@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { useTranslation } from '../lib/i18n';
 import { ModernNavigationBar } from '../components/ModernNavigationBar';
 import { SkipToContentLink } from '../components/layout/SkipToContentLink';
+import { AmbientBackground } from '../components/AmbientBackground';
 
 const MAIN_CONTENT_ID = 'forma-main-content';
 
@@ -33,6 +34,8 @@ export function AppShell({ children, isInSession, hasActiveSession, isAdminRoute
 
   return (
     <div className={layoutClasses}>
+      <AmbientBackground />
+
       <SkipToContentLink
         targetId={MAIN_CONTENT_ID}
         label={isRTL ? 'تخطَّ إلى المحتوى' : 'Skip to main content'}

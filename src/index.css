@@ -5987,11 +5987,6 @@ body, .content-area, .page-surface, .session-detail-page, .forma-page-frame, .ze
   flex-shrink: 0;
 }
 
-.gym-tool-tile-icon.plate-calc {
-  background: rgba(198, 244, 50, 0.15);
-  color: var(--gym-lime, #c6f432);
-}
-
 .gym-tool-tile-icon.warmup {
   background: rgba(249, 115, 22, 0.15);
   color: #f97316;
@@ -7170,14 +7165,14 @@ body, .content-area, .page-surface, .session-detail-page, .forma-page-frame, .ze
     inset-inline-start: 0 !important;
     inset-inline-end: auto !important;
     width: 68px !important;
-    height: 100vh !important;
+    height: 100dvh !important;
     padding: max(6px, env(safe-area-inset-top, 0px)) 0.35rem max(6px, env(safe-area-inset-bottom, 0px)) max(6px, env(safe-area-inset-left, 0px)) !important;
     pointer-events: none !important;
     z-index: 1000 !important;
   }
   .modern-navbar, .sidebar {
     width: 58px !important;
-    height: calc(100vh - 16px) !important;
+    height: calc(100dvh - 16px) !important;
     max-height: none !important;
     flex-direction: column !important;
     justify-content: center !important;

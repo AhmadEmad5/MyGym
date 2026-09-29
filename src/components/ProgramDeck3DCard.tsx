@@ -192,7 +192,11 @@ export function ProgramDeck3DCard({
         style={{ '--routine-accent': accent } as CSSProperties}
         aria-labelledby={titleId}
       >
-        {frontFace}
+        <span className="routine-ledger-sheen" aria-hidden="true" />
+        {heading}
+        <ol className="routine-ledger-session-list is-full" id={listId}>
+          {sessionRows(routine.sessions, 'static', false)}
+        </ol>
         <div className="routine-ledger-footer">
           {footerMeta}
           <span className="routine-ledger-footer-actions">
