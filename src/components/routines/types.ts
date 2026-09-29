@@ -1,11 +1,7 @@
-import type { SessionExercise, SetRecord } from '../../lib/api';
+import type { RoutineSession, SessionExercise, SetRecord } from '../../lib/api';
 import type { PredefinedRoutine } from '../ProgramDeck3DCard';
 
-export type ProgramSessionDraft = {
-  title: string;
-  type: string;
-  exercises: SessionExercise[];
-};
+export type ProgramSessionDraft = RoutineSession;
 
 export type ProgramDraft = {
   id: string;

@@ -5,6 +5,7 @@ import { Zap } from 'lucide-react';
 export type QuickSplit = {
   id: string;
   label: string;
+  /** Saturday-first offsets (Sat = 0 ... Fri = 6), matching DAYS_OF_WEEK. */
   days: number[];
   daysLabelEn: string;
   daysLabelAr: string;
@@ -15,7 +16,7 @@ export const QUICK_SPLITS: QuickSplit[] = [
   {
     id: 'ppl-routine',
     label: 'Push / Pull / Legs',
-    days: [0, 2, 4],
+    days: [1, 3, 5],
     daysLabelEn: 'Sun • Tue • Thu',
     daysLabelAr: 'أحد • ثلاثاء • خميس',
     accent: '#38bdf8'
@@ -23,7 +24,7 @@ export const QUICK_SPLITS: QuickSplit[] = [
   {
     id: 'upper-lower-routine',
     label: 'Upper / Lower',
-    days: [6, 0, 2, 3],
+    days: [0, 1, 3, 4],
     daysLabelEn: 'Sat • Sun • Tue • Wed',
     daysLabelAr: 'سبت • أحد • ثلاثاء • أربعاء',
     accent: '#a78bfa'
@@ -31,7 +32,7 @@ export const QUICK_SPLITS: QuickSplit[] = [
   {
     id: 'arnold-split-6day',
     label: 'Arnold Split',
-    days: [6, 1, 3],
+    days: [0, 2, 4],
     daysLabelEn: 'Sat • Mon • Wed',
     daysLabelAr: 'سبت • اثنين • أربعاء',
     accent: '#fbbf24'
@@ -39,7 +40,7 @@ export const QUICK_SPLITS: QuickSplit[] = [
   {
     id: 'full-body-routine',
     label: 'Full Body 3x',
-    days: [0, 2, 4],
+    days: [1, 3, 5],
     daysLabelEn: 'Sun • Tue • Thu',
     daysLabelAr: 'أحد • ثلاثاء • خميس',
     accent: '#34d399'

@@ -26,42 +26,75 @@ import { PREDEFINED_ROUTINES, PREDEFINED_ROUTINE_CATEGORIES } from '../component
 
 const CUSTOM_CATEGORY = 'Custom Program';
 
+// Firestore rule `isValidRoutine` only accepts `daysRequired` in 1..7, so clamp
+// before writing or a multi-session program would be rejected on save.
+function clampDaysRequired(value: number) {
+  if (!Number.isFinite(value)) return 1;
+  return Math.min(7, Math.max(1, Math.round(value)));
+}
+
+// Round trip for multi-session programs (REGRESSION NOTE):
+//   write  programDraftToRoutine  -> Routine.sessions  (ALL sessions) + Routine.daysRequired
+//   read   routineToProgramDraft  -> PredefinedRoutine.sessions (ALL sessions)
+// `Routine.exercises` keeps mirroring sessions[0] only, because that is the field
+// src/views/SettingsView.tsx rewrites when converting weight units, and the field
+// AIWorkoutGeneratorModal.tsx and useAI.ts still read. Losing it here is what
+// silently dropped every session after the first on save.
+// Readers that get a routine written before `sessions` existed fall back to the
+// single legacy session built from `Routine.exercises`, so old documents still open.
+
+function cloneExercises(exercises: SessionExercise[]): SessionExercise[] {
+  return (exercises || []).map(exercise => ({
+    ...exercise,
+    sets: (exercise.sets || []).map(set => ({ ...set }))
+  }));
+}
+
 function routineToProgramDraft(routine: Routine): PredefinedRoutine {
+  const storedSessions = Array.isArray(routine.sessions) ? routine.sessions : [];
+  const sessions =
+    storedSessions.length > 0
+      ? storedSessions.map(session => ({
+          title: session.title,
+          type: session.type,
+          exercises: cloneExercises(session.exercises)
+        }))
+      : [
+          {
+            title: routine.name,
+            type: 'Strength',
+            exercises: cloneExercises(routine.exercises)
+          }
+        ];
   return {
     id: routine.id,
     name: routine.name,
     description: routine.description,
     category: CUSTOM_CATEGORY,
-    daysRequired: 1,
+    daysRequired: clampDaysRequired(routine.daysRequired ?? sessions.length),
     difficulty: 'Intermediate',
     difficultyScore: 3,
     estTime: '45 - 60 min',
     primaryMuscles: [],
     accentColor: '#38bdf8',
     badge: 'MY PROGRAM',
-    sessions: [
-      {
-        title: routine.name,
-        type: 'Strength',
-        exercises: (routine.exercises || []).map(exercise => ({
-          ...exercise,
-          sets: (exercise.sets || []).map(set => ({ ...set }))
-        }))
-      }
-    ]
+    sessions
   };
 }
 
 function programDraftToRoutine(draft: ProgramDraft, existing?: Routine): Routine {
-  const firstSession = draft.sessions[0];
+  const sessions = draft.sessions.map(session => ({
+    title: session.title,
+    type: session.type,
+    exercises: cloneExercises(session.exercises)
+  }));
   return {
     id: existing?.id || draft.id || createEntityId('routine'),
     name: draft.name || existing?.name || CUSTOM_CATEGORY,
     description: draft.description,
-    exercises: (firstSession?.exercises || []).map(exercise => ({
-      ...exercise,
-      sets: (exercise.sets || []).map(set => ({ ...set }))
-    }))
+    exercises: sessions[0]?.exercises || [],
+    sessions,
+    daysRequired: clampDaysRequired(draft.daysRequired || sessions.length)
   };
 }
 
