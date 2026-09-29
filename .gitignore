@@ -71,3 +71,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Local agent tooling state (worktrees, per-machine manager state)
+.kilo/
+

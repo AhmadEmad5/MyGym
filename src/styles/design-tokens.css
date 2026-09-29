@@ -1064,13 +1064,6 @@
 }
 
 /* Spinner Primitive */
-.ui-spinner {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--accent-cyan);
-  animation: ui-spin 900ms linear infinite;
-}
 
 @keyframes ui-spin {
   to { transform: rotate(360deg); }
@@ -1083,9 +1076,6 @@
 }
 
 /* RTL arrow mirroring for directional affordances */
-[dir="rtl"] .ui-directional-affordance {
-  transform: scaleX(-1);
-}
 
 /* ==========================================================================
    Mobile-First Device Fixes & Safe Area Insets (Capacitor iOS & Android)
@@ -1102,26 +1092,6 @@
 }
 
 /* Safe area insets for notches, dynamic islands and home indicators */
-.safe-pt {
-  padding-top: var(--safe-top-max);
-}
-.safe-pb {
-  padding-bottom: var(--safe-bottom-max);
-}
-.safe-mb {
-  margin-bottom: var(--safe-bottom-max);
-}
-.safe-px {
-  padding-inline: var(--safe-x-max);
-}
-.safe-inset-inline {
-  padding-inline-start: var(--safe-left);
-  padding-inline-end: var(--safe-right);
-}
-.safe-inset-block {
-  padding-top: var(--safe-top);
-  padding-bottom: var(--safe-bottom);
-}
 
 /* Compact density tightens the shared primitives */
 [data-density="compact"] .ui-button {

@@ -29,7 +29,6 @@
 .session-set-check,
 .mobile-vital-tile,
 .mobile-hero-workout,
-.forma-keypad-sheet,
 .forma-mobile-sheet {
   -webkit-tap-highlight-color: transparent;
 }
@@ -268,62 +267,18 @@
 }
 
 /* ==========================================================================
-   7. Rest timer floating bar
+   7. Countdown readouts
    ========================================================================== */
 
-.rest-timer-floating-hud .rest-timer-control {
-  min-block-size: var(--gym-floor-target-sm);
-  min-inline-size: var(--gym-floor-target-sm);
-  touch-action: manipulation;
-}
-
-.rest-timer-floating-hud .rest-timer-control-group {
-  display: flex;
-  align-items: center;
-  gap: var(--gym-floor-gap);
-  flex-shrink: 0;
-}
-
-.rest-timer-floating-hud .rest-timer-voice-toggle {
-  min-block-size: var(--gym-floor-icon);
-  padding: 0.25rem 0.6rem;
-  font-size: 0.72rem;
-}
-
-.rest-timer-floating-hud .rest-timer-lockscreen-chip {
-  font-size: 0.7rem;
-  padding: 0.2rem 0.5rem;
-}
-
-.rest-timer-floating-hud .session-countdown {
+.session-countdown {
   font-size: 1.35rem;
   font-weight: 900;
 }
 
-.rest-timer-floating-hud {
-  overscroll-behavior: contain;
-}
-
-@media (max-width: 430px) {
-  .rest-timer-floating-hud {
-    flex-wrap: wrap;
-    row-gap: 0.5rem;
-  }
-
-  .rest-timer-floating-hud .rest-timer-control-group {
-    inline-size: 100%;
-  }
-
-  .rest-timer-floating-hud .rest-timer-lockscreen-chip {
-    display: none;
-  }
-}
-
 /* ==========================================================================
-   8. Keypad + set-type sheets
+   8. Bottom sheets
    ========================================================================== */
 
-.forma-keypad-sheet,
 .forma-mobile-sheet {
   overscroll-behavior: contain;
   max-block-size: calc(100dvh - var(--shell-safe-top) - 0.75rem);
@@ -334,44 +289,6 @@
 }
 
 .forma-sheet-header .btn-icon {
-  min-block-size: var(--gym-floor-target-sm);
-  min-inline-size: var(--gym-floor-target-sm);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-md);
-}
-
-.forma-keypad-quick-row {
-  display: flex;
-  gap: var(--gym-floor-gap);
-}
-
-.forma-keypad-quick-row .forma-keypad-key {
-  min-block-size: var(--gym-floor-target-sm);
-}
-
-.forma-keypad-clear {
-  min-block-size: var(--gym-floor-target-sm);
-}
-
-.forma-unit-toggle button {
-  min-block-size: var(--gym-floor-target-sm);
-  padding-inline: 1.15rem;
-}
-
-.forma-set-type-sheet {
-  max-block-size: calc(100dvh - var(--shell-safe-top) - 0.75rem);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
-
-.forma-set-type-option {
-  min-block-size: var(--gym-floor-target);
-  touch-action: manipulation;
-}
-
-.forma-set-type-close {
   min-block-size: var(--gym-floor-target-sm);
   min-inline-size: var(--gym-floor-target-sm);
   display: inline-flex;
@@ -503,8 +420,7 @@
 [data-high-contrast] .gym-floor-number-input,
 [data-high-contrast] .gym-floor-input-value input,
 [data-high-contrast] .session-countdown,
-[data-high-contrast] .mobile-vital-value,
-[data-high-contrast] .forma-keypad-value strong {
+[data-high-contrast] .mobile-vital-value {
   color: var(--text-primary);
   font-weight: 900;
   text-shadow: 0 1px 0 color-mix(in srgb, var(--surface-canvas) 70%, transparent);
@@ -547,9 +463,7 @@
 .mobile-hero-cta:focus-visible,
 .mobile-hero-toggle:focus-visible,
 .mobile-hero-secondary:focus-visible,
-.forma-set-type-option:focus-visible,
-.forma-sheet-header .btn-icon:focus-visible,
-.rest-timer-floating-hud .rest-timer-control:focus-visible {
+.forma-sheet-header .btn-icon:focus-visible {
   outline: var(--focus-ring-width) solid var(--focus-ring-color);
   outline-offset: var(--focus-ring-offset);
 }
@@ -566,8 +480,7 @@
   .mobile-vital-action,
   .mobile-hero-cta,
   .mobile-hero-toggle,
-  .mobile-hero-secondary,
-  .forma-set-type-option {
+  .mobile-hero-secondary {
     transition: none !important;
   }
 
@@ -589,8 +502,7 @@
 [data-motion='reduced'] .mobile-vital-action,
 [data-motion='reduced'] .mobile-hero-cta,
 [data-motion='reduced'] .mobile-hero-toggle,
-[data-motion='reduced'] .mobile-hero-secondary,
-[data-motion='reduced'] .forma-set-type-option {
+[data-motion='reduced'] .mobile-hero-secondary {
   transition: none !important;
 }
 

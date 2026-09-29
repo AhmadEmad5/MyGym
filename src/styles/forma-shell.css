@@ -338,14 +338,6 @@
     padding-inline: 0 1rem;
   }
 
-  .northline-rail-line {
-    position: absolute;
-    inset-block: 0.7rem;
-    inset-inline-start: 0.28rem;
-    width: 1px;
-    background: linear-gradient(180deg, transparent, var(--premium-line) 8%, var(--shell-nav-active) 50%, var(--premium-line) 92%, transparent);
-  }
-
   .northline-rail-horizontal {
     grid-auto-flow: column;
     grid-auto-columns: minmax(8rem, 1fr);
@@ -355,6 +347,14 @@
     scroll-padding-inline: 0.75rem;
     scroll-snap-type: x proximity;
     scrollbar-width: thin;
+  }
+
+  .northline-rail-line {
+    position: absolute;
+    inset-block: 0.7rem;
+    inset-inline-start: 0.28rem;
+    width: 1px;
+    background: linear-gradient(180deg, transparent, var(--premium-line) 8%, var(--shell-nav-active) 50%, var(--premium-line) 92%, transparent);
   }
 
   .northline-rail-horizontal .northline-rail-line {
@@ -489,65 +489,6 @@
   .forma-primary-button:active { transform: translateY(0) scale(0.98); }
   .forma-primary-button:disabled { cursor: not-allowed; opacity: 0.55; transform: none; }
 
-  .forma-quiet-action {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    color: var(--text-secondary);
-    font-size: 0.78rem;
-    font-weight: 750;
-    text-decoration: none;
-    transition: color 160ms ease, gap 160ms ease;
-  }
-
-  .forma-quiet-action:hover { gap: 0.55rem; color: var(--shell-nav-active); }
-
-  .forma-empty-state {
-    display: grid;
-    justify-items: center;
-    gap: 0.65rem;
-    min-height: 15rem;
-    padding: 2.5rem 1.25rem;
-    border: 1px dashed var(--premium-line);
-    border-radius: 1rem;
-    background: color-mix(in srgb, var(--bg-secondary) 78%, transparent);
-    text-align: center;
-  }
-
-  .forma-empty-icon {
-    display: grid;
-    place-items: center;
-    width: 3.25rem;
-    height: 3.25rem;
-    margin-block-end: 0.25rem;
-    border: 1px solid color-mix(in srgb, var(--shell-nav-active) 28%, transparent);
-    border-radius: 0.9rem;
-    color: var(--shell-nav-active);
-    background: color-mix(in srgb, var(--shell-nav-active) 10%, transparent);
-  }
-
-  .forma-empty-state h2 { margin: 0; font-size: 1.1rem; }
-  .forma-empty-state p { max-width: 28rem; margin: 0; font-size: 0.82rem; }
-  .forma-empty-action { margin-block-start: 0.5rem; }
-
-  .forma-page-skeleton {
-    display: grid;
-    gap: 0.75rem;
-    padding-block: 1rem;
-  }
-
-  .forma-skeleton-heading,
-  .forma-skeleton-row {
-    display: block;
-    border-radius: 0.5rem;
-    background: linear-gradient(90deg, var(--bg-secondary), color-mix(in srgb, var(--shell-nav-active) 8%, var(--bg-secondary)), var(--bg-secondary));
-    background-size: 220% 100%;
-    animation: forma-skeleton-shimmer 1.4s ease-in-out infinite;
-  }
-
-  .forma-skeleton-heading { width: min(20rem, 55%); height: 2.3rem; }
-  .forma-skeleton-row { width: 100%; height: 5.25rem; }
-
   .forma-save-status {
     display: inline-flex;
     align-items: center;
@@ -676,9 +617,6 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .forma-skeleton-heading,
-    .forma-skeleton-row { animation: none; }
-    .forma-primary-button,
-    .forma-quiet-action { transition: none; }
+    .forma-primary-button { transition: none; }
   }
 }

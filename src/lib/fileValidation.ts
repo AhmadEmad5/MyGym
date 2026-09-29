@@ -22,19 +22,6 @@ export const ALLOWED_IMAGE_MIME_TYPES = [
   'image/heif'
 ];
 
-export const MAX_AUDIO_UPLOAD_BYTES = 50 * 1024 * 1024; // 50 MB
-export const ALLOWED_AUDIO_MIME_TYPES = [
-  'audio/mpeg',
-  'audio/mp3',
-  'audio/wav',
-  'audio/ogg',
-  'audio/aac',
-  'audio/flac',
-  'audio/m4a',
-  'audio/mp4',
-  'audio/x-m4a'
-];
-
 export function validateClientFile(file: File, options: FileValidationOptions): FileValidationResult {
   if (!file) {
     return { valid: false, error: 'No file was provided.' };

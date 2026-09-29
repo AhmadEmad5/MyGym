@@ -262,54 +262,6 @@ export const DEFAULT_NUTRITION_GOALS: NutritionGoals = {
 const MAX_TEXT_LENGTH = 500;
 
 // ============================================================================
-// SECURITY: Input Sanitization Functions (XSS Prevention)
-// ============================================================================
-
-export function sanitizeString(input: string): string {
-  if (!input || typeof input !== 'string') return '';
-  
-  // Remove potentially dangerous characters (XSS prevention)
-  let sanitized = input
-    .replace(/[<>]/g, '') // Remove HTML tags
-    .replace(/javascript:/gi, '') // Remove javascript: protocol
-    .replace(/on\w+\s*=/gi, '') // Remove event handlers like onclick=
-    .trim();
-  
-  return sanitized.substring(0, MAX_TEXT_LENGTH);
-}
-
-export function sanitizeNumber(input: unknown): number {
-  if (typeof input !== 'number' || !Number.isFinite(input)) {
-    return 0;
-  }
-  return Math.max(0, Number(input));
-}
-
-export function sanitizeBoolean(input: any): boolean {
-  const trueValues = ['true', '1', 'yes', 'on'];
-  if (typeof input === 'boolean') return input;
-  
-  const strInput = String(input).toLowerCase().trim();
-  return trueValues.includes(strInput);
-}
-
-export function sanitizeArray(input: any): any[] {
-  if (!Array.isArray(input)) return [];
-  
-  return input.filter(item => {
-    if (typeof item === 'object' && item !== null) {
-      // Check for dangerous prototype pollution keys
-      const keys = Object.keys(item);
-      if (keys.includes('__proto__') || keys.includes('constructor')) {
-        console.warn('Sanitizing array item with dangerous prototype key:', item);
-        return false;
-      }
-    }
-    return true;
-  });
-}
-
-// ============================================================================
 // VALIDATION FUNCTIONS (Already existed, kept for reference)
 // ============================================================================
 
@@ -398,38 +350,6 @@ export function calculateTDEE(bmr: number, activityMultiplier: number, goal: 'cu
   return { calories, protein, carbs, fats };
 }
 
-export function findPreviousPerformance(
-  exerciseName: string,
-  history: HistoryRecord[],
-  currentSessions: WorkoutSession[] = [],
-  excludeSessionId?: string
-): SessionExercise | null {
-  const normalizedName = (exerciseName || '').trim().toLowerCase();
-  if (!normalizedName) return null;
-
-  const sortedHistory = [...history].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  for (const h of sortedHistory) {
-    if (excludeSessionId && h.sessionId === excludeSessionId) continue;
-    const match = h.snapshot?.exercises?.find(e => (e.name || '').trim().toLowerCase() === normalizedName);
-    if (match && match.sets && match.sets.some(s => s.isCompleted || (s.weight > 0 && (s.repsActual > 0 || s.repsTarget > 0)))) {
-      return match;
-    }
-  }
-
-  const sortedSessions = [...currentSessions]
-    .filter(s => s.isCompleted && (!excludeSessionId || s.id !== excludeSessionId))
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-  for (const s of sortedSessions) {
-    const match = s.exercises?.find(e => (e.name || '').trim().toLowerCase() === normalizedName);
-    if (match && match.sets && match.sets.some(s => s.isCompleted || (s.weight > 0 && (s.repsActual > 0 || s.repsTarget > 0)))) {
-      return match;
-    }
-  }
-
-  return null;
-}
-
 export type PreviousPerformanceInfo = {
   exercise: SessionExercise;
   date: string;
@@ -501,88 +421,6 @@ export function findPreviousPerformanceWithDetails(
     completedSetsCount,
     maxWeight
   };
-}
-
-export type OverloadRecommendation = {
-  type: 'weight' | 'reps';
-  suggestedWeightDelta: number; // e.g. 2.5 kg or 5 lb
-  suggestedRepsDelta: number; // e.g. 2
-  suggestedTargetWeight: number;
-  suggestedTargetReps: number;
-  previousMaxWeight: number;
-  previousMaxReps: number;
-  unit: 'kg' | 'lb';
-  titleEn: string;
-  titleAr: string;
-  messageEn: string;
-  messageAr: string;
-  readyForOverload: boolean;
-};
-
-export function calculateProgressiveOverload(
-  _exercise: SessionExercise,
-  previousPerf?: PreviousPerformanceInfo | null,
-  unit: 'kg' | 'lb' = 'kg'
-): OverloadRecommendation | null {
-  if (!previousPerf || !previousPerf.exercise?.sets || previousPerf.exercise.sets.length === 0) {
-    return null;
-  }
-
-  const prevSets = previousPerf.exercise.sets.filter(
-    s => s.isCompleted || (s.weight > 0 && ((s.repsActual || 0) > 0 || (s.repsTarget || 0) > 0))
-  );
-  if (prevSets.length === 0) return null;
-
-  let prevMaxWeight = 0;
-  let prevMaxReps = 0;
-
-  prevSets.forEach(s => {
-    if (s.weight > prevMaxWeight) prevMaxWeight = s.weight;
-    const r = s.repsActual || s.repsTarget || 0;
-    if (r > prevMaxReps) prevMaxReps = r;
-  });
-
-  const weightStep = unit === 'lb' ? 5 : 2.5;
-
-  if (prevMaxWeight > 0) {
-    const suggestedTargetWeight = prevMaxWeight + weightStep;
-    const suggestedTargetReps = prevMaxReps >= 12 ? 8 : prevMaxReps >= 10 ? 8 : Math.max(6, prevMaxReps);
-
-    return {
-      type: 'weight',
-      suggestedWeightDelta: weightStep,
-      suggestedRepsDelta: 0,
-      suggestedTargetWeight,
-      suggestedTargetReps,
-      previousMaxWeight: prevMaxWeight,
-      previousMaxReps: prevMaxReps,
-      unit,
-      titleEn: `Suggested: ${suggestedTargetWeight}${unit} (+${weightStep}${unit})`,
-      titleAr: `الهدف المقترح اليوم: ${suggestedTargetWeight}${unit} (+${weightStep}${unit})`,
-      messageEn: `Last session: achieved ${prevMaxReps} reps at ${prevMaxWeight}${unit}. Increase to ${suggestedTargetWeight}${unit} for ${suggestedTargetReps} reps to progressively overload.`,
-      messageAr: `الأسبوع الماضي: أنجزت ${prevMaxReps} تكرار بوزن ${prevMaxWeight}${unit}. زد الوزن اليوم إلى ${suggestedTargetWeight}${unit} لـ ${suggestedTargetReps} تكرارات لكسر ثبات العضلات.`,
-      readyForOverload: true
-    };
-  } else {
-    const repsStep = 2;
-    const suggestedTargetReps = (prevMaxReps || 10) + repsStep;
-
-    return {
-      type: 'reps',
-      suggestedWeightDelta: 0,
-      suggestedRepsDelta: repsStep,
-      suggestedTargetWeight: 0,
-      suggestedTargetReps,
-      previousMaxWeight: 0,
-      previousMaxReps: prevMaxReps,
-      unit,
-      titleEn: `Suggested: +${repsStep} Reps (${suggestedTargetReps} reps target)`,
-      titleAr: `الهدف المقترح اليوم: +${repsStep} تكرارات (${suggestedTargetReps} تكرار)`,
-      messageEn: `Last session: completed ${prevMaxReps} reps. Add +${repsStep} reps to trigger muscular progression.`,
-      messageAr: `الجلسة السابقة: أنجزت ${prevMaxReps} تكرار. أضف +${repsStep} تكرار لزيادة الحجم التدريجي وتحفيز الألياف.`,
-      readyForOverload: true
-    };
-  }
 }
 
 

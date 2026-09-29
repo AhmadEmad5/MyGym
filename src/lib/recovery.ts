@@ -1,4 +1,4 @@
-import { HistoryRecord, WorkoutSession, SessionExercise } from './api';
+import { HistoryRecord, WorkoutSession } from './api';
 
 export type MuscleGroupId = 'chest' | 'back' | 'legs' | 'shoulders' | 'arms' | 'core';
 
@@ -158,79 +158,3 @@ export function computeMuscleRecovery(
     recommendedMuscles: recommendedMuscles.length > 0 ? recommendedMuscles : musclesStatus.filter(m => m.status === 'recovering')
   };
 }
-
-export interface WorkoutFatigueAlert {
-  hasFatigue: boolean;
-  fatiguedMuscles: MuscleRecoveryStatus[];
-  warningEn: string;
-  warningAr: string;
-  recommendedActionEn: string;
-  recommendedActionAr: string;
-}
-
-export function checkWorkoutFatigue(
-  sessionExercises: SessionExercise[] = [],
-  history: HistoryRecord[] = [],
-  sessions: WorkoutSession[] = []
-): WorkoutFatigueAlert {
-  if (!sessionExercises || sessionExercises.length === 0) {
-    return {
-      hasFatigue: false,
-      fatiguedMuscles: [],
-      warningEn: '',
-      warningAr: '',
-      recommendedActionEn: '',
-      recommendedActionAr: ''
-    };
-  }
-
-  const recovery = computeMuscleRecovery(history, sessions);
-
-  // Collect all target muscles for this workout
-  const targetedSpecs = new Set<MuscleGroupId>();
-  sessionExercises.forEach(ex => {
-    const raw = `${ex.targetMuscle || ''} ${ex.name || ''}`.toLowerCase();
-    MUSCLE_SPECS.forEach(spec => {
-      if (spec.aliases.some(alias => raw.includes(alias))) {
-        targetedSpecs.add(spec.id);
-      }
-    });
-  });
-
-  // Find targeted muscles that are fatigued
-  const fatigued = recovery.muscles.filter(m => {
-    if (!targetedSpecs.has(m.id)) return false;
-    return m.status === 'fatigued' || m.percent < 55 || (m.hoursAgo !== null && m.hoursAgo < 48 && m.percent < 70);
-  });
-
-  if (fatigued.length === 0) {
-    return {
-      hasFatigue: false,
-      fatiguedMuscles: [],
-      warningEn: '',
-      warningAr: '',
-      recommendedActionEn: '',
-      recommendedActionAr: ''
-    };
-  }
-
-  const namesAr = fatigued.map(m => m.nameAr).join(' و ');
-  const namesEn = fatigued.map(m => m.nameEn).join(' and ');
-  const minPercent = Math.min(...fatigued.map(m => m.percent));
-  const minHours = fatigued.find(m => m.hoursAgo !== null)?.hoursAgo ?? 24;
-
-  const warningAr = `عضلات ${namesAr} ما زالت في مرحلة ترميم الألياف بنسبة ${minPercent}% (تم تدريبها قبل ${minHours} ساعة).`;
-  const warningEn = `${namesEn} muscle fibers are still repairing at ${minPercent}% recovery (trained ${minHours}h ago).`;
-  const recommendedActionAr = `ننصح بتخفيف أوزان اليوم بنسبة 20-30% لحماية المفاصل والجهاز العصبي، أو استبدال الحركات المركبة بتمارين عزل خفيفة.`;
-  const recommendedActionEn = `We recommend reducing today's weights by 20-30% to protect joints and CNS, or swapping compounds for light isolation work.`;
-
-  return {
-    hasFatigue: true,
-    fatiguedMuscles: fatigued,
-    warningEn,
-    warningAr,
-    recommendedActionEn,
-    recommendedActionAr
-  };
-}
-

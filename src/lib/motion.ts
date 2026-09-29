@@ -195,8 +195,6 @@ export const MOTION_TRANSITION = {
   popover: popoverTransition,
 } as const satisfies Record<string, Transition>;
 
-export type MotionTransitionName = keyof typeof MOTION_TRANSITION;
-
 /* --------------------------------------------------------------------------
    Helpers
    -------------------------------------------------------------------------- */

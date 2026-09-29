@@ -1,8 +1,7 @@
-import { addDays, format, isSameDay, startOfWeek } from 'date-fns';
+import { addDays, format, isSameDay } from 'date-fns';
 import type {
   AppData,
   HistoryRecord,
-  SessionExercise,
   WorkoutSession,
 } from './api';
 import { findPreviousPerformanceWithDetails } from './api';
@@ -10,7 +9,6 @@ import type {
   DailySummary,
   PerformanceDataset,
   PreviousSetReference,
-  SessionStationModel,
   SessionStatus,
 } from '../types/ui';
 
@@ -41,13 +39,6 @@ export function selectDailySummary(data: AppData, date: Date): DailySummary {
   };
 }
 
-export function selectTodaySession(data: AppData): WorkoutSession | null {
-  const today = new Date();
-  return data.sessions.find(
-    (session) => isSameDay(new Date(session.date), today) && !session.isCompleted,
-  ) || null;
-}
-
 export function deriveSessionStatus(
   session: WorkoutSession,
   data: AppData,
@@ -56,28 +47,6 @@ export function deriveSessionStatus(
   if (activeSessionId === session.id) return 'in-progress';
   if (session.isCompleted || getHistoryForSession(data, session.id)) return 'completed';
   return 'planned';
-}
-
-export function deriveSessionStations(data: AppData, weekStart: Date): SessionStationModel[] {
-  const start = startOfWeek(weekStart, {
-    weekStartsOn: data.settings?.weekStartsOn === 'monday' ? 1 : data.settings?.weekStartsOn === 'sunday' ? 0 : 6,
-  });
-  const stations: SessionStationModel[] = [];
-
-  for (let offset = 0; offset < 7; offset += 1) {
-    const day = addDays(start, offset);
-    const sessions = data.sessions.filter((session) => isSameDay(new Date(session.date), day));
-    sessions.forEach((session) => {
-      stations.push({
-        session,
-        status: deriveSessionStatus(session, data),
-        exerciseCount: session.exercises?.length || 0,
-        targetMuscles: [...new Set((session.exercises || []).map((exercise) => exercise.targetMuscle).filter(Boolean))],
-      });
-    });
-  }
-
-  return stations;
 }
 
 export function selectPreviousPerformance(
@@ -105,20 +74,6 @@ export function selectPreviousPerformance(
     unit: previous.unit,
     date: details.date,
   };
-}
-
-export function selectNutritionSummary(data: AppData, date: Date) {
-  const daily = selectDailySummary(data, date);
-  return daily.meals.reduce(
-    (summary, meal) => ({
-      calories: summary.calories + (meal.calories || 0),
-      protein: summary.protein + (meal.protein || 0),
-      carbs: summary.carbs + (meal.carbs || 0),
-      fats: summary.fats + (meal.fats || 0),
-      waterMl: daily.waterMl,
-    }),
-    { calories: 0, protein: 0, carbs: 0, fats: 0, waterMl: daily.waterMl },
-  );
 }
 
 function convertWeight(value: number, sourceUnit: 'kg' | 'lb' | undefined, targetUnit: 'kg' | 'lb') {
@@ -169,10 +124,6 @@ export function selectPerformanceDatasets(data: AppData, range = 'all'): Perform
     { label: 'Training volume', unit: targetUnit, points: rangedRecords, isEmpty: rangedRecords.length === 0 },
     { label: 'Body weight', unit: targetUnit, points: rangedBodyMetrics, isEmpty: rangedBodyMetrics.length === 0 },
   ];
-}
-
-export function findExerciseById(session: WorkoutSession, exerciseId: string): SessionExercise | null {
-  return session.exercises?.find((exercise) => exercise.id === exerciseId) || null;
 }
 
 export function selectWorkoutStreak(data: AppData): number {

@@ -29,7 +29,6 @@
   <img src="https://img.shields.io/badge/Vite-5.4-646cff?style=for-the-badge&logo=vitedotjs&logoColor=white" alt="Vite 5" />
   <img src="https://img.shields.io/badge/Tailwind-4.3-38bdf8?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind CSS 4" />
   <img src="https://img.shields.io/badge/Firebase-12-ffca28?style=for-the-badge&logo=firebase&logoColor=black" alt="Firebase 12" />
-  <img src="https://img.shields.io/badge/Three.js-0.186-black?style=for-the-badge&logo=three.js&logoColor=white" alt="Three.js" />
   <img src="https://img.shields.io/badge/Node-20-5FA04E?style=for-the-badge&logo=node.js&logoColor=white" alt="Node 20" />
 </p>
 
@@ -154,13 +153,12 @@ It runs as an installable PWA, native iOS and Android apps, and a desktop applic
 | --- | --- |
 | **Frontend** | React 18.3, TypeScript 5.5, Vite 5.4, Tailwind CSS 4 |
 | **UI / motion** | Framer Motion 13, Lucide icons, custom design-token CSS (no component library) |
-| **3D** | Three.js 0.186 (muscle hologram, motion simulator) |
 | **Backend** | Node.js 20, Firebase Cloud Functions v2 (`firebase-functions` 6) |
 | **Database** | Cloud Firestore — one root document per user (`/users/{uid}`) plus scoped subcollections: `sessions`, `routines`, `history`, `meals` |
 | **Local cache** | `localStorage` mirror + Firestore persistent cache (IndexedDB) |
 | **Auth** | Firebase Authentication — email/password, Google, Apple, and a local guest mode |
 | **AI** | Google Gemini, reached only through the authenticated `generateGeminiContent` callable |
-| **Native shells** | Capacitor 8 (Android, iOS), Electron 32 (desktop) |
+| **Native shells** | Capacitor 8 (Android, iOS) |
 | **PWA** | `vite-plugin-pwa` with Workbox generateSW |
 | **Hosting** | Firebase Hosting with SPA rewrites and cache-control headers |
 
@@ -199,7 +197,6 @@ MyGym/
 │   │   ├── performance/            # Chart/table chrome, shared reduced-motion hook
 │   │   ├── admin/                  # Admin sub-components and their data hook
 │   │   ├── mobile/                 # Gym-floor and mobile-specific widgets
-│   │   ├── context/                # MusicPlayerContext
 │   │   └── OnboardingTour.tsx      # The 5-step first-run setup
 │   │
 │   ├── hooks/                      # useData (the store), useAI, timers, wake lock
@@ -209,9 +206,8 @@ MyGym/
 │   ├── types/                      # Shared TypeScript types
 │   └── App.tsx                     # Route table, guards, global overlays
 │
-├── electron/                       # Desktop main + preload
 ├── android/  ios/                  # Capacitor native projects
-├── scripts/                        # Icon generation and one-off maintenance
+├── scripts/                        # Icon generation
 ├── firestore.rules                 # RBAC + structural validation
 ├── storage.rules                   # Deny-all (no client uploads)
 ├── firebase.json                   # Hosting, cache headers, CSP
@@ -450,8 +446,6 @@ Response headers — CSP, HSTS, `X-Frame-Options`, `Permissions-Policy` — are 
 | `npm run build:mobile` | Production build, then sync to the native projects |
 | `npm run cap:sync` | Sync web assets into iOS and Android |
 | `npm run preview` | Serve the production build locally |
-| `npm run electron:dev` | Vite and Electron together |
-| `npm run electron:start` | Launch the desktop shell against a build |
 
 Inside `functions/`:
 
@@ -493,17 +487,13 @@ A previous deployment can be restored with `firebase hosting:rollback`.
 # PWA
 npm run build && npm run preview
 
-# Desktop
-npm run electron:dev
-npm run electron:start
-
 # Mobile
 npm run build:mobile
 npx cap open android    # Android Studio
 npx cap open ios        # Xcode, macOS only
 ```
 
-Capacitor uses `appId: com.forma.app` and serves from `dist/`, so a production web build is the single source for all three native shells.
+Capacitor uses `appId: com.forma.app` and serves from `dist/`, so a production web build is the single source for both native shells.
 
 ---
 

@@ -157,12 +157,6 @@
     background: color-mix(in srgb, var(--text-primary) 8%, transparent);
   }
 
-  .today-skeleton-row {
-    display: flex;
-    align-items: center;
-    gap: 0.65rem;
-  }
-
   .today-skeleton-stack {
     display: flex;
     flex-direction: column;
@@ -718,21 +712,6 @@
     margin-block: 0 0.85rem;
   }
 
-  .today-section-heading {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-block-start: clamp(1.5rem, 3vw, 2.5rem);
-  }
-
-  .today-section-heading h2 {
-    margin: 0.25rem 0 0;
-    color: var(--text-primary);
-    font-size: 1.15rem;
-    font-weight: 800;
-  }
-
   .today-active-heading {
     justify-content: space-between;
     gap: 1.25rem;
@@ -913,13 +892,6 @@
     font-weight: 800;
   }
 
-  .today-empty-actions {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 0.6rem;
-  }
-
   .today-inline-error {
     display: flex;
     align-items: center;
@@ -977,43 +949,6 @@
     font-size: clamp(1.25rem, 2.4vw, 1.6rem);
     font-weight: 850;
     letter-spacing: -0.03em;
-  }
-
-  .today-empty-surface {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.85rem;
-    padding: clamp(1.25rem, 3vw, 2.25rem) 1.1rem;
-    text-align: center;
-  }
-
-  .today-empty-surface-icon {
-    display: grid;
-    place-items: center;
-    width: 3rem;
-    height: 3rem;
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border-card);
-    background: color-mix(in srgb, var(--text-primary) 5%, transparent);
-    color: var(--accent-cyan);
-  }
-
-  .today-empty-surface-title {
-    margin: 0;
-    color: var(--text-primary);
-    font-size: 1.05rem;
-    font-weight: 800;
-  }
-
-  .today-empty-surface-body {
-    max-width: 34rem;
-    margin: 0;
-    color: var(--text-secondary);
-    font-size: 0.85rem;
-    line-height: 1.55;
   }
 
   .today-empty-state {
@@ -1178,17 +1113,6 @@
   .today-hydration-column > *,
   .today-insight-column > * {
     flex: 1;
-  }
-
-  .today-insight-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 21rem), 1fr));
-    gap: clamp(0.85rem, 1.8vw, 1.35rem);
-    align-items: stretch;
-  }
-
-  .today-insight-grid > * {
-    min-width: 0;
   }
 
   .today-widget-error {
@@ -1366,223 +1290,14 @@
   /* ==========================================================================
      Weekly activity chart
      ========================================================================== */
-  .today-week-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 5.5rem), 1fr));
-    gap: 0.5rem;
-  }
-
-  .today-week-stat {
-    display: grid;
-    gap: 0.15rem;
-    padding: 0.55rem 0.65rem;
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-sm);
-    background: color-mix(in srgb, var(--text-primary) 3%, transparent);
-    min-width: 0;
-  }
-
-  .today-week-stat span {
-    overflow: hidden;
-    color: var(--text-muted);
-    font-size: 0.7rem;
-    font-weight: 650;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .today-week-stat strong {
-    font-size: 1rem;
-    font-weight: 800;
-    white-space: nowrap;
-  }
-
-  .today-week-chart {
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-    min-width: 0;
-  }
-
-  .today-week-chart svg {
-    inline-size: 100%;
-    block-size: 7.5rem;
-    display: block;
-    overflow: visible;
-  }
-
-  .today-week-chart-axis {
-    display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: 0.2rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .today-week-axis-button {
-    inline-size: 100%;
-    min-height: 2rem;
-    border: 1px solid transparent;
-    border-radius: var(--radius-xs);
-    background: transparent;
-    color: var(--text-muted);
-    font: inherit;
-    font-size: 0.7rem;
-    font-weight: 650;
-    cursor: pointer;
-  }
-
-  .today-week-axis-button:hover,
-  .today-week-axis-button[aria-pressed='true'] {
-    border-color: rgba(56, 189, 248, 0.35);
-    background: rgba(56, 189, 248, 0.08);
-    color: var(--text-primary);
-  }
-
-  .today-week-axis-button[data-today='true'] {
-    color: var(--accent-cyan);
-    font-weight: 800;
-  }
-
-  .today-week-axis-button[data-empty='true'] {
-    color: var(--text-muted);
-  }
-
-  .today-week-tooltip {
-    margin: 0;
-    padding: 0.4rem 0.6rem;
-    border: 1px solid var(--border-card);
-    border-radius: var(--radius-sm);
-    background: var(--surface-elevated);
-    color: var(--text-primary);
-    font-size: 0.74rem;
-    font-weight: 650;
-  }
 
   /* ==========================================================================
      Body weight
      ========================================================================== */
-  .today-bodyweight-subtitle {
-    margin: 0;
-    color: var(--text-muted);
-    font-size: 0.74rem;
-  }
-
-  .today-bodyweight-reading {
-    display: flex;
-    align-items: baseline;
-    gap: 0.6rem;
-    flex-wrap: wrap;
-    margin-block: 0.15rem 0.5rem;
-  }
-
-  .today-bodyweight-reading strong {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 0.25rem;
-    color: var(--text-primary);
-    font-size: clamp(1.6rem, 3vw, 2rem);
-    font-weight: 850;
-    line-height: 1;
-  }
-
-  .today-bodyweight-reading strong small {
-    color: var(--text-muted);
-    font-size: 0.8rem;
-    font-weight: 600;
-  }
-
-  .today-bodyweight-delta {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.2rem;
-    font-size: 0.76rem;
-    font-weight: 750;
-  }
-
-  .today-bodyweight-delta[data-direction='down'] {
-    color: var(--accent-emerald);
-  }
-
-  .today-bodyweight-delta[data-direction='up'] {
-    color: var(--color-warning);
-  }
-
-  .today-bodyweight-delta[data-direction='flat'] {
-    color: var(--text-muted);
-  }
-
-  .today-bodyweight-form {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.45rem;
-    margin-block: 0.4rem 0.2rem;
-  }
 
   .today-bodyweight-form .today-widget-error {
     flex: 1 1 100%;
     margin-block-start: 0.15rem;
-  }
-
-  .today-bodyweight-input {
-    inline-size: 7.5rem;
-    min-height: 2.5rem;
-    padding: 0.35rem 0.6rem;
-    border: 1px solid var(--border-card);
-    border-radius: var(--radius-sm);
-    background: var(--surface-input);
-    color: var(--text-primary);
-    font-size: 0.9rem;
-    outline: none;
-  }
-
-  .today-bodyweight-input:focus-visible {
-    border-color: var(--accent-emerald);
-    box-shadow: 0 0 0 3px var(--accent-emerald-glow);
-  }
-
-  .today-bodyweight-history {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    margin-block-start: auto;
-    padding-block-start: 0.6rem;
-    border-block-start: 1px solid var(--border-subtle);
-  }
-
-  .today-bodyweight-history > span {
-    color: var(--text-muted);
-    font-size: 0.7rem;
-    font-weight: 650;
-  }
-
-  .today-bodyweight-history ul {
-    display: flex;
-    gap: 0.3rem;
-    flex-wrap: wrap;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .today-bodyweight-history li {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 0.2rem;
-    padding: 0.15rem 0.4rem;
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-xs);
-    background: color-mix(in srgb, var(--text-primary) 4%, transparent);
-    color: var(--text-secondary);
-    font-size: 0.7rem;
-  }
-
-  .today-bodyweight-history small {
-    color: var(--text-muted);
-    font-size: 0.62rem;
   }
 
   /* ==========================================================================
@@ -1724,27 +1439,6 @@
     border-color: rgba(56, 189, 248, 0.35);
     color: var(--text-primary);
     background: rgba(56, 189, 248, 0.08);
-  }
-
-  .forma-section-kicker {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.65rem;
-    margin-block-end: 0.85rem;
-    color: var(--text-secondary);
-    font-size: 0.72rem;
-    font-weight: 800;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-  }
-
-  .forma-section-line {
-    flex: 0 0 auto;
-    width: 1.5rem;
-    height: 2px;
-    border-radius: var(--radius-full);
-    background: var(--accent-cyan);
-    box-shadow: 0 0 10px var(--accent-cyan);
   }
 
   .forma-section-heading {
@@ -1911,10 +1605,6 @@
 
     .today-primary-row > * {
       flex: 1 1 100%;
-    }
-
-    .today-empty-actions > * {
-      width: 100%;
     }
 
     .forma-widget-header {

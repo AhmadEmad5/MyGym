@@ -197,31 +197,3 @@ export function useWorkoutTimer(): WorkoutTimerState {
     workoutTimer.getState
   );
 }
-
-/**
- * Selector hook: Only re-renders when isRunning changes (starts or stops).
- * Does NOT re-render on every second tick! Perfect for parent/HUD shells.
- */
-export function useIsWorkoutTimerRunning(): boolean {
-  return useSyncExternalStore(
-    workoutTimer.subscribe,
-    () => workoutTimer.getState().isRunning,
-    () => workoutTimer.getState().isRunning
-  );
-}
-
-/**
- * Selector hook: Only re-renders when showCompleteToast changes.
- * Avoids any parent view re-render during timer ticks.
- */
-export function useWorkoutRestToast() {
-  const showToast = useSyncExternalStore(
-    workoutTimer.subscribe,
-    () => workoutTimer.getState().showCompleteToast,
-    () => workoutTimer.getState().showCompleteToast
-  );
-  return {
-    showToast,
-    dismissToast: () => workoutTimer.dismissToast()
-  };
-}
