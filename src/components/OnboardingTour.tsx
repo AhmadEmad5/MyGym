@@ -1,21 +1,40 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowLeft,
   ArrowRight,
+  Building2,
   Check,
+  Dumbbell,
   Flame,
   Gauge,
+  Home,
   Palette,
   Sparkles,
+  Sprout,
+  Target,
   Timer,
+  Trophy,
+  TrendingUp,
+  User,
   X,
   Zap
 } from 'lucide-react';
 import { useData } from '../hooks/useData';
 import { useTranslation } from '../lib/i18n';
 import { gymAudio } from '../lib/audio';
-import type { UserSettings } from '../lib/api';
+import {
+  DAYS_PER_WEEK_OPTIONS,
+  normalizeAthleteProfile
+} from '../lib/api';
+import type {
+  AthleteProfile,
+  EquipmentAccess,
+  ExperienceLevel,
+  TrainingGoal,
+  UserSettings
+} from '../lib/api';
 
 interface OnboardingTourProps {
   onFinish: () => void;
@@ -34,7 +53,7 @@ const THEME_OPTIONS: Array<{ id: ThemeId; label: string; color: string }> = [
   { id: 'paper', label: 'Paper', color: '#a16207' }
 ];
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 5;
 const FOCUSABLE =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -78,25 +97,57 @@ export function OnboardingTour({ onFinish }: OnboardingTourProps) {
             fast: 'سريعة',
             standard: 'مثالية',
             heavy: 'قوية',
-            s3Title: 'اجعل الواجهة لك',
-            s3Desc: 'اختر المظهر، وقرار الكثافة والحركة، لتصل إلى تجربة مريحة في الجوال وسط الصالة.',
-            s3Theme: 'المظهر',
-            s3Density: 'كثافة العرض',
-            s3Motion: 'الحركة',
+            s3Title: 'أخبرنا بما تتدرّب من أجله',
+            s3Desc: 'دقيقة واحدة من السياق، فيسلّمك FORMA خطةً وأهدافاً وتقسيمة تناسبك بدل لوحة فارغة.',
+            s3Goal: 'الهدف الأساسي',
+            goalStrength: 'القوة',
+            goalStrengthSub: 'أوزان أثقل',
+            goalMuscle: 'العضلات',
+            goalMuscleSub: 'الحجم والتناسق',
+            goalFatloss: 'إنقاص الكيلو',
+            goalFatlossSub: 'جسم أنحف',
+            goalGeneral: 'عام',
+            goalGeneralSub: 'الحفاظ على اللياقة',
+            s3Level: 'خبرتك التدريبية',
+            levelBeginner: 'مبتدئ',
+            levelBeginnerSub: 'أقل من سنة',
+            levelIntermediate: 'متمرّن',
+            levelIntermediateSub: 'سنة إلى ثلاث',
+            levelAdvanced: 'متقدّم',
+            levelAdvancedSub: 'أكثر من ثلاث سنوات',
+            s3Equipment: 'أين تتدرّب',
+            gearFullGym: 'صالة كاملة',
+            gearFullGymSub: 'كل الأجهزة',
+            gearHome: 'معدات منزلية',
+            gearHomeSub: 'بار وأجراس',
+            gearBodyweight: 'وزن الجسم',
+            gearBodyweightSub: 'بدون معدات',
+            s3Days: 'أيام في الأسبوع',
+            days: (n: number) => `${n}`,
+            s3Hint: 'كل ما تختاره هنا يبقى قابلاً للتعديل في الإعدادات.',
+            s4Title: 'اجعل الواجهة لك',
+            s4Desc: 'اختر المظهر، وقرار الكثافة والحركة، لتصل إلى تجربة مريحة في الجوال وسط الصالة.',
+            s4Theme: 'المظهر',
+            s4Density: 'كثافة العرض',
+            s4Motion: 'الحركة',
             comfortable: 'مريحة',
             compact: 'مكثفة',
             full: 'كاملة',
             reduced: 'مخففة',
-            s4Title: 'كل شيء جاهز',
-            s4Desc: 'تم حفظ تفضيلاتك. ابدأ أول تمرين، وسنقيس كل جولة تضيفها.',
-            s4Unit: 'الوحدة',
-            s4Rest: 'الراحة',
-            s4Theme: 'المظهر',
-            s4Start: 'الإنجليزية',
-            s4Week: 'بداية الأسبوع',
+            s5Title: 'كل شيء جاهز',
+            s5Desc: 'تم حفظ تفضيلاتك. ابدأ أول تمرين، وسنقيس كل جولة تضيفها.',
+            s5Unit: 'الوحدة',
+            s5Rest: 'الراحة',
+            s5Theme: 'المظهر',
+            s5Start: 'اللغة',
+            s5Week: 'بداية الأسبوع',
+            s5Goal: 'الهدف',
+            s5Level: 'المستوى',
+            s5Kit: 'المعدات',
+            s5Days: 'أيام الأسبوع',
             sunday: 'الأحد',
             monday: 'الاثنين',
-            s4Hint: 'يمكنك إعادة تشغيل الجولة أو تعديل أي إعداد في أي وقت.'
+            s5Hint: 'يمكنك إعادة تشغيل الجولة أو تعديل أي إعداد في أي وقت.'
           }
         : {
             step: (n: number) => `Step ${n} of ${TOTAL_STEPS}`,
@@ -121,25 +172,57 @@ export function OnboardingTour({ onFinish }: OnboardingTourProps) {
             fast: 'Fast',
             standard: 'Optimal',
             heavy: 'Heavy',
-            s3Title: 'Make the interface yours',
-            s3Desc: 'Choose a theme plus how dense and how animated the app should be on a phone in the gym.',
-            s3Theme: 'Theme',
-            s3Density: 'Layout density',
-            s3Motion: 'Motion',
+            s3Title: 'Tell us what you are training for',
+            s3Desc: 'One minute of context so FORMA hands you a plan, targets and a split that fit you — instead of a blank dashboard.',
+            s3Goal: 'Primary goal',
+            goalStrength: 'Strength',
+            goalStrengthSub: 'Heavier lifts',
+            goalMuscle: 'Muscle',
+            goalMuscleSub: 'Size and shape',
+            goalFatloss: 'Fat loss',
+            goalFatlossSub: 'Leaner body',
+            goalGeneral: 'General',
+            goalGeneralSub: 'Stay fit',
+            s3Level: 'Training experience',
+            levelBeginner: 'New',
+            levelBeginnerSub: 'Under a year',
+            levelIntermediate: 'Regular',
+            levelIntermediateSub: '1 to 3 years',
+            levelAdvanced: 'Advanced',
+            levelAdvancedSub: '3 years plus',
+            s3Equipment: 'Where you train',
+            gearFullGym: 'Full gym',
+            gearFullGymSub: 'All machines',
+            gearHome: 'Home kit',
+            gearHomeSub: 'Bars and dumbbells',
+            gearBodyweight: 'Bodyweight',
+            gearBodyweightSub: 'No equipment',
+            s3Days: 'Days per week',
+            days: (n: number) => `${n}`,
+            s3Hint: 'Everything here stays editable in Settings.',
+            s4Title: 'Make the interface yours',
+            s4Desc: 'Choose a theme plus how dense and how animated the app should be on a phone in the gym.',
+            s4Theme: 'Theme',
+            s4Density: 'Layout density',
+            s4Motion: 'Motion',
             comfortable: 'Comfortable',
             compact: 'Compact',
             full: 'Full',
             reduced: 'Reduced',
-            s4Title: 'You are all set',
-            s4Desc: 'Your preferences are saved. Start your first session and every set you log gets measured.',
-            s4Unit: 'Unit',
-            s4Rest: 'Rest',
-            s4Theme: 'Theme',
-            s4Start: 'Language',
-            s4Week: 'Week starts',
+            s5Title: 'You are all set',
+            s5Desc: 'Your preferences are saved. Start your first session and every set you log gets measured.',
+            s5Unit: 'Unit',
+            s5Rest: 'Rest',
+            s5Theme: 'Theme',
+            s5Start: 'Language',
+            s5Week: 'Week starts',
+            s5Goal: 'Goal',
+            s5Level: 'Level',
+            s5Kit: 'Kit',
+            s5Days: 'Weekly days',
             sunday: 'Sunday',
             monday: 'Monday',
-            s4Hint: 'You can replay this tour or change any preference in Settings at any time.'
+            s5Hint: 'You can replay this tour or change any preference in Settings at any time.'
           },
     [isRTL]
   );
@@ -164,15 +247,24 @@ export function OnboardingTour({ onFinish }: OnboardingTourProps) {
     [data?.user, settings, updateSettings]
   );
 
+  const saveProfilePatch = useCallback(
+    async (patch: Partial<AthleteProfile>) => {
+      const next = normalizeAthleteProfile({ ...normalizeAthleteProfile(settings?.athlete), ...patch });
+      await saveSettingsPatch({ athlete: next });
+    },
+    [saveSettingsPatch, settings?.athlete]
+  );
+
   const goNext = useCallback(() => {
     gymAudio.triggerSubtleHaptic([20, 25]);
     if (currentStepRef.current >= TOTAL_STEPS - 1) {
       gymAudio.triggerDualPulseHaptic();
+      void saveProfilePatch({ onboardedAt: new Date().toISOString() });
       onFinish();
       return;
     }
     setCurrentStep((prev) => Math.min(TOTAL_STEPS - 1, prev + 1));
-  }, [onFinish]);
+  }, [onFinish, saveProfilePatch]);
 
   const goPrev = useCallback(() => {
     gymAudio.triggerSubtleHaptic([15]);
@@ -270,6 +362,44 @@ export function OnboardingTour({ onFinish }: OnboardingTourProps) {
 
   const activeTheme = (theme || settings?.theme || 'dark') as ThemeId;
   const activeWeek = settings?.weekStartsOn === 'monday' ? labels.monday : labels.sunday;
+  const profile = useMemo(() => normalizeAthleteProfile(settings?.athlete), [settings?.athlete]);
+
+  const goalOptions = useMemo(
+    () => [
+      { id: 'strength' as TrainingGoal, label: labels.goalStrength, sub: labels.goalStrengthSub, Icon: Dumbbell },
+      { id: 'muscle' as TrainingGoal, label: labels.goalMuscle, sub: labels.goalMuscleSub, Icon: TrendingUp },
+      { id: 'fatloss' as TrainingGoal, label: labels.goalFatloss, sub: labels.goalFatlossSub, Icon: Flame },
+      { id: 'general' as TrainingGoal, label: labels.goalGeneral, sub: labels.goalGeneralSub, Icon: Sparkles }
+    ],
+    [labels]
+  );
+
+  const levelOptions = useMemo(
+    () => [
+      { id: 'beginner' as ExperienceLevel, label: labels.levelBeginner, sub: labels.levelBeginnerSub, Icon: Sprout },
+      {
+        id: 'intermediate' as ExperienceLevel,
+        label: labels.levelIntermediate,
+        sub: labels.levelIntermediateSub,
+        Icon: Zap
+      },
+      { id: 'advanced' as ExperienceLevel, label: labels.levelAdvanced, sub: labels.levelAdvancedSub, Icon: Trophy }
+    ],
+    [labels]
+  );
+
+  const equipmentOptions = useMemo(
+    () => [
+      { id: 'full_gym' as EquipmentAccess, label: labels.gearFullGym, sub: labels.gearFullGymSub, Icon: Building2 },
+      { id: 'home_basic' as EquipmentAccess, label: labels.gearHome, sub: labels.gearHomeSub, Icon: Home },
+      { id: 'bodyweight' as EquipmentAccess, label: labels.gearBodyweight, sub: labels.gearBodyweightSub, Icon: User }
+    ],
+    [labels]
+  );
+
+  const goalLabel = goalOptions.find((option) => option.id === profile.goal)?.label ?? profile.goal;
+  const levelLabel = levelOptions.find((option) => option.id === profile.level)?.label ?? profile.level;
+  const kitLabel = equipmentOptions.find((option) => option.id === profile.equipment)?.label ?? profile.equipment;
 
   return (
     <div className="forma-onboarding-backdrop" dir={isRTL ? 'rtl' : 'ltr'}>
@@ -307,6 +437,7 @@ export function OnboardingTour({ onFinish }: OnboardingTourProps) {
 
         <div
           className="forma-onboarding-route"
+          style={{ '--forma-tour-steps': TOTAL_STEPS } as CSSProperties}
           role="progressbar"
           aria-label={labels.progress}
           aria-valuemin={1}
@@ -467,8 +598,8 @@ export function OnboardingTour({ onFinish }: OnboardingTourProps) {
             {currentStep === 2 && (
               <>
                 <header className="forma-onboarding-hero-head">
-                  <div className="forma-onboarding-icon-gem" style={{ color: '#e879f9', borderColor: 'rgba(232, 121, 249, 0.4)' }}>
-                    <Palette size={28} aria-hidden="true" />
+                  <div className="forma-onboarding-icon-gem" style={{ color: '#84cc16', borderColor: 'rgba(132, 204, 22, 0.4)' }}>
+                    <Target size={28} aria-hidden="true" />
                   </div>
                   <h2 id="forma-onboarding-title" className="forma-onboarding-title">
                     {labels.s3Title}
@@ -479,9 +610,113 @@ export function OnboardingTour({ onFinish }: OnboardingTourProps) {
                 </header>
 
                 <div className="forma-choice-group">
+                  <div className="forma-choice-label" id="forma-tour-goal">
+                    <Target size={14} aria-hidden="true" />
+                    <span>{labels.s3Goal}</span>
+                  </div>
+                  <div className="forma-choice-grid is-four" role="group" aria-labelledby="forma-tour-goal">
+                    {goalOptions.map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        className={`forma-choice-card ${profile.goal === option.id ? 'is-active' : ''}`}
+                        aria-pressed={profile.goal === option.id}
+                        onClick={() => void saveProfilePatch({ goal: option.id })}
+                      >
+                        <option.Icon size={17} aria-hidden="true" className="forma-choice-icon" />
+                        <strong className="forma-choice-title">{option.label}</strong>
+                        <span className="forma-choice-sub">{option.sub}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="forma-choice-group">
+                  <div className="forma-choice-label" id="forma-tour-level">
+                    <Zap size={14} aria-hidden="true" />
+                    <span>{labels.s3Level}</span>
+                  </div>
+                  <div className="forma-choice-grid is-three" role="group" aria-labelledby="forma-tour-level">
+                    {levelOptions.map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        className={`forma-choice-card ${profile.level === option.id ? 'is-active' : ''}`}
+                        aria-pressed={profile.level === option.id}
+                        onClick={() => void saveProfilePatch({ level: option.id })}
+                      >
+                        <option.Icon size={17} aria-hidden="true" className="forma-choice-icon" />
+                        <strong className="forma-choice-title">{option.label}</strong>
+                        <span className="forma-choice-sub">{option.sub}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="forma-choice-group">
+                  <div className="forma-choice-label" id="forma-tour-equipment">
+                    <Dumbbell size={14} aria-hidden="true" />
+                    <span>{labels.s3Equipment}</span>
+                  </div>
+                  <div className="forma-choice-grid is-three" role="group" aria-labelledby="forma-tour-equipment">
+                    {equipmentOptions.map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        className={`forma-choice-card ${profile.equipment === option.id ? 'is-active' : ''}`}
+                        aria-pressed={profile.equipment === option.id}
+                        onClick={() => void saveProfilePatch({ equipment: option.id })}
+                      >
+                        <option.Icon size={17} aria-hidden="true" className="forma-choice-icon" />
+                        <strong className="forma-choice-title">{option.label}</strong>
+                        <span className="forma-choice-sub">{option.sub}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="forma-choice-group">
+                  <div className="forma-choice-label" id="forma-tour-days">
+                    <Gauge size={14} aria-hidden="true" />
+                    <span>{labels.s3Days}</span>
+                  </div>
+                  <div className="forma-days-row" role="group" aria-labelledby="forma-tour-days">
+                    {DAYS_PER_WEEK_OPTIONS.map((days) => (
+                      <button
+                        key={days}
+                        type="button"
+                        className={`forma-days-pill ${profile.daysPerWeek === days ? 'is-active' : ''}`}
+                        aria-pressed={profile.daysPerWeek === days}
+                        onClick={() => void saveProfilePatch({ daysPerWeek: days })}
+                      >
+                        {labels.days(days)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <p className="forma-onboarding-footnote">{labels.s3Hint}</p>
+              </>
+            )}
+
+            {currentStep === 3 && (
+              <>
+                <header className="forma-onboarding-hero-head">
+                  <div className="forma-onboarding-icon-gem" style={{ color: '#e879f9', borderColor: 'rgba(232, 121, 249, 0.4)' }}>
+                    <Palette size={28} aria-hidden="true" />
+                  </div>
+                  <h2 id="forma-onboarding-title" className="forma-onboarding-title">
+                    {labels.s4Title}
+                  </h2>
+                  <p id="forma-onboarding-desc" className="forma-onboarding-desc">
+                    {labels.s4Desc}
+                  </p>
+                </header>
+
+                <div className="forma-choice-group">
                   <div className="forma-choice-label" id="forma-tour-theme">
                     <Palette size={14} aria-hidden="true" />
-                    <span>{labels.s3Theme}</span>
+                    <span>{labels.s4Theme}</span>
                   </div>
                   <div className="forma-themes-swatches" role="group" aria-labelledby="forma-tour-theme">
                     {THEME_OPTIONS.map((option) => (
@@ -505,7 +740,7 @@ export function OnboardingTour({ onFinish }: OnboardingTourProps) {
                 <div className="forma-choice-group">
                   <div className="forma-choice-label" id="forma-tour-density">
                     <Gauge size={14} aria-hidden="true" />
-                    <span>{labels.s3Density}</span>
+                    <span>{labels.s4Density}</span>
                   </div>
                   <div className="forma-choice-grid is-two" role="group" aria-labelledby="forma-tour-density">
                     <button
@@ -530,7 +765,7 @@ export function OnboardingTour({ onFinish }: OnboardingTourProps) {
                 <div className="forma-choice-group">
                   <div className="forma-choice-label" id="forma-tour-motion">
                     <Sparkles size={14} aria-hidden="true" />
-                    <span>{labels.s3Motion}</span>
+                    <span>{labels.s4Motion}</span>
                   </div>
                   <div className="forma-choice-grid is-two" role="group" aria-labelledby="forma-tour-motion">
                     <button
@@ -554,44 +789,60 @@ export function OnboardingTour({ onFinish }: OnboardingTourProps) {
               </>
             )}
 
-            {currentStep === 3 && (
+            {currentStep === 4 && (
               <>
                 <header className="forma-onboarding-hero-head">
                   <div className="forma-onboarding-icon-gem" style={{ color: '#f59e0b', borderColor: 'rgba(245, 158, 11, 0.4)' }}>
                     <Flame size={30} aria-hidden="true" />
                   </div>
                   <h2 id="forma-onboarding-title" className="forma-onboarding-title">
-                    {labels.s4Title}
+                    {labels.s5Title}
                   </h2>
                   <p id="forma-onboarding-desc" className="forma-onboarding-desc">
-                    {labels.s4Desc}
+                    {labels.s5Desc}
                   </p>
                 </header>
 
                 <div className="forma-summary-card">
                   <div className="forma-summary-row">
-                    <span>{labels.s4Start}</span>
+                    <span>{labels.s5Start}</span>
                     <strong>{language === 'ar' ? 'العربية' : 'English'}</strong>
                   </div>
+                  <div className="forma-summary-row is-hero">
+                    <span>{labels.s5Goal}</span>
+                    <strong>{goalLabel}</strong>
+                  </div>
                   <div className="forma-summary-row">
-                    <span>{labels.s4Unit}</span>
+                    <span>{labels.s5Level}</span>
+                    <strong>{levelLabel}</strong>
+                  </div>
+                  <div className="forma-summary-row">
+                    <span>{labels.s5Kit}</span>
+                    <strong>{kitLabel}</strong>
+                  </div>
+                  <div className="forma-summary-row">
+                    <span>{labels.s5Days}</span>
+                    <strong>{profile.daysPerWeek}</strong>
+                  </div>
+                  <div className="forma-summary-row">
+                    <span>{labels.s5Unit}</span>
                     <strong>{(settings?.weightUnit || 'kg').toUpperCase()}</strong>
                   </div>
                   <div className="forma-summary-row">
-                    <span>{labels.s4Rest}</span>
+                    <span>{labels.s5Rest}</span>
                     <strong>{settings?.restTimerSeconds || 90}s</strong>
                   </div>
                   <div className="forma-summary-row">
-                    <span>{labels.s4Theme}</span>
+                    <span>{labels.s5Theme}</span>
                     <strong>{THEME_OPTIONS.find((option) => option.id === activeTheme)?.label ?? activeTheme}</strong>
                   </div>
                   <div className="forma-summary-row">
-                    <span>{labels.s4Week}</span>
+                    <span>{labels.s5Week}</span>
                     <strong>{activeWeek}</strong>
                   </div>
                 </div>
 
-                <p className="forma-onboarding-footnote">{labels.s4Hint}</p>
+                <p className="forma-onboarding-footnote">{labels.s5Hint}</p>
               </>
             )}
           </motion.div>

@@ -72,6 +72,57 @@ export type Routine = {
   daysRequired?: number;
 };
 
+export type TrainingGoal = 'strength' | 'muscle' | 'fatloss' | 'general';
+export type ExperienceLevel = 'beginner' | 'intermediate' | 'advanced';
+export type EquipmentAccess = 'full_gym' | 'home_basic' | 'bodyweight';
+
+export const TRAINING_GOALS: readonly TrainingGoal[] = ['strength', 'muscle', 'fatloss', 'general'];
+export const EXPERIENCE_LEVELS: readonly ExperienceLevel[] = ['beginner', 'intermediate', 'advanced'];
+export const EQUIPMENT_OPTIONS: readonly EquipmentAccess[] = ['full_gym', 'home_basic', 'bodyweight'];
+export const DAYS_PER_WEEK_OPTIONS: readonly number[] = [2, 3, 4, 5, 6];
+
+/**
+ * What the athlete is actually training for. Collected once during onboarding
+ * and read by the routine builder, the AI generator and nutrition targets, so a
+ * new athlete never has to start from a blank dashboard.
+ */
+export type AthleteProfile = {
+  goal: TrainingGoal;
+  level: ExperienceLevel;
+  equipment: EquipmentAccess;
+  daysPerWeek: number;
+  /** ISO timestamp written the first time the setup tour is completed. */
+  onboardedAt?: string;
+};
+
+export const DEFAULT_ATHLETE_PROFILE: AthleteProfile = {
+  goal: 'general',
+  level: 'beginner',
+  equipment: 'full_gym',
+  daysPerWeek: 3
+};
+
+export function normalizeAthleteProfile(raw: unknown): AthleteProfile {
+  const source = (raw && typeof raw === 'object' ? raw : {}) as Partial<AthleteProfile>;
+  const goal = source.goal as TrainingGoal | undefined;
+  const level = source.level as ExperienceLevel | undefined;
+  const equipment = source.equipment as EquipmentAccess | undefined;
+  const daysPerWeek = Number(source.daysPerWeek);
+  return {
+    goal: goal && TRAINING_GOALS.includes(goal) ? goal : DEFAULT_ATHLETE_PROFILE.goal,
+    level: level && EXPERIENCE_LEVELS.includes(level) ? level : DEFAULT_ATHLETE_PROFILE.level,
+    equipment:
+      equipment && EQUIPMENT_OPTIONS.includes(equipment) ? equipment : DEFAULT_ATHLETE_PROFILE.equipment,
+    daysPerWeek:
+      Number.isFinite(daysPerWeek) && daysPerWeek >= 1 && daysPerWeek <= 7
+        ? Math.round(daysPerWeek)
+        : DEFAULT_ATHLETE_PROFILE.daysPerWeek,
+    ...(typeof source.onboardedAt === 'string' && source.onboardedAt
+      ? { onboardedAt: source.onboardedAt }
+      : {})
+  };
+}
+
 export type UserSettings = {
   weightUnit: 'lb' | 'kg';
   theme: string;
@@ -89,6 +140,8 @@ export type UserSettings = {
   autoCollapseFinishedExercises?: boolean;
   fontScale?: 'default' | 'large';
   highContrast?: boolean;
+  /** Absent until the athlete finishes the setup tour. */
+  athlete?: AthleteProfile;
 };
 
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
@@ -648,9 +701,25 @@ const DEFAULT_SETTINGS: UserSettings = {
   warmTint: 'auto',
   keepScreenAwake: true,
   autoCollapseFinishedExercises: true
-,fontScale: 'default',
-highContrast: false
+  ,fontScale: 'default',
+  highContrast: false
 };
+
+/**
+ * Fills in missing settings keys and repairs a malformed `athlete` profile so
+ * every read path (Firestore, local mirror, JSON import) yields the same shape.
+ */
+export function normalizeSettings(raw: unknown): UserSettings {
+  const source = (raw && typeof raw === 'object' ? raw : {}) as Partial<UserSettings>;
+  const merged: UserSettings = { ...DEFAULT_SETTINGS, ...source };
+  if ('athlete' in source) {
+    merged.athlete = normalizeAthleteProfile(source.athlete);
+  } else {
+    delete merged.athlete;
+  }
+  return merged;
+}
+
 
 async function migrateLegacyDataIfNeeded(uid: string) {
   if (!db) return;
@@ -663,7 +732,7 @@ async function migrateLegacyDataIfNeeded(uid: string) {
       console.debug('Migrating legacy monolithic data to sub-collections...');
       const batch = writeBatch(db);
       
-      const settings = data.settings || DEFAULT_SETTINGS;
+      const settings = normalizeSettings(data.settings);
       const user = data.user || null;
       
       // Update root document
@@ -778,7 +847,7 @@ export const api = {
         ]);
 
         const rootData = rootSnap.exists() ? rootSnap.data() : {};
-        const settings = rootData.settings || DEFAULT_SETTINGS;
+        const settings = normalizeSettings(rootData.settings);
         const user = rootData.user;
         let bodyMetrics = Array.isArray(rootData.bodyMetrics) ? rootData.bodyMetrics : [];
         const nutritionGoals = rootData.nutritionGoals || DEFAULT_NUTRITION_GOALS;
@@ -868,6 +937,7 @@ export const api = {
       try {
         const data = JSON.parse(stored);
         if (!data.settings) data.settings = DEFAULT_SETTINGS;
+        else data.settings = normalizeSettings(data.settings);
         if (!data.meals) data.meals = [];
         if (!data.bodyMetrics) data.bodyMetrics = [];
         if (!data.nutritionGoals) data.nutritionGoals = DEFAULT_NUTRITION_GOALS;
@@ -1257,7 +1327,7 @@ export const api = {
     const validGoals = imported.nutritionGoals ? { ...DEFAULT_NUTRITION_GOALS, ...imported.nutritionGoals } : DEFAULT_NUTRITION_GOALS;
     assertValidGoals(validGoals);
     const validWater = imported.waterLogs && typeof imported.waterLogs === 'object' ? imported.waterLogs : {};
-    const validSettings = imported.settings ? { ...DEFAULT_SETTINGS, ...imported.settings } : DEFAULT_SETTINGS;
+    const validSettings = normalizeSettings(imported.settings);
 
     const fullData: AppData = {
       user: imported.user || { name: 'Athlete', email: 'guest@forma.app' },
