@@ -11,7 +11,11 @@
   .app-layout { min-height: 100dvh; }
   .app-layout .main-content { min-height: 0; }
 
-  .app-layout .content-area {
+  /* :not(.in-workout-session-main) for the same reason the landscape block
+     further down carries it: the workout screen floats its own dock, and
+     reserving the global dock's height here on top of .session-hud's is what
+     stacked the three reservations. */
+  .app-layout .main-content:not(.in-workout-session-main) .content-area {
     padding-inline: var(--mobile-page-gutter);
     padding-block: calc(var(--shell-topbar-inset) + 0.75rem) calc(max(var(--shell-dock-inset), var(--hud-bottom-offset)) + 1.25rem);
     scroll-padding-block: 1rem calc(var(--shell-dock-inset) + 1rem);
@@ -339,9 +343,11 @@
     transform: scale(0.99);
   }
 
-  .session-detail-container {
-    padding-block-end: calc(max(var(--hud-bottom-offset), 9rem) + 1rem) !important;
-  }
+  /* The unlayered 9rem reservation this block used to carry is gone on purpose.
+     .session-detail-container wraps .session-hud, and this file is unlayered, so
+     a 9rem !important pad here beat the measured --session-* geometry in
+     performance.css on every phone. The dock band now comes from .session-hud
+     alone; see the bottom-chrome block in performance.css. */
 
   .gym-floor-current-set-card {
     padding: clamp(0.9rem, 4vw, 1.2rem) !important;
@@ -531,4 +537,452 @@
 :root[data-motion='reduced'] .modern-nav-item,
 :root[data-motion='reduced'] .modern-nav-item .nav-icon-wrap {
   transition: none !important;
+}
+
+/* ==========================================================================
+   Thumb-zone, safe-area and legibility pass for the non-workout screens.
+
+   Everything here is unlayered, so it outranks the `@layer components` blocks
+   in index.css / LoginView.css / today.css / performance.css / routines.css
+   without needing `!important` on the cascade. gym-floor.css is imported
+   earlier than this file, so it also loses to equal-specificity rules below.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. Phone landscape (<=900px wide, <=540px tall)
+
+   index.css collapses the dock into an inline-start rail for
+   `orientation: landscape and max-height: 540px`, but the `max-width: 900px`
+   block above re-asserts a 74px horizontal pill with a 5-column grid and is
+   imported later, so a phone held sideways between 541px and 900px of
+   viewport width squeezed a 74px-tall grid into a 68px-wide rail. Re-assert
+   the rail, and drop the top-bar / bottom-dock reserve that no longer has any
+   chrome left to clear. The workout screen keeps its own offsets: both
+   selectors below are guarded with :not().
+   -------------------------------------------------------------------------- */
+@media (max-width: 900px) and (orientation: landscape) and (max-height: 540px) {
+  .modern-nav-wrapper {
+    inset-block: 0 auto !important;
+    inset-inline: 0 auto !important;
+    z-index: 1050 !important;
+    display: flex !important;
+    width: 68px !important;
+    height: 100dvh !important;
+    padding-block: max(6px, var(--shell-safe-top)) max(6px, var(--shell-safe-bottom)) !important;
+    padding-inline: max(6px, var(--shell-safe-inline-start)) 0.35rem !important;
+    justify-content: center !important;
+    align-items: center !important;
+    pointer-events: none !important;
+  }
+
+  .modern-navbar {
+    pointer-events: auto !important;
+    width: 58px !important;
+    max-width: none !important;
+    height: calc(100dvh - 12px) !important;
+    min-height: 0 !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    padding-block: 0.5rem !important;
+    padding-inline: 0.2rem !important;
+    border-radius: 18px !important;
+  }
+
+  .modern-nav-links.mobile-only-nav {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-around !important;
+    width: 100% !important;
+    height: 100% !important;
+    gap: 0.15rem !important;
+  }
+
+  .modern-nav-item {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: 54px !important;
+    padding-block: 0.2rem !important;
+    padding-inline: 0.1rem !important;
+  }
+
+  .modern-nav-item .nav-icon-wrap {
+    width: 34px !important;
+    height: 30px !important;
+  }
+
+  .modern-nav-item .nav-short-label { font-size: 0.6rem !important; }
+
+  .app-layout:not(.has-live-bar) .main-content:not(.in-workout-session-main) .content-area {
+    padding-block: max(0.5rem, var(--shell-safe-top)) max(0.5rem, var(--shell-safe-bottom)) !important;
+    scroll-padding-block: 0.5rem;
+  }
+
+  .forma-page-frame { padding-block-end: 1.5rem !important; }
+  .nutrition-page,
+  .calendar-page { padding-block-end: 1.5rem !important; }
+  .mobile-page-actionbar { display: none !important; }
+}
+
+/* --------------------------------------------------------------------------
+   2. Thumb-zone action bar (Nutrition, Calendar)
+
+   `display: none` by default so it never reaches a tablet or desktop. Below
+   900px it becomes a fixed bar sitting directly on top of the dock, which
+   keeps its own z-index of 1050 above the bar's 1040.
+   -------------------------------------------------------------------------- */
+.mobile-page-actionbar { display: none; }
+
+@media (max-width: 900px) {
+  .mobile-page-actionbar {
+    position: fixed;
+    z-index: 1040;
+    inset-inline: 0;
+    inset-block-end: max(var(--shell-dock-inset), var(--hud-bottom-offset));
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-block: 0.5rem;
+    padding-inline:
+      max(0.75rem, var(--shell-safe-inline-start))
+      max(0.75rem, var(--shell-safe-inline-end));
+    border-block-start: 1px solid var(--border-highlight);
+    background: color-mix(in srgb, var(--bg-primary) 93%, transparent);
+    backdrop-filter: blur(18px) saturate(170%);
+    -webkit-backdrop-filter: blur(18px) saturate(170%);
+    box-shadow: 0 -12px 28px color-mix(in srgb, var(--bg-primary) 40%, transparent);
+  }
+
+  .mobile-page-actionbar > * {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 52px;
+  }
+
+  .mobile-page-actionbar .ui-button {
+    gap: 0.45rem;
+    font-size: 0.95rem;
+    font-weight: 800;
+  }
+
+  /* Reserve the bar's own height so the last row can scroll clear of it. The
+     scroller already reserves --shell-dock-inset; the bar sits inside that
+     band, so only the bar's height is added here. */
+  .nutrition-page,
+  .calendar-page { padding-block-end: 7.5rem; }
+}
+
+/* --------------------------------------------------------------------------
+   3. Sheets: inline safe area (a landscape notch was clipping the leading
+      edge of the first item) and a legible 44px close affordance.
+   -------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .more-sheet-panel,
+  .forma-mobile-sheet {
+    padding-inline:
+      max(1rem, var(--shell-safe-inline-start))
+      max(1rem, var(--shell-safe-inline-end));
+  }
+
+  .more-sheet-close-btn {
+    width: var(--mobile-touch-size);
+    height: var(--mobile-touch-size);
+    color: var(--text-secondary);
+  }
+
+  .forma-sheet-header h2 {
+    font-size: 1.05rem;
+    font-weight: 800;
+    line-height: 1.25;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   4. Mobile top bar
+
+   The streak chip was a 40px link showing an 11.5px number in mid-orange on a
+   translucent bar - the smallest, lowest-contrast readout on the screen. The
+   number moves onto the primary text token so it survives bright gym light and
+   a dark rack room; amber stays as the state accent on the border and fill.
+   -------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .mobile-top-streak {
+    height: auto !important;
+    min-block-size: var(--mobile-touch-size) !important;
+    padding-inline: 0.65rem;
+    color: var(--text-primary) !important;
+    font-size: 0.85rem !important;
+    font-weight: 900 !important;
+    font-variant-numeric: tabular-nums;
+    border-color: color-mix(in srgb, var(--warning) 55%, transparent) !important;
+    background: color-mix(in srgb, var(--warning) 14%, var(--bg-secondary)) !important;
+  }
+
+  .mobile-top-streak .streak-icon { color: var(--warning); }
+
+  .mobile-live-workout-pill.compact {
+    font-size: 0.78rem;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   5. Settings - the controls on this screen were the worst offenders: a
+      `sm` SegmentedControl trigger renders at roughly 24px inside a 30px
+      pill, and the rest-timer select and reminder input were 40px. Every one
+      of them is the only control on its row.
+   -------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .settings-page .ui-segmented { padding: 0.3rem; }
+
+  .settings-page .ui-segmented-trigger {
+    min-height: var(--mobile-touch-size);
+    padding-block: 0.35rem;
+  }
+
+  .settings-page .subtle-action {
+    min-height: var(--mobile-touch-size);
+    justify-content: center;
+  }
+
+  .settings-page [role='alertdialog'] .ui-button-danger { min-height: 52px; }
+}
+
+/* --------------------------------------------------------------------------
+   6. Performance hub - numeric readouts and the first-glance verdict strip.
+      `.forma-adaptive-callout small` and `.forma-adaptive-updated` were
+      0.62rem (9.9px), below the floor for anything read at arm's length.
+   -------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .performance-page .forma-adaptive-callout small,
+  .performance-page .forma-adaptive-updated {
+    font-size: 0.72rem;
+    line-height: 1.35;
+  }
+
+  .performance-page .forma-adaptive-chain strong { font-size: 0.9rem; }
+  .performance-page .forma-adaptive-callout p { font-size: 0.8rem; }
+  .performance-page .forma-tile-label { font-size: 0.8rem; }
+  .performance-page .forma-record-chip { font-size: 0.82rem; }
+  .performance-page .forma-recovery-not-logged { font-size: 0.8rem; }
+}
+
+.performance-ready-strip {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem 0.9rem;
+  flex-wrap: wrap;
+  margin-block-end: 1.15rem;
+  padding: 0.7rem 0.95rem;
+  border: 1px solid color-mix(in srgb, var(--shell-nav-active) 34%, var(--border-color));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--shell-nav-active) 8%, var(--bg-secondary));
+}
+
+.performance-ready-strip-copy {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.performance-ready-value {
+  color: var(--text-primary);
+  font-size: 1.6rem;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.performance-ready-value small {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.performance-ready-state {
+  margin-inline-start: auto;
+  color: var(--shell-nav-active);
+  font-size: 0.84rem;
+  font-weight: 850;
+  text-align: end;
+}
+
+/* --------------------------------------------------------------------------
+   7. Nutrition - header actions get a touch floor and the quick-add rail
+      bleeds to the page gutter so the first chip is not clipped.
+   -------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .nutrition-page .nutrition-header-actions > * { min-height: 48px; }
+
+  .nutrition-page .nutrition-quick-meals-track {
+    margin-inline: calc(var(--mobile-page-gutter) * -1);
+    padding-inline: var(--mobile-page-gutter);
+    padding-block-end: 0.3rem;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   8. Routines - the two header actions are the only entry points to AI
+      generation and the muscle map, and they sat at pill height in a wrap.
+   -------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .routines-page .routines-header-actions {
+    width: 100%;
+  }
+
+  .routines-page .routines-header-actions > button {
+    flex: 1 1 10rem;
+    min-height: 48px;
+    justify-content: center;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   9. Sign-in surface.
+
+   On a phone the marketing hero sits above the form, so the sign-in CTA
+   started around y=900 on an 812px-tall screen. The brand row and the h1
+   stay (the hero is this page's only h1); the body paragraph goes and the
+   remaining block tightens. Control sizes come off LoginView.css, which is
+   layered, so plain unlayered rules here already outrank it.
+   -------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .forma-hero {
+    gap: 0.6rem;
+    padding: 0.85rem 1.1rem;
+  }
+
+  .forma-hero-desc { display: none; }
+  .forma-hero-title { font-size: 1.35rem; line-height: 1.15; }
+  [dir='rtl'] .forma-hero-title { line-height: 1.3; }
+
+  .forma-panel {
+    gap: 0.85rem;
+    padding: 1.1rem;
+  }
+
+  .forma-panel-subtitle {
+    margin-block-start: 0.3rem;
+    font-size: 0.82rem;
+  }
+
+  .forma-lang-btn {
+    min-height: var(--mobile-touch-size);
+    padding-inline: 0.85rem;
+  }
+
+  .forma-mode-switch button { min-height: var(--mobile-touch-size); }
+  .forma-check { min-height: var(--mobile-touch-size); }
+  .forma-forgot-btn { min-height: var(--mobile-touch-size); }
+  .forma-field-action {
+    width: var(--mobile-touch-size);
+    height: var(--mobile-touch-size);
+  }
+  .forma-alert-dismiss {
+    width: var(--mobile-touch-size);
+    height: var(--mobile-touch-size);
+  }
+  .forma-modal-close {
+    width: var(--mobile-touch-size);
+    height: var(--mobile-touch-size);
+  }
+  .forma-social-row .ui-button { min-height: 48px; }
+  .forma-reset-modal { padding: 1.4rem; }
+
+  /* The busy pill was parked 4.75rem off the floor for a dock this screen does
+     not have, and it ignored the home indicator. */
+  .forma-busy-overlay {
+    inset-block-end: calc(max(0.75rem, var(--shell-safe-bottom)) + 0.75rem) !important;
+    inset-inline-end: max(0.75rem, var(--shell-safe-inline-end)) !important;
+  }
+
+  .forma-reset-backdrop {
+    align-items: center;
+    overflow-y: auto;
+    padding-block: max(1rem, var(--shell-safe-top)) max(1rem, var(--shell-safe-bottom));
+  }
+}
+
+/* --------------------------------------------------------------------------
+   10. Cascade repairs.
+
+   index.css sizes .mobile-top-btn/.mobile-top-avatar to 36px (<=768px) and 32px
+   (<=380px) with !important inside `@layer components`. Important layered
+   declarations outrank important unlayered ones, so the 44px floor declared
+   unlayered above never takes effect. Re-declaring it inside that same layer
+   wins on source order, because this file is imported after index.css.
+   -------------------------------------------------------------------------- */
+@layer components {
+  @media (max-width: 900px) {
+    .mobile-top-btn,
+    .mobile-top-avatar {
+      width: 44px !important;
+      height: 44px !important;
+      min-height: 44px !important;
+    }
+  }
+
+  /* The in-session scroller padding in index.css is layered and !important, so
+     the keyboard collapse below has to be layered and !important too, or the
+     scroller keeps reserving dock height while the dock is hidden. */
+  @media (max-width: 640px) {
+    :root[data-floor-input='true'] .app-layout .content-area {
+      padding-bottom: 0.75rem !important;
+    }
+  }
+}
+
+/* data-floor-input hides the thumb dock and the rest HUD, so the scroller must
+   stop reserving room for them: 100dvh does not shrink on iOS when the
+   software keyboard opens, and the reserve is what parks the last sets
+   underneath it. */
+@media (max-width: 900px) {
+  :root[data-floor-input='true'] .app-layout .content-area {
+    padding-block-end: 0.75rem;
+    scroll-padding-block-end: 1rem;
+  }
+}
+
+/* The nav press-scale is a compound :active selector, so the bare reduced-motion
+   rule above cannot reach it. Both gates are listed explicitly. */
+@media (prefers-reduced-motion: reduce) {
+  .modern-nav-item:active .nav-icon-wrap { transform: none; }
+}
+
+:root[data-motion='reduced'] .modern-nav-item:active .nav-icon-wrap {
+  transform: none;
+}
+
+/* --------------------------------------------------------------------------
+   10. Readability at arm's length
+
+   Numeric readouts and mid-workout metadata that sat at 0.62-0.66rem
+   (9.9-10.6px) are lifted to 0.72rem (11.5px). These are labels and counts,
+   not the primary hero figures, which were already 1rem+; the change is
+   specifically the small text a user has to lean in to read on a phone.
+   -------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .mobile-streak-ring {
+    inline-size: 3.25rem;
+    block-size: 3.25rem;
+  }
+
+  .mobile-streak-text { font-size: 0.75rem; }
+
+  .today-dashboard-stack .forma-section-kicker-text,
+  .performance-page .forma-section-kicker-text,
+  .routines-page .forma-section-kicker-text,
+  .nutrition-page .forma-section-kicker-text,
+  .calendar-page .forma-section-kicker-text { font-size: 0.72rem; }
+
+  .today-dashboard-stack .today-bento-legend-value small { font-size: 0.72rem; }
+  .today-dashboard-stack .home-quick-actions-grid .quick-action-card-btn small { font-size: 0.72rem; }
+
+  .routines-page .routine-ledger-counts { font-size: 0.72rem; }
+  .routines-page .routine-ledger-session-meta { font-size: 0.72rem; }
+  .routines-page .routine-ledger-session-list .routine-ledger-overflow { font-size: 0.72rem; }
+  .routines-page .routine-ledger-index { font-size: 0.72rem; }
 }

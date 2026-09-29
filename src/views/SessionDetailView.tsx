@@ -4,11 +4,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Plus, Check, Play, Pause, Trash2, X,
   CirclePlay, ChevronRight, ChevronLeft, Sparkles, Dumbbell,
-  RotateCcw, Info, CheckCircle2, Bell, MoreVertical, Flag, Square
+  RotateCcw, Info, CheckCircle2, Bell, MoreVertical, Flag, Square,
+  SearchX, ListTodo, CalendarDays, Lightbulb
 } from 'lucide-react';
 import { WorkoutSession, SetRecord, SessionExercise } from '../lib/api';
 import { useData } from '../hooks/useData';
 import { Modal } from '../components/Modal';
+import { Button } from '../components/ui/Button';
+import { EmptyState } from '../components/ui/EmptyState';
+import { PageSkeleton } from '../components/ui/PageSkeleton';
 import { useTranslation } from '../lib/i18n';
 import { gymAudio } from '../lib/audio';
 import { notify } from '../lib/feedback';
@@ -84,6 +88,19 @@ function formatTimer(seconds: number) {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function InlineHint({ id, children }: { id: string; children: string }) {
+  return (
+    <p
+      id={id}
+      className="ui-empty-description"
+      style={{ display: 'flex', alignItems: 'flex-start', gap: '0.4rem', margin: '0.5rem 0 0', fontSize: '0.78rem' }}
+    >
+      <Lightbulb size={14} aria-hidden="true" style={{ color: 'var(--accent-primary)', flexShrink: 0, marginBlockStart: '0.15rem' }} />
+      <span>{children}</span>
+    </p>
+  );
 }
 
 export function SessionDetailView() {
@@ -387,15 +404,32 @@ export function SessionDetailView() {
   }, [session?.exercises]);
 
   if (!session) {
+    if (!data) {
+      return (
+        <div className="page-surface session-detail-container flex-col" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <span className="forma-sr-only" role="status">{t('loadingYourWorkout')}</span>
+          <PageSkeleton variant="rows" rows={3} />
+        </div>
+      );
+    }
+
     return (
-      <div
-        className="page-surface session-detail-container flex-col"
-        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}
-        role="status"
-        aria-live="polite"
-      >
-        <Dumbbell className="w-10 h-10 animate-bounce" style={{ color: 'var(--accent-primary)', marginBottom: '1rem' }} aria-hidden="true" />
-        <p style={{ color: 'var(--text-secondary)' }}>{t('loading') || 'Loading workout session...'}</p>
+      <div className="page-surface session-detail-container flex-col" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', padding: '1.5rem' }}>
+        <EmptyState
+          icon={<SearchX size={22} aria-hidden="true" />}
+          title={t('sessionNotFoundTitle')}
+          description={t('sessionNotFoundDesc')}
+          action={
+            <Button variant="primary" size="md" leftIcon={<ArrowLeft width={16} height={16} style={{ transform: isRTL ? 'scaleX(-1)' : 'none' }} />} onClick={() => navigate('/today')}>
+              {t('sessionNotFoundAction')}
+            </Button>
+          }
+          secondaryAction={
+            <Button variant="secondary" size="md" leftIcon={<CalendarDays width={16} height={16} />} onClick={() => navigate('/plan')}>
+              {t('sessionNotFoundSecondary')}
+            </Button>
+          }
+        />
       </div>
     );
   }
@@ -519,7 +553,11 @@ export function SessionDetailView() {
           </div>
         </header>
 
-        <section style={{ marginBottom: '0.75rem' }} aria-label={isRTL ? 'تصفية المجموعات العضلية' : 'Muscle Group Filter'}>
+        <section
+          style={{ marginBottom: '0.75rem' }}
+          aria-label={isRTL ? 'تصفية المجموعات العضلية' : 'Muscle Group Filter'}
+          aria-describedby="session-muscle-filter-hint"
+        >
           <div className="gym-floor-ribbon hide-scrollbar">
             <button
               type="button"
@@ -570,6 +608,7 @@ export function SessionDetailView() {
               </button>
             ))}
           </div>
+          <InlineHint id="session-muscle-filter-hint">{t('muscleFilterHint')}</InlineHint>
         </section>
 
         <nav style={{ marginBottom: '1rem' }} aria-label={isRTL ? 'تنتقل بين التمارين' : 'Exercise Stepper'}>
@@ -663,7 +702,7 @@ export function SessionDetailView() {
           </div>
         </nav>
 
-        {currentExercise && (
+        {currentExercise ? (
           <article style={{
             borderRadius: '20px',
             background: 'var(--premium-surface)',
@@ -702,6 +741,8 @@ export function SessionDetailView() {
                     className="btn-icon btn-ghost"
                     onClick={() => setShowNotesAccordion(prev => !prev)}
                     aria-expanded={showNotesAccordion}
+                    aria-controls="session-form-tips"
+                    aria-label={isRTL ? 'نصائح الأداء الصحيح' : 'Proper form tips'}
                     style={{ color: showNotesAccordion ? 'var(--accent-primary)' : 'var(--text-muted)' }}
                     title={isRTL ? 'نصائح الأداء' : 'Form Advice & Tips'}
                   >
@@ -726,6 +767,7 @@ export function SessionDetailView() {
             <AnimatePresence initial={false}>
               {showNotesAccordion && currentExercise.notes && (
                 <motion.div
+                  id="session-form-tips"
                   initial={reducedMotion ? false : { opacity: 0, height: 0 }}
                   animate={reducedMotion ? {} : { opacity: 1, height: 'auto' }}
                   exit={reducedMotion ? {} : { opacity: 0, height: 0 }}
@@ -766,6 +808,7 @@ export function SessionDetailView() {
                     className="session-target session-target-primary"
                     onClick={() => setCardioRunning(r => !r)}
                     aria-pressed={cardioRunning}
+                    aria-describedby="session-cardio-timer-hint"
                   >
                     {cardioRunning ? <Pause className="w-5 h-5" aria-hidden="true" /> : <Play className="w-5 h-5" aria-hidden="true" />}
                     <span>{cardioRunning ? t('stopTimer') : t('startTimer')}</span>
@@ -779,6 +822,7 @@ export function SessionDetailView() {
                     <RotateCcw className="w-5 h-5" aria-hidden="true" />
                   </button>
                 </div>
+                <InlineHint id="session-cardio-timer-hint">{t('cardioTimerHint')}</InlineHint>
               </div>
             ) : (
               <div>
@@ -793,30 +837,32 @@ export function SessionDetailView() {
                     const isCurrentActive = sIdx === activeSetIndex;
                     return (
                       <div key={set.id || sIdx} style={{ display: 'grid', gap: '0.5rem' }}>
-                        <button
-                          type="button"
-                          className={`session-set-check ${isCurrentActive ? 'is-active' : ''}`.trim()}
-                          aria-pressed={set.isCompleted}
-                          onClick={() => { setSelectedSetIndex(sIdx); handleToggleSetComplete(activeExerciseIndex, sIdx); }}
-                        >
-                          <span className="session-set-check-mark" aria-hidden="true">
-                            {set.isCompleted ? <Check className="w-6 h-6" /> : <span style={{ fontSize: '0.95rem', fontWeight: 800 }}>{sIdx + 1}</span>}
-                          </span>
-                          <span className="session-set-check-body">
-                            <span className="session-set-check-title">
-                              {isRTL ? `الجولة ${sIdx + 1}` : `Set ${sIdx + 1}`}
+                        {isCurrentActive && (
+                          <button
+                            type="button"
+                            className="session-set-check is-active"
+                            aria-pressed={set.isCompleted}
+                            onClick={() => { setSelectedSetIndex(sIdx); handleToggleSetComplete(activeExerciseIndex, sIdx); }}
+                          >
+                            <span className="session-set-check-mark" aria-hidden="true">
+                              {set.isCompleted ? <Check className="w-6 h-6" /> : <span style={{ fontSize: '0.95rem', fontWeight: 800 }}>{sIdx + 1}</span>}
                             </span>
-                            <span className="session-set-check-meta">
-                              {`${set.weight || 0} ${set.unit} × ${set.repsActual || set.repsTarget || 10}`}
-                              {set.isCompleted && ` · ${isRTL ? 'مكتملة' : 'done'}`}
+                            <span className="session-set-check-body">
+                              <span className="session-set-check-title">
+                                {isRTL ? `الجولة ${sIdx + 1}` : `Set ${sIdx + 1}`}
+                              </span>
+                              <span className="session-set-check-meta">
+                                {`${set.weight || 0} ${set.unit} × ${set.repsActual || set.repsTarget || 10}`}
+                                {set.isCompleted && ` · ${isRTL ? 'مكتملة' : 'done'}`}
+                              </span>
                             </span>
-                          </span>
-                          <span className="forma-sr-only">
-                            {isRTL
-                              ? `${set.isCompleted ? 'مكتملة' : 'غير مكتملة'}. اضغط للتبديل.`
-                              : `${set.isCompleted ? 'Completed' : 'Not completed'}. Activate to toggle.`}
-                          </span>
-                        </button>
+                            <span className="forma-sr-only">
+                              {isRTL
+                                ? `${set.isCompleted ? 'مكتملة' : 'غير مكتملة'}. اضغط للتبديل.`
+                                : `${set.isCompleted ? 'Completed' : 'Not completed'}. Activate to toggle.`}
+                            </span>
+                          </button>
+                        )}
                         <GymFloorSetCard
                           set={set}
                           setIndex={sIdx}
@@ -849,11 +895,7 @@ export function SessionDetailView() {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.9rem' }}>
               <div style={{ flex: 1, fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                {isCardio
-                  ? (isRTL ? 'مؤقت الكارديو' : 'Cardio timer')
-                  : (isRTL
-                    ? `${doneSetsInExercise} من ${totalSetsInExercise} جولة مكتملة`
-                    : `${doneSetsInExercise} of ${totalSetsInExercise} sets complete`)}
+                {isCardio && (isRTL ? 'مؤقت الكارديو' : 'Cardio timer')}
               </div>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <button
@@ -878,12 +920,60 @@ export function SessionDetailView() {
                 </button>
               </div>
             </div>
+            <InlineHint id="session-complete-set-hint">{t('completeSetHint')}</InlineHint>
           </article>
+        ) : (
+          <EmptyState
+            icon={<ListTodo size={22} aria-hidden="true" />}
+            title={t('sessionEmptyExercisesTitle')}
+            description={t('sessionEmptyExercisesDesc')}
+            action={
+              <Button variant="primary" size="md" leftIcon={<Plus width={16} height={16} />} onClick={() => setIsAddExerciseModalOpen(true)}>
+                {t('sessionAddFirstExercise')}
+              </Button>
+            }
+            secondaryAction={
+              <Button variant="secondary" size="md" leftIcon={<Flag width={16} height={16} />} onClick={() => void handleFinishWorkout()}>
+                {t('finishWorkout')}
+              </Button>
+            }
+          />
         )}
       </div>
 
       <div className="session-thumb-dock">
-        <div className="session-dock-row">
+        <div className="session-dock-row session-dock-row-secondary">
+          <button
+            type="button"
+            className="session-target session-target-ghost"
+            onClick={handleCompleteCurrentExercise}
+          >
+            <CheckCircle2 className="w-5 h-5" aria-hidden="true" />
+            <span style={{ fontSize: '0.85rem' }}>
+              {isLastExercise
+                ? (isRTL ? 'أنهِ التمرين الأخير' : 'Finish exercise')
+                : (isRTL ? 'أنهِ التمرين' : 'Finish exercise')}
+            </span>
+          </button>
+          <button
+            type="button"
+            className="session-target session-target-ghost"
+            onClick={handleFinishWorkout}
+          >
+            <Flag className="w-5 h-5" aria-hidden="true" />
+            <span>{t('finishWorkout')}</span>
+          </button>
+          <button
+            type="button"
+            className="session-target session-target-ghost"
+            onClick={() => setIsAddExerciseModalOpen(true)}
+            aria-label={t('addExercise')}
+            style={{ minWidth: '48px', padding: 0 }}
+          >
+            <Plus className="w-5 h-5" aria-hidden="true" />
+          </button>
+        </div>
+        <div className="session-dock-row session-dock-row-primary">
           <button
             type="button"
             className={`session-target ${isCardio || !activeSet ? 'session-target-ghost' : activeSetDone ? 'session-target-success' : 'session-target-primary'}`}
@@ -900,38 +990,6 @@ export function SessionDetailView() {
                 ? (activeSetDone ? 'تراجع عن الجولة' : `تم ${doneSetsInExercise}/${totalSetsInExercise} — أكمل الجولة`)
                 : (activeSetDone ? 'Undo set' : `${doneSetsInExercise}/${totalSetsInExercise} done — complete set`)}
             </span>
-          </button>
-        </div>
-        <div className="session-dock-row">
-          <button
-            type="button"
-            className="session-target session-target-ghost"
-            onClick={handleCompleteCurrentExercise}
-            style={{ minHeight: '56px' }}
-          >
-            <CheckCircle2 className="w-5 h-5" aria-hidden="true" />
-            <span style={{ fontSize: '0.85rem' }}>
-              {isLastExercise
-                ? (isRTL ? 'أنهِ التمرين الأخير' : 'Finish exercise')
-                : (isRTL ? 'أنهِ التمرين' : 'Finish exercise')}
-            </span>
-          </button>
-          <button
-            type="button"
-            className="session-target session-target-primary"
-            onClick={handleFinishWorkout}
-          >
-            <Flag className="w-5 h-5" aria-hidden="true" />
-            <span>{t('finishWorkout')}</span>
-          </button>
-          <button
-            type="button"
-            className="session-target session-target-ghost"
-            onClick={() => setIsAddExerciseModalOpen(true)}
-            aria-label={t('addExercise')}
-            style={{ minWidth: '48px', padding: 0 }}
-          >
-            <Plus className="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -1156,7 +1214,7 @@ function RestHudLayer({ reducedMotion, showCelebration, onDismissCelebration, on
             transition={reducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 380, damping: 26 }}
             style={{
               position: 'fixed',
-              insetBlockStart: 'calc(1rem + max(0px, env(safe-area-inset-top, 0px)))',
+              insetBlockStart: 'calc(1rem + max(0px, var(--shell-safe-top, 0px)))',
               insetInline: '0.75rem',
               marginInline: 'auto',
               maxWidth: '420px',

@@ -20,7 +20,9 @@
    Breakpoints  --bp-xs 360 | --bp-sm 480 | --bp-md 640 | --bp-lg 768 |
                 --bp-xl 1060 | --bp-2xl 1260
    Density      --density-scale 1 comfortable | 0.86 compact
-   Motion       --motion-{fast,base,slow} | --ease-{standard,out,in}
+    Motion       --motion-{fast,base,slow} | --ease-{standard,out,in,ambient}
+    Ambient      --ambient-orb-{a,b,c}[-alpha] | --ambient-aurora-{sweep,mask,alpha} |
+                 --ambient-{grid-mask,grid-opacity,bloom,vignette,grain-image,grain-opacity}
    ========================================================================== */
 
 :root {
@@ -161,6 +163,12 @@
   --ease-standard: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  /* Long ambient drift. Control points at 0.45/0.55 make the curve symmetric:
+     the orbs ease out of and back into rest at the same rate across a 40-60s
+     cycle, so there is no perceptible "start" or "stop" beat, and no overshoot
+     that would read as a bounce. Slower and flatter than --ease-standard on
+     purpose — a 320ms UI transition stretched over 50s has to be near-linear. */
+  --ease-ambient: cubic-bezier(0.45, 0, 0.55, 1);
 
   /* Density Scale */
   --density-scale: 1;
@@ -206,6 +214,62 @@
 
   /* Dynamic HUD Floating Stacking Height */
   --hud-bottom-offset: calc(72px + max(12px, env(safe-area-inset-bottom, 0px)));
+
+  /* ==========================================================================
+     Ambient Background
+     The animated backdrop is composed entirely from gradients and transforms —
+     no filter, no backdrop-filter — so it stays on the compositor instead of
+     re-rasterising every frame. Because it is a fixed decoration under a phone
+     on a gym floor, every colour and alpha it needs is declared here: that way
+     each theme retunes the whole composition, and the component stylesheet
+     carries no literal colour values of its own.
+
+     Hierarchy: -a leads and is the largest, brightest field. It tracks
+     --border-focus, which every theme already sets to its own brand colour, so
+     the lead glow stays on-brand without a per-theme declaration. -b is a
+     supporting counter-hue at roughly three-quarter strength, and -c is a
+     small, low-alpha counterweight placed low in the frame so the palette never
+     collapses into one flat wash.
+     ========================================================================== */
+  --ambient-orb-a: var(--border-focus);
+  --ambient-orb-b: var(--accent-purple);
+  --ambient-orb-c: var(--accent-amber);
+  --ambient-orb-a-alpha: 0.42;
+  --ambient-orb-b-alpha: 0.34;
+  --ambient-orb-c-alpha: 0.2;
+
+  /* Slow conic light sweep. Derived from the orbs so it can never clash with
+     them, and masked to a soft circle so the conic has no visible tile edge. */
+  --ambient-aurora-a: var(--ambient-orb-a);
+  --ambient-aurora-b: var(--ambient-orb-b);
+  --ambient-aurora-sweep: conic-gradient(
+    from 0deg at 50% 50%,
+    transparent 0deg,
+    var(--ambient-aurora-a) 72deg,
+    transparent 150deg,
+    transparent 200deg,
+    var(--ambient-aurora-b) 266deg,
+    transparent 344deg,
+    transparent 360deg
+  );
+  --ambient-aurora-mask: radial-gradient(circle closest-side, rgb(0 0 0) 20%, rgb(0 0 0 / 0.5) 46%, transparent 88%);
+  --ambient-aurora-alpha: 0.15;
+
+  /* Technical grid, masked to a top-weighted ellipse so it fades out before it
+     can compete with body copy. */
+  --ambient-grid-mask: radial-gradient(ellipse 96% 66% at 50% 0%, rgb(0 0 0) 0%, rgb(0 0 0 / 0.5) 40%, transparent 76%);
+  --ambient-grid-opacity: 0.32;
+
+  /* Top-edge bloom and a vignette that pulls focus to the centre. Both are
+     derived from the active surface so they retint with the theme. */
+  --ambient-bloom: color-mix(in srgb, var(--ambient-orb-a) 9%, transparent);
+  --ambient-vignette: color-mix(in srgb, var(--surface-canvas) 24%, rgb(2 5 12));
+
+  /* Film grain. A 120px turbulence tile dithers the wide gradient ramps that
+     would otherwise band on an 8-bit phone panel. Decoded once, tiled from that
+     one texture, and never animated. */
+  --ambient-grain-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23g)'/%3E%3C/svg%3E");
+  --ambient-grain-opacity: 0.035;
 }
 
 /* --------------------------------------------------------------------------
@@ -261,6 +325,21 @@
   --border-color: var(--border-subtle);
   --border-highlight: rgba(0, 0, 0, 0.2);
   --theme-radius: var(--radius-lg);
+
+  /* Ambient background, light mode. Saturated dark-field glows on a near-white
+     canvas read as a stain, so every orb drops to a fraction of its dark-field
+     alpha and the deep end of the palette stands in for the neon versions. The
+     bloom inverts into a light "sky" and the vignette into a pale haze: on a
+     light canvas the vignette must add tone, not subtract it. */
+  --ambient-orb-b: #7c3aed;
+  --ambient-orb-c: #b45309;
+  --ambient-orb-a-alpha: 0.15;
+  --ambient-orb-b-alpha: 0.11;
+  --ambient-orb-c-alpha: 0.07;
+  --ambient-aurora-alpha: 0.06;
+  --ambient-bloom: rgb(255 255 255 / 0.6);
+  --ambient-vignette: color-mix(in srgb, var(--surface-canvas) 28%, rgb(203 213 225));
+  --ambient-grain-opacity: 0.02;
 }
 
 /* --------------------------------------------------------------------------
@@ -319,6 +398,11 @@
   --accent-hover: #60a5fa;
   --accent-gradient: linear-gradient(135deg, #3b82f6, #8b5cf6);
   --theme-radius: var(--radius-lg);
+
+  /* Ambient: blue lead, violet support, cyan counterweight. The warm default
+     counterweight would read as a stray ember on this cool canvas. */
+  --ambient-orb-b: #a78bfa;
+  --ambient-orb-c: #22d3ee;
 }
 
 /* --------------------------------------------------------------------------
@@ -377,6 +461,10 @@
   --accent-hover: #e879f9;
   --accent-gradient: linear-gradient(135deg, #d946ef, #06b6d4);
   --theme-radius: var(--radius-lg);
+
+  /* Ambient: fuchsia lead, cyan support, violet counterweight. */
+  --ambient-orb-b: #22d3ee;
+  --ambient-orb-c: #a855f7;
 }
 
 /* --------------------------------------------------------------------------
@@ -435,6 +523,10 @@
   --accent-hover: #8df8ee;
   --accent-gradient: linear-gradient(135deg, #43dcd3, #3686e9);
   --theme-radius: var(--radius-lg);
+
+  /* Ambient: teal lead, blue support, violet counterweight. */
+  --ambient-orb-b: #3b82f6;
+  --ambient-orb-c: #a78bfa;
 }
 
 /* --------------------------------------------------------------------------
@@ -493,6 +585,12 @@
   --accent-hover: #c2ee9c;
   --accent-gradient: linear-gradient(135deg, #b9e875, #38a974);
   --theme-radius: var(--radius-lg);
+
+  /* Ambient: lime lead, emerald support, sky counterweight. A third green would
+     be indistinguishable from the other two once they are blurred into a wash;
+     a low-alpha cool note keeps the frame from turning monochrome. */
+  --ambient-orb-b: #34d399;
+  --ambient-orb-c: #38bdf8;
 }
 
 /* --------------------------------------------------------------------------
@@ -551,6 +649,11 @@
   --accent-hover: #ffd18d;
   --accent-gradient: linear-gradient(135deg, #ffbd67, #f06081);
   --theme-radius: var(--radius-lg);
+
+  /* Ambient: amber lead, rose support, violet counterweight. The default amber
+     counterweight would collide with this theme's own lead colour. */
+  --ambient-orb-b: #f06081;
+  --ambient-orb-c: #a78bfa;
 }
 
 /* --------------------------------------------------------------------------
@@ -609,6 +712,19 @@
   --accent-hover: #bd6351;
   --accent-gradient: linear-gradient(135deg, #ad5546, #ce8054);
   --theme-radius: var(--radius-lg);
+
+  /* Ambient, paper: terracotta lead over two muted earth tones. Chroma is kept
+     deliberately low so the warm paper field stays calm, and the bloom inverts
+     to a warm off-white. */
+  --ambient-orb-b: #8a7355;
+  --ambient-orb-c: #b08654;
+  --ambient-orb-a-alpha: 0.12;
+  --ambient-orb-b-alpha: 0.1;
+  --ambient-orb-c-alpha: 0.06;
+  --ambient-aurora-alpha: 0.05;
+  --ambient-bloom: rgb(255 253 249 / 0.55);
+  --ambient-vignette: color-mix(in srgb, var(--surface-canvas) 30%, rgb(214 202 186));
+  --ambient-grain-opacity: 0.022;
 }
 
 /* --------------------------------------------------------------------------

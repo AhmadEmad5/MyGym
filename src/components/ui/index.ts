@@ -4,6 +4,8 @@ export * from './Card';
 export * from './Modal';
 export * from './Badge';
 export * from './EmptyState';
+export * from './Hint';
+export * from './Skeleton';
 export * from './SegmentedControl';
 export * from './PageSkeleton';
 export * from './cn';

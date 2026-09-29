@@ -411,7 +411,7 @@
   .today-bento-quick-actions {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 6rem), 1fr));
-    gap: 0.45rem;
+    gap: 0.5rem;
   }
 
   .forma-quick-tile {

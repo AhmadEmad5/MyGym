@@ -1,8 +1,28 @@
 ﻿@layer components {
-  /* Ambient background: three slow drifting colour orbs behind a faint grid.
-     Animates only transform/opacity so it stays on the compositor and costs
-     no layout or paint. Purely decorative, so it is aria-hidden and never
-     intercepts pointer events. */
+  /* ==========================================================================
+     Ambient background
+     Back to front: conic aurora sweep -> three colour orbs -> masked grid ->
+     top bloom + vignette -> film grain. Every layer is a gradient painted once
+     and only ever transformed afterwards, so the whole scene composites on the
+     GPU: no filter, no backdrop-filter, no per-frame raster.
+
+     The orbs take their softness from a multi-stop radial ramp that reaches full
+     transparency at 50% radius. A radial gradient already falls off smoothly,
+     so `filter: blur(70px)` was paying for an edge the ramp removes for free —
+     and that blur was re-run as a raster pass every time a scale() in the
+     keyframes moved the layer bounds. Sizes are also *not* inflated on small
+     screens any more: a bigger orb does not look better through a phone's
+     narrower frame, it just blends more pixels every frame.
+
+     Purely decorative: aria-hidden, pointer-events: none, z-index 0 with all
+     real content raised above it. Anchors are logical properties, so the
+     composition mirrors under html[dir="rtl"]; the drift then flips sign with
+     the text direction, so an orb anchored to the inline start travels across
+     the screen in both languages instead of quietly sliding off the near edge.
+
+     Geometry and timing live here; every colour and alpha is a token in
+     design-tokens.css, so each theme retunes the composition wholesale.
+     ========================================================================== */
   .forma-ambient {
     position: fixed;
     inset: 0;
@@ -10,46 +30,147 @@
     overflow: hidden;
     pointer-events: none;
     contain: strict;
+    --forma-ambient-drift-sign: 1;
   }
+  [dir='rtl'] .forma-ambient { --forma-ambient-drift-sign: -1; }
+
+  /* Slow conic light sweep. Exactly one viewport-sized layer, masked to a soft
+     circle so the conic has no visible tile edge, with the sweep sized past the
+     viewport's half-diagonal so the tile boundary can never surface. */
+  .forma-ambient-aurora {
+    position: absolute;
+    z-index: 0;
+    inset: 0;
+    background-image: var(--ambient-aurora-sweep);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 110vmax 110vmax;
+    opacity: var(--ambient-aurora-alpha);
+    -webkit-mask-image: var(--ambient-aurora-mask);
+    mask-image: var(--ambient-aurora-mask);
+    animation: forma-ambient-aurora-spin 150s linear infinite;
+  }
+
   .forma-ambient-orb {
     position: absolute;
+    z-index: 1;
     display: block;
-    inline-size: 42vmax;
-    block-size: 42vmax;
-    border-radius: 50%;
-    opacity: 0.5;
-    filter: blur(70px);
     will-change: transform;
   }
-  .forma-ambient-orb.is-a { inset-block-start: -18vmax; inset-inline-start: -12vmax; background: radial-gradient(circle, var(--accent-primary) 0%, transparent 68%); animation: forma-ambient-drift-a 34s var(--ease-ambient, ease-in-out) infinite alternate; }
-  .forma-ambient-orb.is-b { inset-block-end: -22vmax; inset-inline-end: -14vmax; background: radial-gradient(circle, var(--accent-purple) 0%, transparent 68%); animation: forma-ambient-drift-b 44s var(--ease-ambient, ease-in-out) infinite alternate; }
-  .forma-ambient-orb.is-c { inset-block-start: 22%; inset-inline-end: 12%; inline-size: 30vmax; block-size: 30vmax; background: radial-gradient(circle, var(--accent-emerald) 0%, transparent 70%); opacity: 0.32; animation: forma-ambient-drift-c 52s var(--ease-ambient, ease-in-out) infinite alternate; }
-  .forma-ambient-grid {
-    position: absolute;
-    inset: 0;
-    background-image: linear-gradient(var(--premium-line) 1px, transparent 1px), linear-gradient(90deg, var(--premium-line) 1px, transparent 1px);
-    background-size: 56px 56px;
-    opacity: 0.35;
-    mask-image: radial-gradient(ellipse at 50% 0%, #000 0%, transparent 72%);
-    -webkit-mask-image: radial-gradient(ellipse at 50% 0%, #000 0%, transparent 72%);
+  .forma-ambient-orb.is-a {
+    inset-block-start: -16vmax;
+    inset-inline-start: -13vmax;
+    inline-size: 46vmax;
+    block-size: 46vmax;
+    opacity: var(--ambient-orb-a-alpha);
+    background: radial-gradient(circle closest-side, var(--ambient-orb-a) 0 11%, color-mix(in srgb, var(--ambient-orb-a) 56%, transparent) 31%, color-mix(in srgb, var(--ambient-orb-a) 26%, transparent) 54%, color-mix(in srgb, var(--ambient-orb-a) 9%, transparent) 76%, color-mix(in srgb, var(--ambient-orb-a) 2%, transparent) 92%, transparent 100%);
+    animation: forma-ambient-drift-a 38s var(--ease-ambient, ease-in-out) infinite alternate;
+  }
+  .forma-ambient-orb.is-b {
+    inset-block-end: -20vmax;
+    inset-inline-end: -12vmax;
+    inline-size: 36vmax;
+    block-size: 36vmax;
+    opacity: var(--ambient-orb-b-alpha);
+    background: radial-gradient(circle closest-side, var(--ambient-orb-b) 0 10%, color-mix(in srgb, var(--ambient-orb-b) 52%, transparent) 30%, color-mix(in srgb, var(--ambient-orb-b) 24%, transparent) 54%, color-mix(in srgb, var(--ambient-orb-b) 8%, transparent) 77%, color-mix(in srgb, var(--ambient-orb-b) 2%, transparent) 92%, transparent 100%);
+    animation: forma-ambient-drift-b 46s var(--ease-ambient, ease-in-out) infinite alternate;
+  }
+  .forma-ambient-orb.is-c {
+    inset-block-start: 24%;
+    inset-inline-end: 14%;
+    inline-size: 27vmax;
+    block-size: 27vmax;
+    opacity: var(--ambient-orb-c-alpha);
+    background: radial-gradient(circle closest-side, var(--ambient-orb-c) 0 9%, color-mix(in srgb, var(--ambient-orb-c) 48%, transparent) 29%, color-mix(in srgb, var(--ambient-orb-c) 22%, transparent) 53%, color-mix(in srgb, var(--ambient-orb-c) 7%, transparent) 76%, color-mix(in srgb, var(--ambient-orb-c) 2%, transparent) 92%, transparent 100%);
+    animation: forma-ambient-drift-c 58s var(--ease-ambient, ease-in-out) infinite alternate;
   }
 
-  @keyframes forma-ambient-drift-a { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(8vmax, 6vmax, 0) scale(1.14); } }
-  @keyframes forma-ambient-drift-b { from { transform: translate3d(0, 0, 0) scale(1.08); } to { transform: translate3d(-9vmax, -5vmax, 0) scale(0.94); } }
-  @keyframes forma-ambient-drift-c { from { transform: translate3d(0, 0, 0) scale(0.96); } to { transform: translate3d(-5vmax, 8vmax, 0) scale(1.18); } }
+  .forma-ambient-grid {
+    position: absolute;
+    z-index: 2;
+    inset: 0;
+    background-image: linear-gradient(var(--premium-line) 1px, transparent 1px), linear-gradient(90deg, var(--premium-line) 1px, transparent 1px);
+    background-position: center top;
+    background-size: 56px 56px;
+    opacity: var(--ambient-grid-opacity);
+    -webkit-mask-image: var(--ambient-grid-mask);
+    mask-image: var(--ambient-grid-mask);
+  }
+
+  /* Top-edge bloom plus a vignette that pulls focus to the centre. Both static,
+     so they bake into the parent's single paint pass rather than costing a
+     layer each. */
+  .forma-ambient::after {
+    content: '';
+    position: absolute;
+    z-index: 3;
+    inset: 0;
+    background-image: linear-gradient(180deg, var(--ambient-bloom) 0%, transparent 26%), radial-gradient(132% 104% at 50% 16%, transparent 0 40%, var(--ambient-vignette) 100%);
+  }
+
+  /* Film grain. Tiled from a single decoded texture and never animated, it
+     dithers the wide gradient ramps that would otherwise band on an 8-bit
+     phone panel. */
+  .forma-ambient::before {
+    content: '';
+    position: absolute;
+    z-index: 4;
+    inset: 0;
+    background-image: var(--ambient-grain-image);
+    background-repeat: repeat;
+    opacity: var(--ambient-grain-opacity);
+  }
+
+  @keyframes forma-ambient-drift-a {
+    from { transform: translate3d(0, 0, 0) scale(1); }
+    to { transform: translate3d(calc(7vmax * var(--forma-ambient-drift-sign, 1)), 6vmax, 0) scale(1.12); }
+  }
+  @keyframes forma-ambient-drift-b {
+    from { transform: translate3d(0, 0, 0) scale(1.06); }
+    to { transform: translate3d(calc(-8vmax * var(--forma-ambient-drift-sign, 1)), -5vmax, 0) scale(0.95); }
+  }
+  @keyframes forma-ambient-drift-c {
+    from { transform: translate3d(0, 0, 0) scale(0.96); }
+    to { transform: translate3d(calc(-4vmax * var(--forma-ambient-drift-sign, 1)), 7vmax, 0) scale(1.16); }
+  }
+  @keyframes forma-ambient-aurora-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
 
   /* Stop burning battery when the tab is backgrounded */
-  .forma-ambient[data-paused='true'] .forma-ambient-orb { animation-play-state: paused; }
+  .forma-ambient[data-paused='true'] .forma-ambient-orb,
+  .forma-ambient[data-paused='true'] .forma-ambient-aurora { animation-play-state: paused; }
+
+  /* Static equivalent: same composition, no animation and no compositor
+     promotion, so reduced-motion users get the depth without the motion or the
+     battery cost.
+
+     Every guard below is scoped through `.forma-ambient` on purpose. A bare
+     `.forma-ambient-orb` selector is (0,1,0) and loses to the (0,2,0)
+     `.forma-ambient-orb.is-a` colour rules above — a media query adds no
+     specificity, so `prefers-reduced-motion: reduce` would silently leave the
+     orbs animating. Prefixing the descendant selector makes the tie (0,2,0) and
+     source order then decides, which is the reduced-motion rule. */
+  .forma-ambient[data-static='true'] .forma-ambient-orb,
+  .forma-ambient[data-static='true'] .forma-ambient-aurora { animation: none; will-change: auto; }
+  .forma-ambient[data-static='true'] .forma-ambient-orb.is-b { transform: translate3d(0, 0, 0) scale(1.06); }
+  .forma-ambient[data-static='true'] .forma-ambient-orb.is-c { transform: translate3d(calc(-4vmax * var(--forma-ambient-drift-sign, 1)), 7vmax, 0) scale(0.96); }
 
   @media (max-width: 640px) {
-    .forma-ambient-orb { inline-size: 62vmax; block-size: 62vmax; filter: blur(58px); opacity: 0.42; }
-    .forma-ambient-grid { background-size: 40px 40px; opacity: 0.28; }
+    /* The orbs are small enough to composite for free, but a full-viewport
+       layer re-blending every frame is the one cost a phone cannot hide, so the
+       aurora is rasterised once and left still. */
+    .forma-ambient-aurora { animation: none; }
+    .forma-ambient-grid { background-size: 40px 40px; }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .forma-ambient-orb { animation: none; }
+    .forma-ambient .forma-ambient-orb,
+    .forma-ambient .forma-ambient-aurora { animation: none; will-change: auto; }
   }
-  [data-motion='reduced'] .forma-ambient-orb { animation: none; }
+  [data-motion='reduced'] .forma-ambient .forma-ambient-orb,
+  [data-motion='reduced'] .forma-ambient .forma-ambient-aurora { animation: none; will-change: auto; }
 
   /* Keep real content above the decorative layer */
   .app-layout > .main-content,
@@ -503,10 +624,19 @@
   @media (prefers-reduced-motion: reduce) {
     .routine-ledger-card, .routine-exercise-row, .day-nutrition-bar > span, .day-macro-bar > span { transition: none; }
     .routine-ledger-card:hover { transform: none; }
-    .routine-flip-inner, .routine-flip:hover .routine-flip-inner, .routine-flip:focus-within .routine-flip-inner { transform: none; transition: none; }
+    /* The [data-flipped] and :hover/:focus-within selectors above are compound and
+       so outrank a bare .routine-flip-inner. Without listing them here the 3D
+       rotateY(180deg) still played for a user who asked for reduced motion. */
+    .routine-flip-inner,
+    .routine-flip-inner[data-flipped='true'],
+    [dir='rtl'] .routine-flip-inner[data-flipped='true'],
+    .routine-flip:hover .routine-flip-inner,
+    .routine-flip:focus-within .routine-flip-inner { transform: none; transition: none; }
   }
 
   [data-motion='reduced'] .routine-flip-inner,
+  [data-motion='reduced'] .routine-flip-inner[data-flipped='true'],
+  [dir='rtl'] [data-motion='reduced'] .routine-flip-inner[data-flipped='true'],
   [data-motion='reduced'] .routine-flip:hover .routine-flip-inner,
   [data-motion='reduced'] .routine-flip:focus-within .routine-flip-inner { transform: none; transition: none; }
 }

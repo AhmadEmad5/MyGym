@@ -18,6 +18,7 @@ import './styles/today-recovery.css'
 import './styles/gym-floor.css'
 import './styles/mobile-refinement.css'
 import './styles/gym-ergonomics.css'
+import './styles/ui-kit.css'
 
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(

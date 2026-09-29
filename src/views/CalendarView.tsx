@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { addDays, endOfMonth, endOfWeek, format, isSameDay, isSameWeek, startOfMonth, startOfWeek } from 'date-fns';
 import { motion } from 'framer-motion';
+import { createPortal } from 'react-dom';
+import { CalendarDays, Plus } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { WorkoutSession } from '../lib/api';
 import { estimateWorkoutCalories } from '../lib/api';
@@ -10,6 +12,8 @@ import { useTranslation } from '../lib/i18n';
 import { notify } from '../lib/feedback';
 import { gymAudio } from '../lib/audio';
 import { AIWorkoutGeneratorModal } from '../components/AIWorkoutGeneratorModal';
+import { PageSkeleton } from '../components/ui/PageSkeleton';
+import { Button } from '../components/ui/Button';
 import {
   buildPPLPlan,
   resolveWeekStartsOn,
@@ -371,7 +375,14 @@ export function CalendarView() {
       : 'Current week'
     : formatDate(anchor, mode === 'month' ? 'yyyy' : 'yyyy');
 
-  if (!data) return null;
+  if (!data) {
+    return (
+      <div className="zen-page-container calendar-page">
+        <span className="sr-only" role="status">{t('loadingPlan')}</span>
+        <PageSkeleton variant="calendar" rows={5} />
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -523,6 +534,28 @@ export function CalendarView() {
           onDelete={id => void handleDelete(id)}
           onAddSession={openEditor}
         />
+      )}
+
+      {createPortal(
+        <div className="mobile-page-actionbar" role="group" aria-label={t('calendarActionBarLabel')}>
+          <Button
+            variant="secondary"
+            size="lg"
+            onClick={goToday}
+            leftIcon={<CalendarDays width={18} height={18} />}
+          >
+            {t('calendarActionBarToday')}
+          </Button>
+          <Button
+            variant="primary"
+            size="lg"
+            onClick={() => openEditor(selectedDay)}
+            leftIcon={<Plus width={18} height={18} />}
+          >
+            {t('calendarActionBarAdd')}
+          </Button>
+        </div>,
+        document.body
       )}
 
       <SessionEditorModal

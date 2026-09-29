@@ -8,6 +8,8 @@ import { useTranslation } from '../lib/i18n';
 import { notify } from '../lib/feedback';
 import { AIWorkoutGeneratorModal } from '../components/AIWorkoutGeneratorModal';
 import { InteractiveMuscleMapModal } from '../components/InteractiveMuscleMapModal';
+import { PageSkeleton } from '../components/ui/PageSkeleton';
+import { Hint } from '../components/ui/Hint';
 import type { PredefinedRoutine } from '../components/ProgramDeck3DCard';
 import {
   buildProgramSessions,
@@ -353,7 +355,14 @@ export function RoutinesView() {
     [isRTL, navigate, saveSessions]
   );
 
-  if (!data) return null;
+  if (!data) {
+    return (
+      <div className="zen-page-container routines-page">
+        <span className="sr-only" role="status">{t('loadingRoutines')}</span>
+        <PageSkeleton variant="rows" rows={4} />
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -378,6 +387,11 @@ export function RoutinesView() {
             <Activity size={17} aria-hidden="true" />
             <span>{t('muscleMapTitle')}</span>
           </button>
+          <Hint
+            content={t('routinesAiHintBody')}
+            label={t('routinesAiHintLabel')}
+            placement="bottom-end"
+          />
           <button type="button" onClick={() => setIsAIModalOpen(true)} className="btn-primary routines-ai-btn">
             <Sparkles className="w-4 h-4" aria-hidden="true" />
             <span>{t('generateWithAI')}</span>

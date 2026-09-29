@@ -613,6 +613,9 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
+    /* :hover is compound, so it outranks a bare .forma-primary-button and the
+       hover lift survived reduced motion. */
     .forma-primary-button { transition: none; }
+    .forma-primary-button:hover { transform: none; }
   }
 }

@@ -11,9 +11,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding-block-start: max(0.75rem, env(safe-area-inset-top, 0px));
-    padding-block-end: max(0.75rem, env(safe-area-inset-bottom, 0px));
-    padding-inline: max(0.75rem, env(safe-area-inset-left, 0px)) max(0.75rem, env(safe-area-inset-right, 0px));
+    padding-block-start: max(0.75rem, var(--shell-safe-top));
+    padding-block-end: max(0.75rem, var(--shell-safe-bottom));
+    padding-inline: max(0.75rem, var(--shell-safe-inline-start)) max(0.75rem, var(--shell-safe-inline-end));
     background: radial-gradient(circle at center, rgba(15, 23, 42, 0.94) 0%, rgba(3, 7, 18, 0.98) 100%);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
@@ -26,7 +26,7 @@
     display: flex;
     width: 100%;
     max-width: 34rem;
-    max-height: calc(100dvh - 2rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    max-height: calc(100dvh - 2rem - var(--shell-safe-top) - var(--shell-safe-bottom));
     flex-direction: column;
     overflow: hidden;
     border: 1px solid rgba(56, 189, 248, 0.22);
@@ -92,6 +92,7 @@
   }
 
   .forma-onboarding-skip-btn {
+    min-height: var(--space-touch-min);
     padding: 0.4rem 0.6rem;
     border: 0;
     border-radius: 8px;
@@ -111,8 +112,8 @@
 
   .forma-onboarding-close-btn {
     display: flex;
-    width: 32px;
-    height: 32px;
+    width: var(--space-touch-min);
+    height: var(--space-touch-min);
     align-items: center;
     justify-content: center;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -294,7 +295,7 @@
   .forma-days-row {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 0.45rem;
+    gap: 0.5rem;
   }
 
   .forma-days-pill {
@@ -349,7 +350,7 @@
   .forma-switch {
     position: relative;
     width: 46px;
-    height: 26px;
+    min-height: var(--space-touch-min);
     flex-shrink: 0;
     padding: 0;
     border: 1px solid rgba(255, 255, 255, 0.14);
@@ -366,7 +367,7 @@
 
   .forma-switch-knob {
     position: absolute;
-    inset-block-start: 2px;
+    inset-block-start: calc((100% - 20px) / 2);
     inset-inline-start: 2px;
     width: 20px;
     height: 20px;
@@ -387,12 +388,13 @@
   .forma-themes-swatches {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0.45rem;
+    gap: 0.5rem;
   }
 
   .forma-theme-swatch-card {
     display: flex;
     min-width: 0;
+    min-block-size: var(--space-touch-min);
     align-items: center;
     gap: 0.45rem;
     padding: 0.55rem 0.5rem;
@@ -478,7 +480,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.85rem;
-    padding-block: 1rem max(1rem, env(safe-area-inset-bottom, 0px));
+    padding-block: 1rem max(1rem, var(--shell-safe-bottom));
     padding-inline: 1.4rem;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
     background: rgba(11, 15, 25, 0.95);
@@ -575,7 +577,7 @@
 
     .forma-days-row {
       grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: 0.35rem;
+      gap: 0.5rem;
     }
 
     .forma-onboarding-back-btn span {
@@ -590,8 +592,36 @@
   @media (prefers-reduced-motion: reduce) {
     .forma-onboarding-primary-btn,
     .forma-switch-knob,
-    .forma-onboarding-route-bar {
+    .forma-onboarding-route-bar,
+    .forma-onboarding-skip-btn,
+    .forma-onboarding-close-btn,
+    .forma-choice-card,
+    .forma-days-pill,
+    .forma-theme-swatch-card,
+    .forma-choice-icon,
+    .forma-onboarding-back-btn {
       transition: none;
     }
+
+    .forma-onboarding-primary-btn:hover,
+    .forma-onboarding-primary-btn:active { transform: none; }
   }
+
+  /* The app's own motion gate needs its own copy: a media query adds no
+     specificity, so these cannot be folded into the block above. */
+  [data-motion='reduced'] .forma-onboarding-primary-btn,
+  [data-motion='reduced'] .forma-switch-knob,
+  [data-motion='reduced'] .forma-onboarding-route-bar,
+  [data-motion='reduced'] .forma-onboarding-skip-btn,
+  [data-motion='reduced'] .forma-onboarding-close-btn,
+  [data-motion='reduced'] .forma-choice-card,
+  [data-motion='reduced'] .forma-days-pill,
+  [data-motion='reduced'] .forma-theme-swatch-card,
+  [data-motion='reduced'] .forma-choice-icon,
+  [data-motion='reduced'] .forma-onboarding-back-btn {
+    transition: none;
+  }
+
+  [data-motion='reduced'] .forma-onboarding-primary-btn:hover,
+  [data-motion='reduced'] .forma-onboarding-primary-btn:active { transform: none; }
 }

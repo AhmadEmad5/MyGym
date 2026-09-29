@@ -4,7 +4,7 @@ import {
   Activity, BrainCircuit, Camera, Check, HeartPulse, Sparkles,
   Watch, Flame, Zap, Clock, ShieldCheck, Trash2,
   RefreshCw, Moon, BatteryCharging, Trophy,
-  X, CheckCircle2, Printer, AlertTriangle
+  X, CheckCircle2, Printer, AlertTriangle, Lightbulb
 } from 'lucide-react';
 import { generateGeminiJson } from '../lib/gemini';
 import { useData } from '../hooks/useData';
@@ -17,7 +17,20 @@ import { useTranslation, TranslationKey } from '../lib/i18n';
 import { notify } from '../lib/feedback';
 import { AthleteReportModal } from '../components/AthleteReportModal';
 import { AthleticPowerRadar } from '../components/AthleticPowerRadar';
-import { Button, Badge } from '../components/ui';
+import { Button, Badge, EmptyState } from '../components/ui';
+
+function InlineHint({ id, children }: { id: string; children: string }) {
+  return (
+    <p
+      id={id}
+      className="ui-empty-description"
+      style={{ display: 'flex', alignItems: 'flex-start', gap: '0.4rem', margin: '0.6rem 0 0', fontSize: '0.76rem' }}
+    >
+      <Lightbulb size={13} aria-hidden="true" style={{ color: '#46d9ff', flexShrink: 0, marginBlockStart: '0.15rem' }} />
+      <span>{children}</span>
+    </p>
+  );
+}
 
 const CARDIO_ACTIVITIES: { id: string; nameKey: TranslationKey; icon: string }[] = [
   { id: 'Treadmill', nameKey: 'activityTreadmill', icon: '🏃' },
@@ -348,7 +361,7 @@ Do not hallucinate numbers not visible on the screen. Output raw JSON only.`;
             exit={{ opacity: 0, y: -20 }}
             style={{
               position: 'fixed',
-              top: 'calc(1.25rem + max(0px, env(safe-area-inset-top, 0px)))',
+              top: 'calc(var(--shell-topbar-inset) + 0.5rem)',
               insetInlineStart: 0,
               insetInlineEnd: 0,
               marginInline: 'auto',
@@ -405,6 +418,19 @@ Do not hallucinate numbers not visible on the screen. Output raw JSON only.`;
           <span>{isRTL ? 'تصدير تقرير المتدرب (PDF)' : 'Athlete Report (PDF)'}</span>
         </Button>
       </header>
+
+      {hasRecoveryToDisplay && (
+        <div className="performance-ready-strip">
+          <div className="performance-ready-strip-copy">
+            <span className="forma-section-kicker-text">{t('readinessShort')}</span>
+            <span className="performance-ready-value">
+              {weeklyPlan.recovery}
+              <small>%</small>
+            </span>
+          </div>
+          <span className="performance-ready-state" style={{ color: readinessColor }}>{readinessStatusLabel}</span>
+        </div>
+      )}
 
       {isInitialLoading ? (
         <div role="status" aria-live="polite">
@@ -557,6 +583,7 @@ Do not hallucinate numbers not visible on the screen. Output raw JSON only.`;
                             {weeklyPlan.message}
                           </p>
                         </div>
+                        <InlineHint id="hub-readiness-hint">{t('readinessScoreHint')}</InlineHint>
                       </>
                     ) : (
                       <div className="forma-recovery-not-logged" role="status">
@@ -567,7 +594,7 @@ Do not hallucinate numbers not visible on the screen. Output raw JSON only.`;
                     )}
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
-                      <fieldset style={{ border: 0, margin: 0, padding: 0 }}>
+                      <fieldset style={{ border: 0, margin: 0, padding: 0 }} aria-describedby="hub-sleep-hint">
                         <legend style={{ display: 'flex', justifyContent: 'space-between', inlineSize: '100%', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.45rem' }}>
                           <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                             <Moon size={14} style={{ color: '#60a5fa' }} aria-hidden="true" /> {t('sleepHours')}
@@ -601,6 +628,7 @@ Do not hallucinate numbers not visible on the screen. Output raw JSON only.`;
                           ))}
                         </div>
                       </fieldset>
+                      <InlineHint id="hub-sleep-hint">{t('sleepInputHint')}</InlineHint>
 
                       <div>
                         <label htmlFor="hub-fatigue" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.45rem' }}>
@@ -620,12 +648,12 @@ Do not hallucinate numbers not visible on the screen. Output raw JSON only.`;
                           aria-label={t('fatigueLevel')}
                           aria-valuetext={`${fatigue} out of 10`}
                           onChange={(e) => { setFatigue(Number(e.target.value)); setFatigueSelected(true); }}
-                          style={{ width: '100%', accentColor: fatigue >= 7 ? '#ef4444' : fatigue >= 4 ? '#fb923c' : '#10b981', cursor: 'pointer', minHeight: '32px' }}
+                          style={{ width: '100%', accentColor: fatigue >= 7 ? '#ef4444' : fatigue >= 4 ? '#fb923c' : '#10b981', cursor: 'pointer', minHeight: '44px' }}
                         />
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                          <span>{isRTL ? 'مستريح جداً (0)' : 'Fresh (0)'}</span>
-                          <span>{isRTL ? 'متوسط (5)' : 'Moderate (5)'}</span>
-                          <span>{isRTL ? 'مجهد للغاية (10)' : 'Exhausted (10)'}</span>
+                          <span>{t('freshnessLabel')}</span>
+                          <span>{t('moderateLabel')}</span>
+                          <span>{t('exhaustedLabel')}</span>
                         </div>
                       </div>
                     </div>
@@ -662,7 +690,7 @@ Do not hallucinate numbers not visible on the screen. Output raw JSON only.`;
             />
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '1.25rem' }}>
-              <section className="forma-ledger-panel" style={{ padding: '1.25rem' }}>
+              <section className="forma-ledger-panel" id="hub-cardio-capture" style={{ padding: '1.25rem', scrollMarginTop: '5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', gap: '0.5rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
                     <Camera size={18} style={{ color: '#46d9ff' }} aria-hidden="true" />
@@ -743,8 +771,8 @@ Do not hallucinate numbers not visible on the screen. Output raw JSON only.`;
                         position: 'absolute',
                         top: '0.45rem',
                         insetInlineEnd: '0.45rem',
-                        minWidth: '36px',
-                        minHeight: '36px',
+                        minWidth: '44px',
+                        minHeight: '44px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -894,7 +922,7 @@ Do not hallucinate numbers not visible on the screen. Output raw JSON only.`;
                         <div>
                           <strong style={{ fontSize: '0.88rem', color: 'var(--text-primary)' }}>{provider}</strong>
                           <div style={{ fontSize: '0.74rem', color: isConnected ? '#34d399' : 'var(--text-muted)', marginTop: '0.15rem' }}>
-                            {isConnected ? `● ${t('connectedStatus')}` : 'Offline'}
+                            {isConnected ? `● ${t('connectedStatus')}` : t('deviceOffline')}
                           </div>
                         </div>
 
@@ -973,7 +1001,7 @@ Do not hallucinate numbers not visible on the screen. Output raw JSON only.`;
                               type="button"
                               onClick={() => deleteCardioLog(log.id)}
                               className="btn-icon btn-ghost"
-                              style={{ minWidth: '40px', minHeight: '40px', color: 'var(--text-muted)' }}
+                              style={{ minWidth: '44px', minHeight: '44px', color: 'var(--text-muted)' }}
                               title={t('delete')}
                               aria-label={`${t('delete')} ${log.activity}`}
                             >
@@ -984,11 +1012,25 @@ Do not hallucinate numbers not visible on the screen. Output raw JSON only.`;
                       ))}
                     </div>
                   ) : (
-                    <div className="forma-state-panel" role="status">
-                      <Flame size={20} aria-hidden="true" />
-                      <strong>{t('noCardioLogs')}</strong>
-                      <span>{isRTL ? 'سجّل أول تمرين كارديو لبدء السجل.' : 'Log your first cardio session to start the log.'}</span>
-                    </div>
+                    <EmptyState
+                      icon={<Flame size={22} aria-hidden="true" />}
+                      title={t('cardioLogEmptyTitle')}
+                      description={t('cardioLogEmptyDesc')}
+                      action={
+                        <Button type="button" variant="cyan" onClick={() => fileRef.current?.click()} leftIcon={<Camera size={16} aria-hidden="true" />}>
+                          {t('cardioLogEmptyAction')}
+                        </Button>
+                      }
+                      secondaryAction={
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => document.getElementById('hub-cardio-capture')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                        >
+                          {t('cameraCardio')}
+                        </Button>
+                      }
+                    />
                   )}
                 </div>
               </section>

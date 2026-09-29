@@ -85,7 +85,8 @@ export function ShellMobileTopBar({
             to={NAV_ROUTE_PATHS.performance}
             className="mobile-top-streak"
             onClick={routeTo(NAV_ROUTE_PATHS.performance)}
-            title={isRTL ? `${streakDays} أيام تدريب متتالية` : `${streakDays} day training streak`}
+            title={`${t('topBarStreakLabel')}: ${streakDays}`}
+            aria-label={`${t('topBarStreakLabel')}: ${streakDays}`}
           >
             <Flame size={14} className="streak-icon" aria-hidden="true" />
             <span>{streakDays}{streakUnit}</span>

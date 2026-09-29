@@ -14,6 +14,7 @@ import {
   Gauge,
   HardDrive,
   Languages,
+  Lightbulb,
   LogOut,
   Moon,
   Palette,
@@ -39,7 +40,7 @@ import {
   requestNotificationPermission,
   testWorkoutReminderNotification
 } from '../lib/notifications';
-import { Button, SegmentedControl } from '../components/ui';
+import { Button, SegmentedControl, PageSkeleton } from '../components/ui';
 import { InlineSaveStatus } from '../components/primitives/InlineSaveStatus';
 import { OnboardingTour } from '../components/OnboardingTour';
 import { validateClientFile, ALLOWED_IMAGE_MIME_TYPES } from '../lib/fileValidation';
@@ -335,7 +336,20 @@ export function SettingsView() {
     reader.readAsDataURL(file);
   };
 
-  if (!data || !settings) return null;
+  if (!data || !settings) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.2 }}
+        className="zen-page-container settings-page"
+        dir={isRTL ? 'rtl' : 'ltr'}
+      >
+        <span className="sr-only" role="status">{t('loadingSettings')}</span>
+        <PageSkeleton variant="rows" rows={6} />
+      </motion.div>
+    );
+  }
 
   const rowId = (key: string) => `${baseId}-${key}`;
 
@@ -755,13 +769,14 @@ function TrainingSection({ settings, t, isRTL, language, changeLanguage, saveSta
         ]}
         saveState={saveState.weightUnit}
         isRTL={isRTL}
+        hint={<SettingHint id={`${rowId('weightUnit')}-hint`}>{t('weightUnitHint')}</SettingHint>}
       />
 
-      <SettingRow id={rowId('restTimer')} icon={<Clock3 size={19} aria-hidden="true" />} title={t('restTimerTitle')} detail={t('restTimerDetail')} saveState={saveState.restTimer} isRTL={isRTL} controlId={rowId('restTimer')}>
+      <SettingRow id={rowId('restTimer')} icon={<Clock3 size={19} aria-hidden="true" />} title={t('restTimerTitle')} detail={t('restTimerDetail')} saveState={saveState.restTimer} isRTL={isRTL} controlId={rowId('restTimer')} hint={<SettingHint id={`${rowId('restTimer')}-hint`}>{t('restTimerHint')}</SettingHint>}>
         <select
           id={rowId('restTimer')}
-          aria-describedby={`${rowId('restTimer')}-detail`}
-          className="min-h-[40px] rounded-[10px] border border-[var(--premium-line)] bg-[var(--bg-input)] px-3 text-[0.8rem] font-semibold text-[var(--text-primary)]"
+          aria-describedby={`${rowId('restTimer')}-detail ${rowId('restTimer')}-hint`}
+          className="min-h-[44px] rounded-[10px] border border-[var(--premium-line)] bg-[var(--bg-input)] px-3 text-[0.8rem] font-semibold text-[var(--text-primary)]"
           value={settings.restTimerSeconds || 90}
           onChange={(event) => void persist(rowId('restTimer'), { restTimerSeconds: Number(event.target.value) })}
         >
@@ -877,7 +892,7 @@ function ReminderSection({ settings, t, isRTL, saveState, rowId, persist, permis
           id={rowId('reminderTime')}
           type="time"
           aria-describedby={`${rowId('reminderTime')}-detail`}
-          className="min-h-[40px] rounded-[10px] border border-[var(--premium-line)] bg-[var(--bg-input)] px-3 text-[0.85rem] font-semibold text-[var(--text-primary)]"
+          className="min-h-[44px] rounded-[10px] border border-[var(--premium-line)] bg-[var(--bg-input)] px-3 text-[0.85rem] font-semibold text-[var(--text-primary)]"
           value={settings.workoutReminderTime || '18:00'}
           onChange={(event) => void persist(rowId('reminderTime'), { workoutReminderTime: event.target.value })}
         />
@@ -971,6 +986,19 @@ function DangerSection({ t, isRTL, onSignOut, onClearData }: { t: Copy; isRTL: b
   );
 }
 
+function SettingHint({ id, children }: { id: string; children: string }) {
+  return (
+    <p
+      id={id}
+      className="ui-empty-description"
+      style={{ display: 'flex', alignItems: 'flex-start', gap: '0.4rem', margin: '0.35rem 0 0', fontSize: '0.74rem' }}
+    >
+      <Lightbulb size={13} aria-hidden="true" className="shrink-0" style={{ color: 'var(--accent-primary)', flexShrink: 0, marginBlockStart: '0.15rem' }} />
+      <span>{children}</span>
+    </p>
+  );
+}
+
 function SettingRow({
   id,
   icon,
@@ -979,7 +1007,8 @@ function SettingRow({
   children,
   saveState,
   isRTL,
-  controlId
+  controlId,
+  hint
 }: {
   id: string;
   icon: ReactNode;
@@ -989,6 +1018,7 @@ function SettingRow({
   saveState?: SaveState;
   isRTL: boolean;
   controlId?: string;
+  hint?: ReactNode;
 }) {
   return (
     <div className="setting-row flex flex-wrap items-center gap-x-4 gap-y-2.5">
@@ -1008,6 +1038,7 @@ function SettingRow({
         <span id={`${id}-detail`} className="mt-0.5 block text-[0.75rem] text-[var(--text-muted)]">
           {detail}
         </span>
+        {hint}
       </div>
       <div className="ms-auto flex items-center gap-2.5">
         <InlineSaveStatus
@@ -1031,7 +1062,8 @@ function ChoiceRow<T extends string>({
   options,
   onChange,
   saveState,
-  isRTL
+  isRTL,
+  hint
 }: {
   id: string;
   icon: ReactNode;
@@ -1042,9 +1074,10 @@ function ChoiceRow<T extends string>({
   onChange: (next: T) => void;
   saveState?: SaveState;
   isRTL: boolean;
+  hint?: ReactNode;
 }) {
   return (
-    <SettingRow id={id} icon={icon} title={title} detail={detail} saveState={saveState} isRTL={isRTL}>
+    <SettingRow id={id} icon={icon} title={title} detail={detail} saveState={saveState} isRTL={isRTL} hint={hint}>
       <SegmentedControl
         size="sm"
         aria-label={title}
@@ -1083,7 +1116,6 @@ function ConfirmDialog({ config, isRTL, onClose }: { config: ConfirmConfig | nul
   const [phrase, setPhrase] = useState('');
   const [busy, setBusy] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
-  const confirmRef = useRef<HTMLButtonElement>(null);
   const restoreRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -1091,7 +1123,7 @@ function ConfirmDialog({ config, isRTL, onClose }: { config: ConfirmConfig | nul
     setPhrase('');
     setBusy(false);
     restoreRef.current = (document.activeElement as HTMLElement) ?? null;
-    const timer = window.setTimeout(() => confirmRef.current?.focus(), 40);
+    const timer = window.setTimeout(() => dialogRef.current?.focus(), 40);
     return () => {
       window.clearTimeout(timer);
       const target = restoreRef.current;
@@ -1123,6 +1155,7 @@ function ConfirmDialog({ config, isRTL, onClose }: { config: ConfirmConfig | nul
         >
           <motion.div
             ref={dialogRef}
+            tabIndex={-1}
             dir={isRTL ? 'rtl' : 'ltr'}
             role="alertdialog"
             aria-modal="true"
@@ -1190,7 +1223,6 @@ function ConfirmDialog({ config, isRTL, onClose }: { config: ConfirmConfig | nul
                 {isRTL ? 'إلغاء' : 'Cancel'}
               </Button>
               <Button
-                ref={confirmRef}
                 type="button"
                 variant="danger"
                 disabled={!phraseReady || busy}

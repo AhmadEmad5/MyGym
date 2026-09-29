@@ -302,28 +302,11 @@
    ========================================================================== */
 
 @media (max-width: 900px) {
-  .session-thumb-dock {
-    padding-block-end: calc(0.6rem + max(10px, var(--shell-safe-bottom)));
-    padding-inline:
-      max(0.85rem, var(--shell-safe-inline-start, 0px))
-      max(0.85rem, var(--shell-safe-inline-end, 0px));
-  }
-
-  .session-dock-row {
-    gap: var(--gym-floor-gap);
-  }
-
-  .session-thumb-dock .session-target {
-    min-block-size: var(--gym-floor-target);
-  }
-
-  .session-hud {
-    padding-block-end: calc(14rem + max(12px, var(--shell-safe-bottom)));
-  }
-
-  .session-hud-rest {
-    inset-block-end: calc(11.5rem + max(12px, var(--shell-safe-bottom)));
-  }
+  /* `.session-thumb-dock`, `.session-dock-row`, `.session-hud` and
+     `.session-hud-rest` geometry - the measured bottom-chrome reservation and
+     the keyboard behaviour included - lives in performance.css behind the
+     `--session-*` tokens. This file is unlayered, so a restated offset here
+     would beat that source of truth on every phone. */
 
   .mobile-top-bar {
     padding-inline:
@@ -354,15 +337,9 @@
   }
 }
 
-/* Keep the thumb dock out of the OS keyboard's way while a set value is typed. */
+/* Keep a typed set input reachable while the OS keyboard is up. The dock and
+   the rest HUD themselves hide in performance.css, next to the reservation. */
 @media (max-width: 900px) {
-  :root[data-floor-input='true'] .session-thumb-dock,
-  :root[data-floor-input='true'] .session-hud-rest {
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-  }
-
   .gym-floor-number-input {
     scroll-margin-block: 1rem calc(var(--gym-floor-dock-inset) + 1rem);
   }

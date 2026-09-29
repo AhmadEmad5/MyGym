@@ -10,11 +10,11 @@ import { gymAudio } from '../lib/audio';
 import { useWorkoutTimer, workoutTimer } from '../lib/workoutTimer';
 import { useReducedMotion } from './performance/useReducedMotion';
 
-const BAR_INSET = 'max(0.75rem, env(safe-area-inset-left, 0px))';
+const BAR_INSET = 'max(0.75rem, var(--shell-safe-inline-start, 0px))';
 
 export function DynamicLiveWorkoutBar() {
   const { data } = useData();
-  const { activeCardio } = useActiveCardio();
+  const { activeCardio, remainingSeconds } = useActiveCardio();
   const { t, isRTL, tTitle, tExercise } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -41,7 +41,17 @@ export function DynamicLiveWorkoutBar() {
     return inProgress || uncompletedToday[0];
   }, [data?.sessions]);
 
-  const shouldRender = Boolean(!isInSession && activeSession && !(activeCardio && activeCardio.sessionId === activeSession.id));
+  // Both global bars claim the same fixed slot at the top of the viewport, so
+  // they must never be on screen together: the cardio timer owns the slot while
+  // it is running (it carries its own controls and a way back to the workout),
+  // and this bar owns it the rest of the time.
+  const isCardioBarOnScreen = Boolean(activeCardio && remainingSeconds > 0);
+
+  const shouldRender = Boolean(
+    !isInSession
+    && activeSession
+    && !(activeCardio && (activeCardio.sessionId === activeSession.id || isCardioBarOnScreen))
+  );
 
   const totalSets = activeSession?.exercises?.reduce((sum, e) => sum + (e.sets?.length || 0), 0) || 0;
   const completedSets = activeSession?.exercises?.reduce(
@@ -88,7 +98,7 @@ export function DynamicLiveWorkoutBar() {
         aria-hidden="true"
         style={{
           display: shouldRender ? 'block' : 'none',
-          blockSize: 'calc(3.4rem + max(0px, env(safe-area-inset-top, 0px)))',
+          blockSize: 'calc(3.4rem + max(0px, var(--shell-safe-top, 0px)))',
           flex: '0 0 auto'
         }}
       />
@@ -103,7 +113,7 @@ export function DynamicLiveWorkoutBar() {
             transition={reducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 460, damping: 32 }}
             style={{
               position: 'fixed',
-              insetBlockStart: 'calc(0.5rem + max(0px, env(safe-area-inset-top, 0px)))',
+              insetBlockStart: 'calc(0.5rem + max(0px, var(--shell-safe-top, 0px)))',
               insetInlineStart: BAR_INSET,
               insetInlineEnd: BAR_INSET,
               marginInline: 'auto',

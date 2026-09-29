@@ -1,0 +1,338 @@
+/* ==========================================================================
+   FORMA — Shared UI Primitive Layer (Hint / EmptyState / Skeleton / Card polish)
+   Loaded last, after every other stylesheet, so it owns the `ui-hint-*`,
+   `ui-empty-state-compact` and `ui-skeleton-*` names without touching the
+   canonical token file.
+
+   Rules of this file:
+   - Colour is always `var(--token)`. No literal hex, no rgba() of our own.
+     Every theme in design-tokens.css therefore restyles this layer for free.
+   - Only `transform` and `opacity` ever animate. Nothing here touches width,
+     height, top or left.
+   - Every animated rule is duplicated under `@media (prefers-reduced-motion:
+     reduce)` and `html[data-motion="reduced"]`, matching the runtime gate in
+     `src/components/performance/useReducedMotion.ts`.
+   - All positioning is logical (`inset-inline-*`), so `dir="rtl"` flips the
+     anchor and the arrow without a second rule set.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Hint — 44px thumb target, panel portalled to <body> so `.content-area`
+   (overflow-y: auto / overflow-x: clip) can never crop it.
+   -------------------------------------------------------------------------- */
+
+.ui-hint-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: var(--space-touch-min);
+  min-height: var(--space-touch-min);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+  transition: color var(--motion-fast) var(--ease-standard), background-color var(--motion-fast) var(--ease-standard);
+}
+
+.ui-hint-trigger:hover,
+.ui-hint-trigger[data-open="true"] {
+  color: var(--accent-cyan);
+  background: var(--accent-cyan-glow);
+}
+
+.ui-hint-trigger:active {
+  color: var(--text-primary);
+}
+
+.ui-hint-trigger:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 var(--focus-ring-width) var(--focus-ring-halo), 0 0 0 1px var(--focus-ring-color);
+}
+
+.ui-hint-trigger:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.ui-hint-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.ui-hint-icon > svg {
+  width: 100%;
+  height: 100%;
+  stroke-width: 2.25;
+}
+
+/* Zero-size fixed anchor. The panel hangs off it; the custom properties are
+   written by `Hint` from measured viewport geometry. `pointer-events: none`
+   on the layer keeps every tap that lands on the panel aimed at the page. */
+.ui-hint-layer {
+  position: fixed;
+  inset-inline-start: var(--ui-hint-inset-inline, 0px);
+  inset-block-start: var(--ui-hint-inset-block, 0px);
+  width: 0;
+  height: 0;
+  z-index: var(--z-tooltip);
+  pointer-events: none;
+}
+
+.ui-hint-panel {
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-start: 0;
+  width: max-content;
+  max-width: min(18rem, calc(100vw - 1.5rem));
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  background: var(--surface-elevated);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-modal);
+  font-size: var(--text-xs);
+  line-height: var(--leading-relaxed);
+  text-align: start;
+  transform-origin: var(--ui-hint-origin, center bottom);
+  will-change: transform, opacity;
+}
+
+.ui-hint-body {
+  display: block;
+  max-width: 16rem;
+  white-space: pre-line;
+}
+
+/* Arrow. The inline offset and its centring sign both come from measured
+   geometry, so the diamond keeps pointing at the trigger in either direction
+   without a mirrored rule set. */
+.ui-hint-arrow {
+  position: absolute;
+  width: 0.5rem;
+  height: 0.5rem;
+  background: var(--surface-elevated);
+  transform: translate(
+      calc(var(--ui-hint-arrow-shift, -50%) + var(--ui-hint-arrow-dx, 0px)),
+      calc(-50% + var(--ui-hint-arrow-dy, 0px))
+    )
+    rotate(45deg);
+}
+
+.ui-hint-layer {
+  /* How far the diamond straddles the panel border. */
+  --ui-hint-arrow-edge: 4px;
+}
+
+.ui-hint-layer[data-side="top"] .ui-hint-panel {
+  --ui-hint-origin: center bottom;
+}
+
+.ui-hint-layer[data-side="bottom"] .ui-hint-panel {
+  --ui-hint-origin: center top;
+}
+
+/* Panel sits above the trigger: arrow hangs off the panel's block-end edge. */
+.ui-hint-layer[data-side="top"] .ui-hint-arrow {
+  inset-inline-start: var(--ui-hint-arrow, 50%);
+  inset-block-start: 100%;
+  border-bottom: 1px solid var(--border-card);
+  border-right: 1px solid var(--border-card);
+  --ui-hint-arrow-dy: var(--ui-hint-arrow-edge);
+}
+
+/* Panel sits below the trigger: arrow sits on the panel's block-start edge. */
+.ui-hint-layer[data-side="bottom"] .ui-hint-arrow {
+  inset-inline-start: var(--ui-hint-arrow, 50%);
+  inset-block-end: 100%;
+  border-top: 1px solid var(--border-card);
+  border-left: 1px solid var(--border-card);
+  --ui-hint-arrow-dy: calc(-1 * var(--ui-hint-arrow-edge));
+}
+
+/* Side placements put the arrow on the panel's physical inline edge, so they
+   offset with physical properties and take their centring sign from JS. */
+.ui-hint-layer[data-side="left"] .ui-hint-arrow {
+  inset-block-start: var(--ui-hint-arrow, 50%);
+  right: 0;
+  border-top: 1px solid var(--border-card);
+  border-bottom: 1px solid var(--border-card);
+  --ui-hint-arrow-dx: calc(-1 * var(--ui-hint-arrow-edge));
+}
+
+.ui-hint-layer[data-side="right"] .ui-hint-arrow {
+  inset-block-start: var(--ui-hint-arrow, 50%);
+  left: 0;
+  border-left: 1px solid var(--border-card);
+  border-right: 1px solid var(--border-card);
+  --ui-hint-arrow-dx: var(--ui-hint-arrow-edge);
+}
+
+/* --------------------------------------------------------------------------
+   EmptyState — `compact` variant and the actionable hint line. The default
+   structure and class names are untouched, so existing call sites are
+   byte-identical.
+   -------------------------------------------------------------------------- */
+
+.ui-empty-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2xs);
+  max-width: 32rem;
+  margin: var(--space-2xs) 0 0;
+  padding: var(--space-2xs) var(--space-xs);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent-cyan) 8%, transparent);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  text-align: start;
+}
+
+.ui-empty-hint::before {
+  content: "";
+  flex-shrink: 0;
+  width: 0.375rem;
+  height: 0.375rem;
+  margin-block-start: 0.45em;
+  border-radius: var(--radius-full);
+  background: var(--accent-cyan);
+}
+
+.ui-empty-state-compact {
+  gap: var(--space-3xs);
+  padding: var(--space-md) var(--space-sm);
+}
+
+.ui-empty-state-compact .ui-empty-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  margin-bottom: var(--space-3xs);
+  border-radius: var(--radius-md);
+}
+
+.ui-empty-state-compact .ui-empty-title {
+  font-size: var(--text-md);
+}
+
+.ui-empty-state-compact .ui-empty-description {
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+}
+
+.ui-empty-state-compact .ui-empty-actions {
+  width: 100%;
+  flex-direction: column;
+  align-items: stretch;
+  margin-top: var(--space-sm);
+}
+
+/* --------------------------------------------------------------------------
+   Skeleton — inline placeholders layered on the existing `ui-skeleton` class.
+   -------------------------------------------------------------------------- */
+
+.ui-skeleton-text {
+  height: 0.75rem;
+  width: 100%;
+}
+
+.ui-skeleton-block {
+  height: 5.25rem;
+  width: 100%;
+  border-radius: var(--radius-md);
+}
+
+.ui-skeleton-circle {
+  height: 2.5rem;
+  width: 2.5rem;
+  border-radius: var(--radius-full);
+}
+
+.ui-skeleton-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  width: 100%;
+}
+
+/* --------------------------------------------------------------------------
+   Card — depth polish. `.ui-card` already owns the border and `--shadow-card`
+   bevel in design-tokens.css; nothing here overrides those, this only adds the
+   press treatment for the interactive variant and tames the hover lift on
+   coarse pointers, where `:hover` sticks after the finger lifts.
+   -------------------------------------------------------------------------- */
+
+.ui-card-interactive:active {
+  transform: translateY(0) scale(0.992);
+  transition-duration: var(--motion-fast);
+}
+
+@media (hover: none) {
+  .ui-card-interactive:hover {
+    transform: none;
+    box-shadow: var(--shadow-card);
+  }
+
+  .ui-card-interactive:active {
+    transform: scale(0.992);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Reduced motion. Both gates, because the app also exposes its own switch via
+   `html[data-motion="reduced"]`.
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-hint-trigger,
+  .ui-card,
+  .ui-card-interactive {
+    transition-duration: var(--motion-fast);
+  }
+
+  .ui-hint-panel {
+    will-change: auto;
+  }
+
+  .ui-card-interactive:hover,
+  .ui-card-interactive:active,
+  .ui-card:focus-visible {
+    transform: none;
+  }
+
+  .ui-skeleton {
+    animation: none;
+    background: var(--surface-card);
+  }
+}
+
+html[data-motion="reduced"] .ui-hint-trigger,
+html[data-motion="reduced"] .ui-card,
+html[data-motion="reduced"] .ui-card-interactive {
+  transition-duration: var(--motion-fast);
+}
+
+html[data-motion="reduced"] .ui-hint-panel {
+  will-change: auto;
+}
+
+html[data-motion="reduced"] .ui-card-interactive:hover,
+html[data-motion="reduced"] .ui-card-interactive:active,
+html[data-motion="reduced"] .ui-card:focus-visible {
+  transform: none;
+}
+
+html[data-motion="reduced"] .ui-skeleton {
+  animation: none;
+  background: var(--surface-card);
+}

@@ -10,6 +10,7 @@ import {
   Dumbbell,
   Flame,
   History,
+  Lightbulb,
   Moon,
   Play,
   Plus,
@@ -43,7 +44,7 @@ const MAX_VISIBLE_EXERCISES = 4;
 
 export function TodayView() {
   const { data, loading, finishWorkoutSession, saveSession, logWater, resetWater, forceRefresh } = useData();
-  const { formatDate, tExercise, tTitle, isRTL } = useTranslation();
+  const { formatDate, tExercise, tTitle, t, isRTL } = useTranslation();
   const navigate = useNavigate();
   const reduceMotion = useFormaReducedMotion();
   const [isQuickWorkoutOpen, setIsQuickWorkoutOpen] = useState(false);
@@ -326,7 +327,11 @@ export function TodayView() {
               <div className="mobile-greeting-label">{isRTL ? 'مرحباً بعودتك،' : 'Welcome back,'}</div>
               <div className="mobile-athlete-name">{data.user?.name || (isRTL ? 'البطل' : 'Athlete')}</div>
             </div>
-            <div className="mobile-streak-ring" title={isRTL ? 'السلسلة الحالية' : 'Current streak'}>
+            <div
+              className="mobile-streak-ring"
+              title={isRTL ? 'السلسلة الحالية' : 'Current streak'}
+              aria-describedby="today-streak-hint"
+            >
               <Flame className="w-5 h-5 fill-amber-500 text-amber-500" aria-hidden="true" />
               <span className="mobile-streak-text tabular-nums">{Math.max(1, streakDays)}d</span>
               <span className="forma-sr-only">
@@ -334,6 +339,10 @@ export function TodayView() {
               </span>
             </div>
           </div>
+          <p id="today-streak-hint" className="ui-empty-description" style={{ display: 'flex', alignItems: 'flex-start', gap: '0.4rem', margin: '0.35rem 0 0', fontSize: '0.74rem' }}>
+            <Lightbulb size={13} aria-hidden="true" style={{ color: 'var(--color-warning)', flexShrink: 0, marginBlockStart: '0.15rem' }} />
+            <span>{t('todayStreakHint')}</span>
+          </p>
 
           <MobileHeroWorkoutCard
             session={heroSession}
@@ -563,9 +572,18 @@ export function TodayView() {
                     </div>
                   ))}
                   {todaySessions.length <= 1 && todayHistory.length === 0 && (
-                    <p className="today-line-empty">
-                      {isRTL ? 'ستظهر الجلسات والإنجازات هنا.' : 'Sessions and completed work will appear here.'}
-                    </p>
+                    <div className="today-line-empty">
+                      <p style={{ margin: 0 }}>{t('todayTimelineEmpty')}</p>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="mt-3"
+                        leftIcon={<CalendarDays width={14} height={14} />}
+                        onClick={() => navigate('/plan')}
+                      >
+                        {t('todayTimelineAction')}
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>

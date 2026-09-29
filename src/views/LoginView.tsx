@@ -103,6 +103,8 @@ type Copy = {
   close: string;
   changeLanguage: string;
   skipToForm: string;
+  showPassword: string;
+  hidePassword: string;
 };
 
 const COPY: Record<Lang, Copy> = {
@@ -159,7 +161,9 @@ const COPY: Record<Lang, Copy> = {
     resetDone: 'Email sent',
     close: 'Close',
     changeLanguage: 'Change language',
-    skipToForm: 'Skip to the sign-in form'
+    skipToForm: 'Skip to the sign-in form',
+    showPassword: 'Show password',
+    hidePassword: 'Hide password'
   },
   ar: {
     brandTag: 'PRO',
@@ -214,7 +218,9 @@ const COPY: Record<Lang, Copy> = {
     resetDone: 'تم الإرسال',
     close: 'إغلاق',
     changeLanguage: 'تغيير اللغة',
-    skipToForm: 'تخطَّ إلى نموذج الدخول'
+    skipToForm: 'تخطَّ إلى نموذج الدخول',
+    showPassword: 'إظهار كلمة المرور',
+    hidePassword: 'إخفاء كلمة المرور'
   }
 };
 
@@ -655,7 +661,7 @@ export function LoginView({ onLogin }: LoginProps) {
                   type="button"
                   className="forma-field-action"
                   onClick={() => setPasswordVisible((current) => !current)}
-                  aria-label={passwordVisible ? 'Hide password' : 'Show password'}
+                  aria-label={passwordVisible ? copy.hidePassword : copy.showPassword}
                   aria-pressed={passwordVisible}
                 >
                   {passwordVisible ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}

@@ -192,23 +192,29 @@
       width: 100%;
       padding-block-end: calc(var(--shell-dock-inset, 5rem) + 1rem);
     }
+
+    /* index.css pins the day tabs to 42px with a layered !important. */
+    .calendar-page .day-tab-pill { min-height: 44px !important; }
   }
 
   @media (max-width: 640px) {
 
     .calendar-page .calendar-week-ribbon {
       padding-block-end: 0.65rem !important;
-      gap: 0.35rem;
+      gap: 0.5rem !important;
     }
 
     .calendar-page .ribbon-day-pill {
+      /* Not forced: 7 columns x 44px + 6 x 8px gaps overflows a 360px viewport by
+         ~22px, and the container is overflow-x hidden, so the last day would be
+         clipped. The pill is ~70px tall, so the block axis carries the floor. */
       min-width: 44px;
       padding-block: 0.45rem !important;
       padding-inline: 0.25rem !important;
     }
 
     .calendar-page .calendar-day-tab-bar {
-      gap: 0.35rem;
+      gap: 0.5rem !important;
       margin-block-end: 0.75rem !important;
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
@@ -239,12 +245,12 @@
       width: 100%;
       display: grid;
       grid-template-columns: 1.2fr 1fr 0.8fr;
-      gap: 0.4rem !important;
+      gap: 0.5rem !important;
     }
 
     .nutrition-page .nutrition-header-actions > button {
       width: 100%;
-      min-height: 38px !important;
+      min-height: 44px !important;
       padding-block: 0.35rem !important;
       padding-inline: 0.5rem !important;
       font-size: 0.76rem !important;
@@ -306,4 +312,14 @@
     .calendar-page .calendar-workout-card:hover,
     .routines-page .routine-card:hover { transform: none; }
   }
+
+  /* The app's own motion gate needs its own copy: a media query adds no
+     specificity, so these cannot be folded into the block above. */
+  [data-motion='reduced'] .calendar-page .calendar-week-ribbon,
+  [data-motion='reduced'] .calendar-page .calendar-day-tab-bar {
+    scroll-behavior: auto;
+  }
+
+  [data-motion='reduced'] .calendar-page .calendar-workout-card:hover,
+  [data-motion='reduced'] .routines-page .routine-card:hover { transform: none; }
 }

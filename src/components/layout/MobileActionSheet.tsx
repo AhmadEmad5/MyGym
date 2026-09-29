@@ -22,7 +22,7 @@ const FOCUSABLE_SELECTOR = [
 ].join(', ');
 
 export function MobileActionSheet({ open, title, onClose, children }: MobileActionSheetProps) {
-  const { isRTL } = useTranslation();
+  const { t } = useTranslation();
   const motionEnabled = useMotionEnabled();
   const titleId = useId();
   const panelRef = useRef<HTMLElement>(null);
@@ -102,7 +102,7 @@ export function MobileActionSheet({ open, title, onClose, children }: MobileActi
                 type="button"
                 className="btn-icon btn-ghost"
                 onClick={onClose}
-                aria-label={isRTL ? 'إغلاق' : 'Close'}
+                aria-label={t('close')}
               >
                 <X width={20} height={20} aria-hidden="true" />
               </button>

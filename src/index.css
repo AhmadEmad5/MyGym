@@ -534,6 +534,50 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
   scroll-padding-block-end: calc(var(--shell-scroll-offset, 1.5rem) + var(--shell-safe-bottom, 0px));
 }
 
+/* In-session scroller: the top gutter, and nothing else.
+
+   A session mounts no fixed top bar. AppShell omits ModernNavigationBar when
+   isInSession is set, and that is the only thing that mounts ShellMobileTopBar, so
+   the generic mobile blocks further down reserve 58-60px under a bar that is not
+   there. The block end is handled separately, below.
+
+   The selector is long on purpose: the generic blocks target the bare
+   `.content-area` and are `!important`, so outranking them needs `!important` AND a
+   higher specificity - hence `.app-layout.in-workout-session` in front of
+   `.main-content.in-workout-session-main`. */
+.app-layout.in-workout-session .main-content.in-workout-session-main .content-area {
+  padding-top: clamp(0.75rem, 2vw, 1.5rem) !important;
+}
+
+/* No bottom reservation is declared on .content-area, and none should be.
+
+   .content-area and .session-hud are NESTED - .session-hud is the first child of
+   .session-detail-container and wraps the whole session, dock included - so a
+   padding-bottom here ADDS to the band .session-hud already derives from
+   --session-chrome / --session-chrome-rest in performance.css instead of replacing
+   it: 169.2 + 177.2 = 346.4px reserved for a 169.2px dock, and 253.2 + 261.2 =
+   514.4px for 253.2px with a rest timer running. The 115px + safe-area this file
+   used to hard-code here was one of three such reservations; the surviving one
+   belongs to .session-hud alone, which is the only element that can see the dock.
+
+   The band cannot move up here instead. At >=900px performance.css makes
+   .session-thumb-dock position:sticky (in flow) while .session-hud-rest stays
+   position:fixed at inset-block-end: 1.5rem, and that desktop clearance is declared
+   only on .session-hud.
+
+   The generic mobile blocks in this same file are scoped to the bare
+   `.content-area` and two of them set `padding-bottom` with `!important`, so
+   without an explicit opt-out the session scroller still carries 88px (<=768px)
+   or 100px (<=380px) of a band that nothing renders. `:not([data-floor-input])`
+   hands the scroller back to the keyboard collapse in mobile-refinement.css while
+   the software keyboard is up, and the query stops at 900px because above that the
+   dock is `position: sticky` and in flow. */
+@media (max-width: 900px) {
+  :root:not([data-floor-input='true']) .app-layout.in-workout-session .main-content.in-workout-session-main .content-area {
+    padding-bottom: 0 !important;
+  }
+}
+
 /* Session HUD Header Elements */
 
 /* In-App YouTube Player Component Styles */
@@ -1764,7 +1808,7 @@ button, .btn, .btn-icon { -webkit-tap-highlight-color: transparent; }
   }
 
   .ai-fab {
-    bottom: calc(72px + max(12px, env(safe-area-inset-bottom, 0px))) !important;
+    bottom: calc(var(--shell-dock-inset, 86px) + 1.25rem) !important;
   }
 
   .app-layout.has-live-bar .ai-fab {
@@ -2236,7 +2280,7 @@ body:has(.modal-card) .ai-fab {
   .ai-fab {
     width: 52px !important;
     height: 52px !important;
-    bottom: calc(76px + max(12px, env(safe-area-inset-bottom, 0px))) !important;
+    bottom: calc(var(--shell-dock-inset, 86px) + 1.25rem) !important;
   }
 }
 
@@ -2589,22 +2633,6 @@ button, a, input, select, textarea, .btn, .theme-popover-item, .modern-nav-item 
 /* Clean Input with Embedded Unit Pill */
 
 /* Mobile Swipe Hint in Focus Mode */
-
-/* Mobile Sets Table: Zero Horizontal Scroll & Crisp Columns */
-@media (max-width: 640px) {
-
-  /* Hide auxiliary keypad and plate shortcut buttons inside the table rows on mobile to prevent cell squishing */
-
-  /* Safe Area Bottom Padding on Workout Session View */
-  .main-content.in-workout-session-main .content-area {
-    padding-bottom: calc(115px + max(20px, env(safe-area-inset-bottom, 0px))) !important;
-  }
-
-  /* Touch-friendly Stepper Buttons on Mobile */
-
-  /* Active Set Stepper Tray (Full-width gym-ready controls) */
-
-}
 
 /* Zen Focus Mode Exercise Pills Navigation Bar */
 

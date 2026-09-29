@@ -8,7 +8,7 @@ import { gymAudio } from '../lib/audio';
 import { CARDIO_COMPLETED_EVENT } from '../lib/cardioTimer';
 import { useReducedMotion } from './performance/useReducedMotion';
 
-const BAR_RESERVED_HEIGHT = 'calc(5.2rem + max(0px, env(safe-area-inset-top, 0px)))';
+const BAR_RESERVED_HEIGHT = 'calc(5.2rem + max(0px, var(--shell-safe-top, 0px)))';
 
 export function GlobalCardioBar() {
   const {
@@ -119,7 +119,7 @@ export function GlobalCardioBar() {
             transition={reducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 450, damping: 28 }}
             style={{
               position: 'fixed',
-              insetBlockStart: 'calc(0.6rem + max(0px, env(safe-area-inset-top, 0px)))',
+              insetBlockStart: 'calc(0.6rem + max(0px, var(--shell-safe-top, 0px)))',
               insetInlineStart: '0.75rem',
               insetInlineEnd: '0.75rem',
               marginInline: 'auto',
@@ -199,7 +199,7 @@ export function GlobalCardioBar() {
             onClick={handleReturnToWorkout}
             style={{
               position: 'fixed',
-              insetBlockStart: 'calc(0.6rem + max(0px, env(safe-area-inset-top, 0px)))',
+              insetBlockStart: 'calc(0.6rem + max(0px, var(--shell-safe-top, 0px)))',
               insetInlineStart: '0.75rem',
               insetInlineEnd: '0.75rem',
               marginInline: 'auto',

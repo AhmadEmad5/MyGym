@@ -1,15 +1,16 @@
 import { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { createPortal } from 'react-dom';
 import {
   Utensils, Camera, Sparkles, Trash2, CheckCircle2,
   Clock, Calculator, Plus, Edit3, Barcode, Copy, CopyPlus,
-  ChevronDown, ListChecks, Wand2
+  ChevronDown, Wand2
 } from 'lucide-react';
 import { isSameDay, format, parse } from 'date-fns';
 import { useData } from '../hooks/useData';
 import { MealRecord, MealType, estimateWorkoutCalories, DEFAULT_NUTRITION_GOALS } from '../lib/api';
 import { useTranslation, TranslationKey } from '../lib/i18n';
-import { Button, Badge } from '../components/ui';
+import { Button, Badge, Hint, PageSkeleton } from '../components/ui';
 import { TDEECalculatorModal } from '../components/TDEECalculatorModal';
 import { AIMealVisionModal, InlineNumberField, UnitToggle, FieldError, PrimaryAction, SecondaryAction, massToGrams, gramsToMass, energyToKcal, kcalToEnergy, type MassUnit, type EnergyUnit } from '../components/AIMealVisionModal';
 import { BarcodeFoodScannerModal } from '../components/BarcodeFoodScannerModal';
@@ -244,6 +245,15 @@ export function NutritionView() {
     setDraft(prev => ({ ...prev, calories: String(Math.round(kcalToEnergy(kcal, next))) }));
   };
 
+  if (!data) {
+    return (
+      <div className="zen-page-container nutrition-page">
+        <span className="sr-only" role="status">{t('loadingNutrition')}</span>
+        <PageSkeleton variant="nutrition" rows={4} />
+      </div>
+    );
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -381,9 +391,14 @@ export function NutritionView() {
           />
         </div>
         {filteredQuickMeals.length === 0 ? (
-          <p style={{ margin: 0, fontSize: '.85rem', color: 'var(--text-secondary)' }}>
-            {isRTL ? 'لا توجد نتائج — جرّب اسماً آخر.' : 'No matches — try another name.'}
-          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.6rem' }}>
+            <p style={{ margin: 0, fontSize: '.85rem', color: 'var(--text-secondary)' }}>
+              {isRTL ? 'لا توجد نتائج — جرّب اسماً آخر.' : 'No matches — try another name.'}
+            </p>
+            <Button variant="secondary" size="sm" onClick={() => setQuickMealSearch('')}>
+              {t('quickAddNoMatchAction')}
+            </Button>
+          </div>
         ) : (
           <div className="nutrition-quick-meals-track" style={{ display: 'flex', gap: '.5rem', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: '4px', scrollbarWidth: 'none' }}>
             {filteredQuickMeals.map(meal => (
@@ -469,23 +484,22 @@ export function NutritionView() {
             </div>
           </div>
 
-          {todayMeals.length > 0 && (
-            <div style={{ marginTop: '1rem', padding: '0.75rem 0.9rem', borderRadius: '12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <ListChecks size={15} style={{ color: '#10b981', flexShrink: 0 }} />
-              <span>
-                {isRTL
-                  ? 'اضغط «تكرار» على أي وجبة لسجلها بنفس القيم والوقت.'
-                  : 'Tap Duplicate on any meal to log it again with the same values and time.'}
-              </span>
-            </div>
-          )}
         </div>
 
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <h2 style={{ margin: 0, fontSize: '1.25rem' }}>{t('todaysLoggedMeals')}</h2>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-              {todayMeals.length} {todayMeals.length === 1 ? t('mealWord') : t('mealsWord')}
+            <h2 id="nutrition-meals-heading" style={{ margin: 0, fontSize: '1.25rem' }}>{t('todaysLoggedMeals')}</h2>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+              <span>
+                {todayMeals.length} {todayMeals.length === 1 ? t('mealWord') : t('mealsWord')}
+              </span>
+              {todayMeals.length > 0 && (
+                <Hint
+                  content={t('duplicateGestureHint')}
+                  label={t('nutritionSwipeHintLabel')}
+                  placement="bottom-end"
+                />
+              )}
             </span>
           </div>
 
@@ -538,7 +552,7 @@ export function NutritionView() {
               </div>
             </div>
           ) : (
-            <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+            <ul aria-labelledby="nutrition-meals-heading" style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
               <AnimatePresence initial={false}>
                 {todayMeals.map((meal) => {
                   const mealDate = new Date(meal.date);
@@ -622,7 +636,7 @@ export function NutritionView() {
                                 title={isRTL ? 'تكرار الوجبة' : 'Duplicate meal'}
                                 style={{
                                   background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.28)', color: '#10b981',
-                                  cursor: 'pointer', width: 38, height: 38, borderRadius: '10px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center'
+                                  cursor: 'pointer', width: 44, height: 44, borderRadius: '10px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center'
                                 }}
                               >
                                 <Copy size={15} />
@@ -639,7 +653,7 @@ export function NutritionView() {
                                 title={isRTL ? 'تعديل سريع' : 'Quick edit'}
                                 style={{
                                   background: 'rgba(6, 182, 212, 0.08)', border: '1px solid rgba(6, 182, 212, 0.25)', color: '#06b6d4',
-                                  cursor: 'pointer', width: 38, height: 38, borderRadius: '10px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center'
+                                  cursor: 'pointer', width: 44, height: 44, borderRadius: '10px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center'
                                 }}
                               >
                                 <Edit3 size={15} />
@@ -657,7 +671,7 @@ export function NutritionView() {
                                 title={isRTL ? 'حذف الوجبة' : 'Delete meal'}
                                 style={{
                                   background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#ef4444',
-                                  cursor: 'pointer', width: 38, height: 38, borderRadius: '10px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center'
+                                  cursor: 'pointer', width: 44, height: 44, borderRadius: '10px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center'
                                 }}
                               >
                                 <Trash2 size={15} />
@@ -805,7 +819,7 @@ export function NutritionView() {
                               <button
                                 type="button"
                                 onClick={() => { setEditingMeal(meal); setIsManualMealModalOpen(true); }}
-                                style={{ alignSelf: 'flex-start', background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', minHeight: 28 }}
+                                style={{ alignSelf: 'flex-start', background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', minHeight: 44 }}
                               >
                                 <Edit3 size={12} />
                                 {isRTL ? 'فتح المحرّر الكامل' : 'Open the full editor'}
@@ -820,7 +834,7 @@ export function NutritionView() {
                         onClick={() => { if (isOpen) closeEditor(); else openEditor(meal); }}
                         aria-expanded={isOpen}
                         aria-controls={`meal-editor-${meal.id}`}
-                        style={{ marginTop: '0.6rem', width: '100%', background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem', minHeight: 28 }}
+                        style={{ marginTop: '0.6rem', width: '100%', background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem', minHeight: 44 }}
                       >
                         <span>{isRTL ? (isOpen ? 'إخفاء التعديل السريع' : 'تعديل سريع') : (isOpen ? 'Hide quick edit' : 'Quick edit')}</span>
                         <ChevronDown size={13} style={{ transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
@@ -834,6 +848,28 @@ export function NutritionView() {
           )}
         </div>
       </div>
+
+      {createPortal(
+        <div className="mobile-page-actionbar" role="group" aria-label={t('nutritionActionBarLabel')}>
+          <Button
+            variant="secondary"
+            size="lg"
+            onClick={() => setIsAIMealVisionOpen(true)}
+            leftIcon={<Camera width={18} height={18} />}
+          >
+            {t('nutritionActionBarScan')}
+          </Button>
+          <Button
+            variant="primary"
+            size="lg"
+            onClick={() => { setEditingMeal(null); setIsManualMealModalOpen(true); }}
+            leftIcon={<Plus width={18} height={18} />}
+          >
+            {t('nutritionActionBarLog')}
+          </Button>
+        </div>,
+        document.body
+      )}
 
       <TDEECalculatorModal isOpen={isTDEEModalOpen} onClose={() => setIsTDEEModalOpen(false)} />
 
