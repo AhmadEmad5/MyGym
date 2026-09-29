@@ -47,11 +47,29 @@ export type Exercise = {
   defaultRestTime: number;
 };
 
+// A single training day inside a saved program. Structurally identical to
+// `PredefinedRoutine['sessions'][number]` and `ProgramSessionDraft`, so the same
+// object round-trips through the program editor, the library and Firestore.
+export type RoutineSession = {
+  title: string;
+  type: string;
+  exercises: SessionExercise[];
+};
+
 export type Routine = {
   id: string;
   name: string;
   description: string;
   exercises: SessionExercise[]; // templates for exercises
+  // Multi-session programs (push/pull/legs, upper/lower, ...) need every session
+  // persisted, not just `exercises` (which mirrors sessions[0] for legacy
+  // single-session routines and for settings that rewrite exercise units).
+  // Optional so routines written before this field existed still load.
+  sessions?: RoutineSession[];
+  // Mirrored from ProgramDraft.daysRequired so a reloaded program can still be
+  // scheduled on the number of days it was built for. Clamped to 1..7 to stay
+  // inside the `isValidRoutine` Firestore rule.
+  daysRequired?: number;
 };
 
 export type UserSettings = {
@@ -982,6 +1000,8 @@ export const api = {
   async saveRoutine(routine: Routine) {
     assertId(routine?.id, 'Routine');
     if (!routine.name?.trim() || routine.name.length > MAX_TEXT_LENGTH || !Array.isArray(routine.exercises)) throw new Error('Routine requires a valid name and exercise list.');
+    if (routine.sessions !== undefined && !Array.isArray(routine.sessions)) throw new Error('Routine sessions must be a list.');
+    if (routine.daysRequired !== undefined) assertFiniteNonNegative(routine.daysRequired, 'Routine days required', 7);
     mirrorLocalData(local => {
       if (!local.routines) local.routines = [];
       const idx = local.routines.findIndex(r => r.id === routine.id);

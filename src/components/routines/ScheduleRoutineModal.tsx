@@ -180,7 +180,7 @@ export function ScheduleRoutineModal({
           <div className="routine-day-grid" role="group" aria-label={isRTL ? 'أيام الأسبوع' : 'Days of the week'}>
             {DAYS_OF_WEEK.map(day => {
               const selected = selectedDays.includes(day.value);
-              const closed = day.value === CLOSED_DAY_VALUE;
+              const closed = day.isClosed;
               const disabled = closed || (!selected && selectedDays.length >= daysRequired);
               return (
                 <button

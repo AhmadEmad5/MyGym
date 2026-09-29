@@ -18,7 +18,11 @@ export const DAYS_OF_WEEK = [
   { labelEn: 'Friday (Gym Closed)', labelAr: 'الجمعة (الجيم مغلق)', shortEn: 'Fri', shortAr: 'الجمعة', value: 6, isClosed: true }
 ] as const;
 
-export const CLOSED_DAY_VALUE = 5;
+// Day values are offsets from the Saturday that starts the training week
+// (buildProgramSessions does `addDays(startOfWeek(today, { weekStartsOn: 6 }), offset)`),
+// so Saturday = 0 ... Friday = 6. Derive the closed day from DAYS_OF_WEEK instead
+// of hardcoding it: the old literal 5 pointed at Thursday and blocked the wrong day.
+export const CLOSED_DAY_VALUE = DAYS_OF_WEEK.find(day => day.isClosed)?.value ?? 6;
 
 export const PREDEFINED_ROUTINES: PredefinedRoutine[] = [
   ROUTINE_PPL,
