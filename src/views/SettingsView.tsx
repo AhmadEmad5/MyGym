@@ -2,7 +2,6 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { signOut } from 'firebase/auth';
 import {
   Bell,
   BellRing,
@@ -30,7 +29,6 @@ import {
   Waves,
   Wifi
 } from 'lucide-react';
-import { auth } from '../lib/firebase';
 import type { UserSettings } from '../lib/api';
 import { useData } from '../hooks/useData';
 import { useTranslation } from '../lib/i18n';
@@ -98,7 +96,7 @@ const useIsDesktop = () => {
 };
 
 export function SettingsView() {
-  const { data, updateSettings: saveSettings, saveSessions, saveRoutine, theme, setTheme, exportBackup, importBackup } = useData();
+  const { data, updateSettings: saveSettings, saveSessions, saveRoutine, theme, setTheme, exportBackup, importBackup, signOutUser } = useData();
   const { t, language, setLanguage, isRTL } = useTranslation();
   const navigate = useNavigate();
   const isDesktop = useIsDesktop();
@@ -277,11 +275,8 @@ export function SettingsView() {
   };
 
   const handleSignOut = async () => {
-    if (!data || !settings) return;
     try {
-      if (auth?.currentUser) await signOut(auth);
-      localStorage.removeItem('gym_data');
-      await saveSettings(settings, undefined);
+      await signOutUser();
       navigate('/today');
       notify(isRTL ? 'تم تسجيل الخروج بنجاح.' : 'Signed out successfully.', 'info');
     } catch (error) {

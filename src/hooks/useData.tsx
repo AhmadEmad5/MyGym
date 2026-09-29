@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import { format } from 'date-fns';
 import { api, AppData, WorkoutSession, Routine, HistoryRecord, UserSettings, MealRecord, BodyMetricEntry, NutritionGoals, PerformanceInsights, estimateWorkoutCalories } from '../lib/api';
 import { auth } from '../lib/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { notify } from '../lib/feedback';
 
 type DataContextType = {
@@ -31,6 +31,13 @@ type DataContextType = {
   resetWater: (dateStr?: string) => Promise<void>;
   saveInsights: (insights: PerformanceInsights) => Promise<void>;
   updateSettings: (settings: UserSettings, user?: AppData['user']) => Promise<void>;
+  /**
+   * Ends the session: signs out of Firebase Auth, drops the device-local
+   * mirror, and clears the in-memory athlete so the app returns to the login
+   * screen. Device-level preferences (theme, language) live outside
+   * `gym_data` and deliberately survive.
+   */
+  signOutUser: () => Promise<void>;
   exportBackup: () => void;
   importBackup: (backupJson: string) => Promise<boolean>;
   
@@ -582,6 +589,46 @@ export function DataProvider({ children }: { children: ReactNode }) {
     await api.updateRootSettings(newData.settings, newData.user);
   }, []);
 
+  /**
+   * Order matters here. `signOut(auth)` makes `onAuthStateChanged` fire with
+   * `null`, which triggers `fetchInitialData()` and rebuilds state from the
+   * `gym_data` mirror. Dropping the mirror first means that reload finds
+   * nothing and yields a clean, user-less athlete instead of resurrecting the
+   * previous one. Calling `api.updateRootSettings` on the way out would
+   * re-create the very cache we are trying to delete.
+   */
+  const signOutUser = useCallback(async () => {
+    try {
+      localStorage.removeItem('gym_data');
+    } catch (e) {
+      console.warn('Could not clear the local training cache:', e);
+    }
+
+    if (auth?.currentUser) {
+      try {
+        await signOut(auth);
+      } catch (err) {
+        console.warn('Could not sign out of Firebase Auth, clearing local state anyway:', err);
+      }
+    }
+
+    setData(prev =>
+      prev
+        ? {
+            ...prev,
+            user: undefined,
+            sessions: [],
+            routines: [],
+            exercises: [],
+            history: [],
+            meals: [],
+            bodyMetrics: [],
+            waterLogs: {}
+          }
+        : prev
+    );
+  }, []);
+
   // Export and import backup helpers
   const exportBackup = useCallback(() => {
     if (!data) return;
@@ -624,7 +671,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       saveSession, saveSessions, deleteSession, deleteSessions, finishWorkoutSession, saveRoutine, deleteRoutine, saveHistory, deleteHistory, saveMeal, deleteMeal,
       saveBodyMetric, deleteBodyMetric, updateNutritionGoals, logWater, resetWater,
       saveInsights,
-      updateSettings, updateData,
+      updateSettings, updateData, signOutUser,
       exportBackup, importBackup
     }}>
       {children}
