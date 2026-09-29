@@ -2,6 +2,8 @@ import { useCallback, useId, useRef } from 'react';
 import type { KeyboardEvent } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from './cn';
+import { useReducedMotion } from '../performance/useReducedMotion';
+import { MOTION_SCALE, resolveTransition } from '../../lib/motion';
 
 export interface SegmentOption<T extends string | number> {
   value: T;
@@ -36,6 +38,13 @@ export function SegmentedControl<T extends string | number>({
   const triggerRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const sizeClasses = size === 'sm' ? 'p-0.5 text-xs' : 'p-1 text-sm';
   const itemPadding = size === 'sm' ? 'py-1 px-2.5' : 'py-1.5 px-3.5';
+  const reduced = useReducedMotion();
+  const motionEnabled = !reduced;
+  // `layout="position"` keeps the thumb on the compositor: framer corrects
+  // position only and never animates the trigger's width/height, so switching
+  // segments can never reflow the surrounding page.
+  const indicatorTransition = resolveTransition({ type: 'spring', stiffness: 500, damping: 36 }, motionEnabled);
+  const pressTransition = resolveTransition({ duration: 0.12, ease: [0.22, 1, 0.36, 1] }, motionEnabled);
 
   const focusOption = useCallback(
     (index: number) => {
@@ -89,7 +98,8 @@ export function SegmentedControl<T extends string | number>({
             disabled={option.disabled}
             tabIndex={isSelected ? 0 : -1}
             onClick={() => onChange(option.value)}
-            whileTap={option.disabled ? undefined : { scale: 0.95 }}
+            whileTap={option.disabled || !motionEnabled ? undefined : { scale: MOTION_SCALE.pressControl }}
+            transition={pressTransition}
             className={cn(
               'ui-segmented-trigger',
               itemPadding,
@@ -100,9 +110,11 @@ export function SegmentedControl<T extends string | number>({
             {isSelected && (
               <motion.span
                 layoutId={activeLayoutId}
+                layout="position"
+                initial={false}
                 aria-hidden="true"
                 className="ui-segmented-indicator"
-                transition={{ type: 'spring', stiffness: 500, damping: 36 }}
+                transition={indicatorTransition}
               />
             )}
             {option.icon && <span className="shrink-0">{option.icon}</span>}

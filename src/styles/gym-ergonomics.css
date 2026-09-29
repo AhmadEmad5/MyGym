@@ -1,0 +1,605 @@
+/* ==========================================================================
+   FORMA — Gym Floor Ergonomics Layer
+   Loaded last so it can refine the legacy responsive rules without changing
+   their desktop behavior. Every rule here is mobile-scoped unless it fixes a
+   fixed-position layer that must clear a safe-area inset on every viewport.
+   ========================================================================== */
+
+:root {
+  --gym-floor-target: 56px;
+  --gym-floor-target-sm: 48px;
+  --gym-floor-icon: 44px;
+  --gym-floor-gap: 8px;
+  --gym-floor-dock-inset: max(var(--shell-dock-inset, 86px), var(--hud-bottom-offset, 84px));
+}
+
+/* ==========================================================================
+   1. Target floors
+   ========================================================================== */
+
+.gym-floor-current-set-card button,
+.gym-floor-set-row > button,
+.session-target {
+  touch-action: manipulation;
+}
+
+.gym-floor-current-set-card,
+.gym-floor-set-row,
+.gym-floor-input-row,
+.session-set-check,
+.mobile-vital-tile,
+.mobile-hero-workout,
+.forma-keypad-sheet,
+.forma-mobile-sheet {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Primary gym-floor steps: 56px floor, forgiving under a shaky grip. */
+.gym-floor-thumb-stepper {
+  min-block-size: var(--gym-floor-target);
+  min-inline-size: var(--gym-floor-target);
+  font-size: 1.05rem;
+  font-weight: 850;
+}
+
+.gym-floor-stepper-pair,
+.gym-floor-input-row {
+  gap: var(--gym-floor-gap);
+}
+
+.gym-floor-check-circle {
+  min-block-size: var(--gym-floor-target);
+  min-inline-size: var(--gym-floor-target);
+}
+
+.gym-floor-set-row .gym-floor-check-circle {
+  min-block-size: 48px;
+  min-inline-size: 48px;
+}
+
+.gym-floor-set-row {
+  min-block-size: var(--gym-floor-target);
+  gap: var(--gym-floor-gap);
+  padding: 0.5rem 0.9rem;
+}
+
+.gym-floor-set-summary {
+  min-block-size: 44px;
+}
+
+.gym-floor-number-input {
+  min-block-size: var(--gym-floor-target-sm);
+  min-inline-size: 4.5rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.gym-floor-unit-toggle {
+  min-block-size: var(--gym-floor-target-sm);
+  min-inline-size: var(--gym-floor-target-sm);
+  padding: 0.25rem 0.65rem;
+  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
+}
+
+.gym-floor-complete-row .gym-floor-check-circle {
+  min-block-size: 64px;
+  min-inline-size: 64px;
+}
+
+/* ==========================================================================
+   2. Brush-safe zone for destructive set actions
+   ========================================================================== */
+
+.gym-floor-set-header {
+  align-items: center;
+  gap: var(--gym-floor-gap);
+}
+
+.gym-floor-danger-zone {
+  flex: 0 0 auto;
+  margin-inline-start: var(--space-md);
+  padding-inline-start: var(--space-md);
+  border-inline-start: 1px solid var(--border-subtle);
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+}
+
+.gym-floor-delete-set {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: var(--gym-floor-target-sm);
+  min-inline-size: var(--gym-floor-target-sm);
+  padding: 0.5rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--text-muted) !important;
+  background: transparent;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: color var(--motion-fast) ease, background-color var(--motion-fast) ease, border-color var(--motion-fast) ease;
+}
+
+.gym-floor-delete-set:active {
+  color: var(--color-danger-ink) !important;
+  border-color: var(--color-danger-line);
+  background: var(--color-danger-soft);
+}
+
+/* ==========================================================================
+   3. Thumb-zone ordering for the mobile hero
+   ========================================================================== */
+
+@media (max-width: 900px) {
+  .mobile-hero-workout {
+    gap: var(--gym-floor-gap);
+  }
+
+  .mobile-hero-topline { order: 1; }
+  .mobile-hero-title { order: 2; }
+  .mobile-hero-stats,
+  .mobile-hero-empty { order: 3; }
+  .mobile-hero-muscles { order: 4; }
+  .mobile-hero-toggle { order: 5; }
+  .mobile-hero-exercises { order: 6; }
+  .mobile-hero-cta { order: 7; }
+  .mobile-hero-secondary { order: 8; }
+
+  .mobile-hero-cta {
+    min-block-size: var(--gym-floor-target);
+    font-size: 1.08rem;
+    margin-block-start: var(--space-xs);
+  }
+
+  .mobile-hero-toggle,
+  .mobile-hero-secondary {
+    min-block-size: var(--gym-floor-target-sm);
+  }
+
+  .mobile-hero-muscles {
+    gap: var(--gym-floor-gap);
+  }
+
+  .mobile-hero-exercises {
+    gap: var(--gym-floor-gap);
+  }
+}
+
+/* ==========================================================================
+   4. Floor vitals
+   ========================================================================== */
+
+.mobile-vital-action {
+  inline-size: var(--gym-floor-target-sm);
+  block-size: var(--gym-floor-target-sm);
+  margin-inline-start: auto;
+}
+
+.mobile-vital-tile {
+  min-block-size: var(--gym-floor-target);
+  padding: 0.75rem 0.9rem;
+}
+
+.mobile-vital-value {
+  font-size: 1.2rem;
+  font-weight: 900;
+}
+
+.mobile-vital-value small {
+  font-size: 0.7rem;
+}
+
+.mobile-vital-label {
+  font-size: 0.7rem;
+}
+
+/* ==========================================================================
+   5. Horizontal ribbons — horizontal pan, vertical scroll stays with the page
+   ========================================================================== */
+
+.gym-floor-ribbon {
+  display: flex;
+  align-items: center;
+  gap: var(--gym-floor-gap);
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: 0.25rem;
+  touch-action: pan-x pan-y;
+  overscroll-behavior-x: contain;
+  overscroll-behavior-y: contain;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.gym-floor-ribbon::-webkit-scrollbar {
+  display: none;
+}
+
+.gym-floor-ribbon > * {
+  flex: 0 0 auto;
+  scroll-snap-align: center;
+}
+
+.gym-floor-ribbon button {
+  min-block-size: 44px;
+}
+
+/* ==========================================================================
+   6. Session header action cluster
+   ========================================================================== */
+
+.session-inline-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--gym-floor-gap);
+  flex-shrink: 0;
+}
+
+.session-inline-actions .btn-icon {
+  min-block-size: var(--gym-floor-target-sm);
+  min-inline-size: var(--gym-floor-target-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+}
+
+.session-overflow-menu {
+  gap: var(--gym-floor-gap);
+  padding: 0.4rem;
+}
+
+.session-overflow-menu button {
+  min-block-size: var(--gym-floor-target-sm);
+  padding-block: 0.6rem;
+}
+
+.session-celebration-dismiss {
+  min-block-size: var(--gym-floor-target-sm);
+  min-inline-size: var(--gym-floor-target-sm);
+  display: grid;
+  place-items: center;
+}
+
+/* ==========================================================================
+   7. Rest timer floating bar
+   ========================================================================== */
+
+.rest-timer-floating-hud .rest-timer-control {
+  min-block-size: var(--gym-floor-target-sm);
+  min-inline-size: var(--gym-floor-target-sm);
+  touch-action: manipulation;
+}
+
+.rest-timer-floating-hud .rest-timer-control-group {
+  display: flex;
+  align-items: center;
+  gap: var(--gym-floor-gap);
+  flex-shrink: 0;
+}
+
+.rest-timer-floating-hud .rest-timer-voice-toggle {
+  min-block-size: var(--gym-floor-icon);
+  padding: 0.25rem 0.6rem;
+  font-size: 0.72rem;
+}
+
+.rest-timer-floating-hud .rest-timer-lockscreen-chip {
+  font-size: 0.7rem;
+  padding: 0.2rem 0.5rem;
+}
+
+.rest-timer-floating-hud .session-countdown {
+  font-size: 1.35rem;
+  font-weight: 900;
+}
+
+.rest-timer-floating-hud {
+  overscroll-behavior: contain;
+}
+
+@media (max-width: 430px) {
+  .rest-timer-floating-hud {
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
+  }
+
+  .rest-timer-floating-hud .rest-timer-control-group {
+    inline-size: 100%;
+  }
+
+  .rest-timer-floating-hud .rest-timer-lockscreen-chip {
+    display: none;
+  }
+}
+
+/* ==========================================================================
+   8. Keypad + set-type sheets
+   ========================================================================== */
+
+.forma-keypad-sheet,
+.forma-mobile-sheet {
+  overscroll-behavior: contain;
+  max-block-size: calc(100dvh - var(--shell-safe-top) - 0.75rem);
+}
+
+.forma-mobile-sheet {
+  padding-inline: max(1rem, var(--shell-safe-inline-start, 0px)) max(1rem, var(--shell-safe-inline-end, 0px));
+}
+
+.forma-sheet-header .btn-icon {
+  min-block-size: var(--gym-floor-target-sm);
+  min-inline-size: var(--gym-floor-target-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+}
+
+.forma-keypad-quick-row {
+  display: flex;
+  gap: var(--gym-floor-gap);
+}
+
+.forma-keypad-quick-row .forma-keypad-key {
+  min-block-size: var(--gym-floor-target-sm);
+}
+
+.forma-keypad-clear {
+  min-block-size: var(--gym-floor-target-sm);
+}
+
+.forma-unit-toggle button {
+  min-block-size: var(--gym-floor-target-sm);
+  padding-inline: 1.15rem;
+}
+
+.forma-set-type-sheet {
+  max-block-size: calc(100dvh - var(--shell-safe-top) - 0.75rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.forma-set-type-option {
+  min-block-size: var(--gym-floor-target);
+  touch-action: manipulation;
+}
+
+.forma-set-type-close {
+  min-block-size: var(--gym-floor-target-sm);
+  min-inline-size: var(--gym-floor-target-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+}
+
+/* ==========================================================================
+   9. Fixed chrome — safe areas and overlap
+   ========================================================================== */
+
+@media (max-width: 900px) {
+  .session-thumb-dock {
+    padding-block-end: calc(0.6rem + max(10px, var(--shell-safe-bottom)));
+    padding-inline:
+      max(0.85rem, var(--shell-safe-inline-start, 0px))
+      max(0.85rem, var(--shell-safe-inline-end, 0px));
+  }
+
+  .session-dock-row {
+    gap: var(--gym-floor-gap);
+  }
+
+  .session-thumb-dock .session-target {
+    min-block-size: var(--gym-floor-target);
+  }
+
+  .session-hud {
+    padding-block-end: calc(14rem + max(12px, var(--shell-safe-bottom)));
+  }
+
+  .session-hud-rest {
+    inset-block-end: calc(11.5rem + max(12px, var(--shell-safe-bottom)));
+  }
+
+  .mobile-top-bar {
+    padding-inline:
+      max(0.65rem, var(--shell-safe-inline-start, 0px))
+      max(0.65rem, var(--shell-safe-inline-end, 0px));
+  }
+
+  .mobile-top-actions {
+    gap: var(--gym-floor-gap) !important;
+  }
+
+  .mobile-live-workout-pill.compact {
+    min-block-size: var(--gym-floor-icon);
+    min-inline-size: var(--gym-floor-icon);
+    justify-content: center;
+    padding-inline: 0.6rem;
+  }
+
+  .mobile-top-streak {
+    min-block-size: 40px;
+    min-inline-size: var(--gym-floor-icon);
+    justify-content: center;
+  }
+
+  .more-sheet-item,
+  .more-sheet-footer-btn {
+    min-block-size: var(--gym-floor-target-sm);
+  }
+}
+
+/* Keep the thumb dock out of the OS keyboard's way while a set value is typed. */
+@media (max-width: 900px) {
+  :root[data-floor-input='true'] .session-thumb-dock,
+  :root[data-floor-input='true'] .session-hud-rest {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .gym-floor-number-input {
+    scroll-margin-block: 1rem calc(var(--gym-floor-dock-inset) + 1rem);
+  }
+}
+
+/* ==========================================================================
+   10. High-contrast / bright-light readouts
+   ========================================================================== */
+
+@media (max-width: 900px) {
+  .gym-floor-input-label,
+  .gym-floor-input-suffix,
+  .gym-floor-set-hint,
+  .gym-floor-set-prev,
+  .mobile-hero-stats,
+  .mobile-hero-empty {
+    color: var(--text-secondary);
+  }
+
+  .gym-floor-input-label {
+    font-size: 0.7rem;
+  }
+
+  .gym-floor-number-input {
+    font-size: 2rem;
+    font-weight: 900;
+    color: var(--text-primary);
+  }
+
+  .gym-floor-thumb-stepper {
+    color: var(--text-primary);
+    border-color: var(--border-highlight);
+    background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+  }
+
+  .gym-floor-thumb-stepper.stepper-cyan {
+    color: var(--accent-cyan);
+    border-color: color-mix(in srgb, var(--accent-cyan) 46%, transparent);
+    background: color-mix(in srgb, var(--accent-cyan) 16%, transparent);
+  }
+
+  .gym-floor-thumb-stepper.stepper-green {
+    color: var(--accent-emerald);
+    border-color: color-mix(in srgb, var(--accent-emerald) 46%, transparent);
+    background: color-mix(in srgb, var(--accent-emerald) 16%, transparent);
+  }
+
+  .gym-floor-check-circle.uncompleted {
+    border-color: var(--border-highlight);
+    background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+    color: var(--text-secondary);
+  }
+}
+
+[data-high-contrast] .gym-floor-number-input,
+[data-high-contrast] .gym-floor-input-value input,
+[data-high-contrast] .session-countdown,
+[data-high-contrast] .mobile-vital-value,
+[data-high-contrast] .forma-keypad-value strong {
+  color: var(--text-primary);
+  font-weight: 900;
+  text-shadow: 0 1px 0 color-mix(in srgb, var(--surface-canvas) 70%, transparent);
+}
+
+[data-high-contrast] .gym-floor-thumb-stepper,
+[data-high-contrast] .session-target {
+  border-width: 2px;
+  border-color: var(--border-highlight);
+}
+
+/* ==========================================================================
+   11. Press-state feedback
+   ========================================================================== */
+
+@media (hover: none) {
+  .gym-floor-thumb-stepper:active,
+  .gym-floor-check-circle:active,
+  .gym-floor-unit-toggle:active,
+  .mobile-vital-action:active,
+  .mobile-hero-cta:active,
+  .mobile-hero-toggle:active,
+  .mobile-hero-secondary:active {
+    transform: scale(0.94);
+  }
+
+  .gym-floor-thumb-stepper:active {
+    border-color: var(--accent-cyan);
+    background: color-mix(in srgb, var(--accent-cyan) 26%, transparent);
+    color: var(--accent-cyan);
+  }
+}
+
+.gym-floor-thumb-stepper:focus-visible,
+.gym-floor-check-circle:focus-visible,
+.gym-floor-unit-toggle:focus-visible,
+.gym-floor-delete-set:focus-visible,
+.gym-floor-number-input:focus-visible,
+.mobile-vital-action:focus-visible,
+.mobile-hero-cta:focus-visible,
+.mobile-hero-toggle:focus-visible,
+.mobile-hero-secondary:focus-visible,
+.forma-set-type-option:focus-visible,
+.forma-sheet-header .btn-icon:focus-visible,
+.rest-timer-floating-hud .rest-timer-control:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* ==========================================================================
+   12. Motion guards
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .gym-floor-thumb-stepper,
+  .gym-floor-check-circle,
+  .gym-floor-unit-toggle,
+  .gym-floor-delete-set,
+  .mobile-vital-action,
+  .mobile-hero-cta,
+  .mobile-hero-toggle,
+  .mobile-hero-secondary,
+  .forma-set-type-option {
+    transition: none !important;
+  }
+
+  .gym-floor-thumb-stepper:active,
+  .gym-floor-check-circle:active,
+  .gym-floor-unit-toggle:active,
+  .mobile-vital-action:active,
+  .mobile-hero-cta:active,
+  .mobile-hero-toggle:active,
+  .mobile-hero-secondary:active {
+    transform: none;
+  }
+}
+
+[data-motion='reduced'] .gym-floor-thumb-stepper,
+[data-motion='reduced'] .gym-floor-check-circle,
+[data-motion='reduced'] .gym-floor-unit-toggle,
+[data-motion='reduced'] .gym-floor-delete-set,
+[data-motion='reduced'] .mobile-vital-action,
+[data-motion='reduced'] .mobile-hero-cta,
+[data-motion='reduced'] .mobile-hero-toggle,
+[data-motion='reduced'] .mobile-hero-secondary,
+[data-motion='reduced'] .forma-set-type-option {
+  transition: none !important;
+}
+
+[data-motion='reduced'] .gym-floor-thumb-stepper:active,
+[data-motion='reduced'] .gym-floor-check-circle:active,
+[data-motion='reduced'] .gym-floor-unit-toggle:active,
+[data-motion='reduced'] .mobile-vital-action:active,
+[data-motion='reduced'] .mobile-hero-cta:active,
+[data-motion='reduced'] .mobile-hero-toggle:active,
+[data-motion='reduced'] .mobile-hero-secondary:active {
+  transform: none;
+}

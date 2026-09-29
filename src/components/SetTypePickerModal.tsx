@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Check, Flame, Zap, Dumbbell, Sparkles } from 'lucide-react';
 import { useTranslation } from '../lib/i18n';
 import { gymAudio } from '../lib/audio';
+import { useReducedMotion } from './performance/useReducedMotion';
 import type { SetType } from '../lib/api';
 
 interface SetTypePickerModalProps {
@@ -23,6 +24,7 @@ export function SetTypePickerModal({
   onSelect
 }: SetTypePickerModalProps) {
   const { t, isRTL, tExercise } = useTranslation();
+  const reducedMotion = useReducedMotion();
 
   if (!isOpen) return null;
 
@@ -102,21 +104,23 @@ export function SetTypePickerModal({
         }}
       >
         <motion.div
-          initial={{ y: '100%' }}
-          animate={{ y: 0 }}
-          exit={{ y: '100%' }}
-          transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+          className="forma-set-type-sheet"
+          initial={reducedMotion ? { opacity: 0 } : { y: '100%' }}
+          animate={reducedMotion ? { opacity: 1 } : { y: 0 }}
+          exit={reducedMotion ? { opacity: 0 } : { y: '100%' }}
+          transition={reducedMotion ? { duration: 0 } : { type: 'spring', damping: 28, stiffness: 320 }}
           onClick={(e) => e.stopPropagation()}
           style={{
             width: '100%',
             maxWidth: '480px',
-            backgroundColor: '#0c1322',
-            borderTop: '1px solid rgba(255, 255, 255, 0.15)',
+            background: 'var(--premium-surface)',
+            borderTop: '1px solid var(--premium-line)',
             borderTopLeftRadius: '26px',
             borderTopRightRadius: '26px',
-            padding: '1.25rem 1.25rem calc(1.5rem + max(16px, env(safe-area-inset-bottom, 0px)))',
+            padding: '1.25rem 1.25rem calc(1.5rem + max(16px, var(--shell-safe-bottom, env(safe-area-inset-bottom, 0px))))',
             boxShadow: '0 -15px 40px rgba(0, 0, 0, 0.65)',
             userSelect: 'none',
+            touchAction: 'manipulation',
             direction: isRTL ? 'rtl' : 'ltr'
           }}
         >
@@ -137,11 +141,12 @@ export function SetTypePickerModal({
             </div>
             <button
               type="button"
-              className="btn-icon btn-ghost"
+              className="btn-icon btn-ghost forma-set-type-close"
               onClick={onClose}
-              style={{ padding: '0.45rem', borderRadius: '10px', color: 'var(--text-muted)' }}
+              style={{ color: 'var(--text-secondary)' }}
+              aria-label={isRTL ? 'إغلاق' : 'Close'}
             >
-              <X size={20} />
+              <X size={20} aria-hidden="true" />
             </button>
           </div>
 
@@ -154,7 +159,9 @@ export function SetTypePickerModal({
                 <button
                   key={opt.type}
                   type="button"
+                  className="forma-set-type-option"
                   onClick={() => handleSelect(opt.type)}
+                  aria-pressed={isSelected}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -162,11 +169,12 @@ export function SetTypePickerModal({
                     gap: '0.85rem',
                     padding: '0.85rem 1rem',
                     borderRadius: '16px',
-                    background: isSelected ? opt.bg : 'rgba(255, 255, 255, 0.03)',
-                    border: isSelected ? `2px solid ${opt.color}` : '1px solid rgba(255, 255, 255, 0.08)',
+                    background: isSelected ? opt.bg : 'color-mix(in srgb, var(--text-primary) 4%, transparent)',
+                    border: isSelected ? `2px solid ${opt.color}` : '1px solid var(--border-card)',
+                    color: 'var(--text-primary)',
                     cursor: 'pointer',
                     textAlign: isRTL ? 'right' : 'left',
-                    transition: 'all 0.15s ease',
+                    transition: 'border-color 0.15s ease, background-color 0.15s ease',
                     boxShadow: isSelected ? `0 4px 16px ${opt.bg}` : 'none'
                   }}
                 >
@@ -221,10 +229,10 @@ export function SetTypePickerModal({
                       </div>
                     ) : (
                       <div style={{
-                        width: '22px',
-                        height: '22px',
+                        width: '24px',
+                        height: '24px',
                         borderRadius: '50%',
-                        border: '2px solid rgba(255, 255, 255, 0.15)'
+                        border: '2px solid var(--border-highlight)'
                       }} />
                     )}
                   </div>

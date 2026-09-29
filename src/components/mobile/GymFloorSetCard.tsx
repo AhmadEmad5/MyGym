@@ -4,6 +4,7 @@ import type { SetRecord } from '../../lib/api';
 import type { PreviousSetReference } from '../../types/ui';
 import { useTranslation } from '../../lib/i18n';
 import { useFormaReducedMotion } from '../TodayBentoGrid';
+import { GYM_FLOOR_HAPTICS, pulseHaptic } from './gymFloorHaptics';
 
 interface GymFloorSetCardProps {
   set: SetRecord;
@@ -28,6 +29,30 @@ const inputStyle: React.CSSProperties = {
   fontVariantNumeric: 'tabular-nums',
 };
 
+let floorInputReleaseTimer: ReturnType<typeof setTimeout> | undefined;
+
+function isFloorInputFocused() {
+  const active = document.activeElement;
+  return active instanceof HTMLElement && active.classList.contains('gym-floor-number-input');
+}
+
+/**
+ * Flags the page so the fixed thumb dock can step out of the OS keyboard's way.
+ * Re-checks real focus on a short delay so an unmounted input can never leave
+ * the flag stuck and permanently hide the dock.
+ */
+function setFloorInputActive() {
+  if (isFloorInputFocused()) {
+    document.documentElement.dataset.floorInput = 'true';
+  }
+  if (floorInputReleaseTimer) clearTimeout(floorInputReleaseTimer);
+  floorInputReleaseTimer = setTimeout(() => {
+    if (!isFloorInputFocused()) {
+      delete document.documentElement.dataset.floorInput;
+    }
+  }, 250);
+}
+
 export function GymFloorSetCard({
   set,
   setIndex,
@@ -47,6 +72,17 @@ export function GymFloorSetCard({
   const weightId = `gym-floor-weight-${setIndex}`;
   const repsId = `gym-floor-reps-${setIndex}`;
   const summary = `${set.weight || 0} ${set.unit} × ${set.repsActual || set.repsTarget || 10} ${isRTL ? 'عدة' : 'reps'}`;
+
+  const handleCompleteToggle = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    pulseHaptic(set.isCompleted ? GYM_FLOOR_HAPTICS.select : GYM_FLOOR_HAPTICS.setComplete);
+    onToggleComplete();
+  };
+
+  const handleStep = (adjust: () => void) => {
+    pulseHaptic(GYM_FLOOR_HAPTICS.step);
+    adjust();
+  };
 
   if (isCompact) {
     return (
@@ -74,16 +110,13 @@ export function GymFloorSetCard({
         <motion.button
           type="button"
           whileTap={reduceMotion ? undefined : { scale: 0.88 }}
-          onClick={(event) => {
-            event.stopPropagation();
-            onToggleComplete();
-          }}
+          onClick={handleCompleteToggle}
           className={`gym-floor-check-circle ${set.isCompleted ? 'completed' : 'uncompleted'}`}
-          style={{ inlineSize: '2.4rem', blockSize: '2.4rem' }}
+          style={{ inlineSize: '3rem', blockSize: '3rem' }}
           aria-pressed={set.isCompleted}
           aria-label={set.isCompleted ? (isRTL ? 'إلغاء تعليم الجولة' : 'Mark set as not done') : (isRTL ? 'تعليم الجولة كمنجزة' : 'Mark set as done')}
         >
-          <Check size={16} aria-hidden="true" />
+          <Check size={20} aria-hidden="true" />
         </motion.button>
       </motion.div>
     );
@@ -113,15 +146,19 @@ export function GymFloorSetCard({
         </div>
 
         {totalSets > 1 && onDeleteSet && (
-          <button
-            type="button"
-            className="btn-icon btn-ghost"
-            onClick={onDeleteSet}
-            style={{ color: 'var(--text-muted)' }}
-            aria-label={isRTL ? 'حذف الجولة' : 'Delete set'}
-          >
-            <Trash2 size={16} aria-hidden="true" />
-          </button>
+          <span className="gym-floor-danger-zone">
+            <button
+              type="button"
+              className="btn-icon btn-ghost gym-floor-delete-set"
+              onClick={() => {
+                pulseHaptic(GYM_FLOOR_HAPTICS.select);
+                onDeleteSet();
+              }}
+              aria-label={isRTL ? 'حذف الجولة' : 'Delete set'}
+            >
+              <Trash2 size={18} aria-hidden="true" />
+            </button>
+          </span>
         )}
       </div>
 
@@ -130,7 +167,7 @@ export function GymFloorSetCard({
           <button
             type="button"
             className="gym-floor-thumb-stepper"
-            onClick={() => onQuickWeightAdjust(-2.5)}
+            onClick={() => handleStep(() => onQuickWeightAdjust(-2.5))}
             aria-label={isRTL ? 'إنقاص الوزن 2.5' : 'Decrease weight by 2.5'}
           >
             −2.5
@@ -143,18 +180,21 @@ export function GymFloorSetCard({
             <div className="gym-floor-input-line">
               <input
                 id={weightId}
+                className="gym-floor-number-input"
                 type="number"
                 inputMode="decimal"
                 step="0.5"
                 value={set.weight === 0 ? '' : set.weight}
                 placeholder="0"
+                onFocus={setFloorInputActive}
+                onBlur={setFloorInputActive}
                 onChange={(event) => onUpdateSet('weight', parseFloat(event.target.value) || 0)}
                 style={{ ...inputStyle, inlineSize: '5.5rem', fontSize: '1.8rem', fontWeight: 900 }}
               />
               <button
                 type="button"
                 className="gym-floor-unit-toggle"
-                onClick={() => onUpdateSet('unit', set.unit === 'kg' ? 'lb' : 'kg')}
+                onClick={() => handleStep(() => onUpdateSet('unit', set.unit === 'kg' ? 'lb' : 'kg'))}
                 aria-label={isRTL ? `تبديل الوحدة، الحالية ${set.unit}` : `Switch unit, currently ${set.unit}`}
               >
                 {set.unit}
@@ -166,7 +206,7 @@ export function GymFloorSetCard({
             <button
               type="button"
               className="gym-floor-thumb-stepper stepper-cyan"
-              onClick={() => onQuickWeightAdjust(2.5)}
+              onClick={() => handleStep(() => onQuickWeightAdjust(2.5))}
               aria-label={isRTL ? 'زيادة الوزن 2.5' : 'Increase weight by 2.5'}
             >
               +2.5
@@ -174,7 +214,7 @@ export function GymFloorSetCard({
             <button
               type="button"
               className="gym-floor-thumb-stepper stepper-cyan"
-              onClick={() => onQuickWeightAdjust(5)}
+              onClick={() => handleStep(() => onQuickWeightAdjust(5))}
               aria-label={isRTL ? 'زيادة الوزن 5' : 'Increase weight by 5'}
             >
               +5
@@ -186,7 +226,7 @@ export function GymFloorSetCard({
           <button
             type="button"
             className="gym-floor-thumb-stepper"
-            onClick={() => onQuickRepAdjust(-1)}
+            onClick={() => handleStep(() => onQuickRepAdjust(-1))}
             aria-label={isRTL ? 'إنقاص التكرار' : 'Decrease reps'}
           >
             −1
@@ -199,10 +239,13 @@ export function GymFloorSetCard({
             <div className="gym-floor-input-line">
               <input
                 id={repsId}
+                className="gym-floor-number-input"
                 type="number"
                 inputMode="numeric"
                 value={set.repsActual || set.repsTarget || ''}
                 placeholder="10"
+                onFocus={setFloorInputActive}
+                onBlur={setFloorInputActive}
                 onChange={(event) => onUpdateSet('repsActual', parseInt(event.target.value) || 0)}
                 style={{ ...inputStyle, inlineSize: '5rem', fontSize: '1.8rem', fontWeight: 900 }}
               />
@@ -213,7 +256,7 @@ export function GymFloorSetCard({
           <button
             type="button"
             className="gym-floor-thumb-stepper stepper-green"
-            onClick={() => onQuickRepAdjust(1)}
+            onClick={() => handleStep(() => onQuickRepAdjust(1))}
             aria-label={isRTL ? 'زيادة التكرار' : 'Increase reps'}
           >
             +1
@@ -225,13 +268,13 @@ export function GymFloorSetCard({
         <motion.button
           type="button"
           whileTap={tapScale}
-          onClick={onToggleComplete}
+          onClick={handleCompleteToggle}
           className={`gym-floor-check-circle ${set.isCompleted ? 'completed' : 'uncompleted'}`}
-          style={{ inlineSize: '3.75rem', blockSize: '3.75rem' }}
+          style={{ inlineSize: '4.25rem', blockSize: '4.25rem' }}
           aria-pressed={set.isCompleted}
           aria-label={set.isCompleted ? (isRTL ? 'إلغاء تعليم الجولة' : 'Mark set as not done') : (isRTL ? 'تعليم الجولة كمنجزة' : 'Mark set as done')}
         >
-          <Check size={26} aria-hidden="true" />
+          <Check size={28} aria-hidden="true" />
         </motion.button>
       </div>
     </motion.div>

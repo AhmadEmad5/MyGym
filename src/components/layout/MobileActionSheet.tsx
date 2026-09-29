@@ -104,7 +104,7 @@ export function MobileActionSheet({ open, title, onClose, children }: MobileActi
                 onClick={onClose}
                 aria-label={isRTL ? 'إغلاق' : 'Close'}
               >
-                <X width={18} height={18} aria-hidden="true" />
+                <X width={20} height={20} aria-hidden="true" />
               </button>
             </div>
             <div className="forma-sheet-body">{children}</div>

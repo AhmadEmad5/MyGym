@@ -16,6 +16,7 @@ import type { WorkoutSession } from '../../lib/api';
 import { useTranslation } from '../../lib/i18n';
 import { gymAudio } from '../../lib/audio';
 import { useFormaReducedMotion } from '../TodayBentoGrid';
+import { GYM_FLOOR_HAPTICS, pulseHaptic } from './gymFloorHaptics';
 
 interface MobileHeroWorkoutCardProps {
   session: WorkoutSession | null;
@@ -53,6 +54,7 @@ export function MobileHeroWorkoutCard({
 
   const handleOpenWorkout = () => {
     gymAudio.triggerSubtleHaptic([30, 40]);
+    pulseHaptic(isCompletedToday ? GYM_FLOOR_HAPTICS.select : GYM_FLOOR_HAPTICS.sessionStart);
     if (session?.id) navigate(`/session/${session.id}`);
     else onQuickWorkout();
   };

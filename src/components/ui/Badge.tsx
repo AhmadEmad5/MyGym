@@ -1,8 +1,20 @@
 import type { HTMLAttributes, ReactNode } from 'react';
+import { motion } from 'framer-motion';
+import type { HTMLMotionProps } from 'framer-motion';
 import { cn } from './cn';
+import { useReducedMotion } from '../performance/useReducedMotion';
+import { MOTION_DURATION, MOTION_EASE } from '../../lib/motion';
 
 export type BadgeTone = 'emerald' | 'cyan' | 'lime' | 'amber' | 'purple' | 'rose' | 'neutral';
 export type BadgeSize = 'sm' | 'md';
+
+/**
+ * `BadgeProps` deliberately stays a plain `HTMLAttributes<HTMLSpanElement>`
+ * surface. framer-motion re-declares `onDrag*` as pan gestures, which is not
+ * structurally compatible with the DOM handlers, so the passthrough is widened
+ * once here rather than changing what every existing caller may pass.
+ */
+type BadgeMotionProps = Omit<HTMLMotionProps<'span'>, 'onAnimationStart' | 'onDragStart' | 'onDragEnd' | 'onDrag'>;
 
 export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   tone?: BadgeTone;
@@ -36,11 +48,23 @@ export function Badge({
   children,
   ...props
 }: BadgeProps) {
+  const reduced = useReducedMotion();
+
   return (
-    <span className={cn('ui-badge', TONE_CLASS[tone], SIZE_CLASS[size], className)} {...props}>
+    <motion.span
+      initial={reduced ? false : { opacity: 0, scale: 0.96 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={
+        reduced
+          ? { duration: MOTION_DURATION.instant }
+          : { duration: MOTION_DURATION.quick, ease: MOTION_EASE.emphasized }
+      }
+      className={cn('ui-badge', TONE_CLASS[tone], SIZE_CLASS[size], className)}
+      {...(props as unknown as BadgeMotionProps)}
+    >
       {dot && <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: 'currentColor' }} aria-hidden="true" />}
       {icon && <span className="inline-flex shrink-0">{icon}</span>}
       {children && <span>{children}</span>}
-    </span>
+    </motion.span>
   );
 }

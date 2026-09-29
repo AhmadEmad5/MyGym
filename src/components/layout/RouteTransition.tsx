@@ -1,65 +1,71 @@
-import { useEffect, useRef, type ReactNode } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
+import { useLocation, useNavigationType } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useMotionEnabled } from './useMotionPreference';
+import { buildRouteKey, commitRoute } from '../../hooks/useScrollRestoration';
 
 interface RouteTransitionProps {
   children: ReactNode;
 }
 
-const SCROLL_CONTAINER_SELECTOR = '.content-area';
-
-const scrollMemory = new Map<string, number>();
+/**
+ * Transform/opacity only - never width, height, top or anything that would
+ * force a layout pass on every route swap.
+ */
+const ENTER = { opacity: 1, y: 0 };
+const EXIT = { opacity: 0, y: -6 };
+const EXIT_REDUCED = { opacity: 1 };
+const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+const DURATION = 0.18;
 
 /**
- * Applies a transform/opacity-only route transition and re-asserts the outgoing
- * scroll offset once the entering route is committed, so a route swap never
- * loses the reader position or produces a layout jump.
+ * Module-scope, so every instance and every re-render reuses the SAME object
+ * identity. Under `<AnimatePresence mode="wait">` the outgoing route stays
+ * mounted and re-renders with the new location; handing framer-motion a fresh
+ * `animate` object there restarts the enter animation mid-exit, which is what
+ * made the leaving page twitch while the new one mounted.
+ */
+const TRANSITION_MOTION = { duration: DURATION, ease: EASE };
+const TRANSITION_REDUCED = { duration: 0 };
+
+/**
+ * Wraps a route with a short transform/opacity swap.
+ *
+ * It owns no scroll state at all. Scroll memory lives in
+ * `useScrollRestoration`; this component only reports the one moment that
+ * matters - the entering route is mounted - so the restore is applied against
+ * the real content instead of racing the exit animation.
  */
 export function RouteTransition({ children }: RouteTransitionProps) {
-  const { pathname } = useLocation();
+  const location = useLocation();
+  const navType = useNavigationType();
   const motionEnabled = useMotionEnabled();
-  const committedPathRef = useRef(pathname);
 
-  useEffect(() => {
-    const container = document.querySelector<HTMLElement>(SCROLL_CONTAINER_SELECTOR);
-    if (!container) return;
+  const routeKey = buildRouteKey(location.pathname, location.search);
 
-    const previousPathname = committedPathRef.current;
-    if (previousPathname !== pathname) {
-      scrollMemory.set(previousPathname, container.scrollTop);
-      committedPathRef.current = pathname;
-    }
+  // A RouteTransition instance belongs to exactly one route key. The outgoing
+  // copy re-renders with the new location while it animates out; comparing
+  // against its own birth key is what stops the exiting route from committing
+  // a restore for a page it is no longer showing.
+  const birthKeyRef = useRef(routeKey);
 
-    const target = scrollMemory.get(pathname) ?? 0;
-    let nestedFrame = 0;
+  useLayoutEffect(() => {
+    if (birthKeyRef.current !== routeKey) return;
+    commitRoute(routeKey, navType);
+  }, [routeKey, navType]);
 
-    const outerFrame = requestAnimationFrame(() => {
-      container.scrollTop = target;
-      nestedFrame = requestAnimationFrame(() => {
-        if (container.scrollTop !== target) {
-          container.scrollTop = target;
-        }
-      });
-    });
-
-    return () => {
-      cancelAnimationFrame(outerFrame);
-      cancelAnimationFrame(nestedFrame);
-    };
-  }, [pathname]);
+  const style = useMemo(
+    () => (motionEnabled ? { width: '100%', minHeight: '100%', willChange: 'opacity, transform' } : { width: '100%', minHeight: '100%' }),
+    [motionEnabled],
+  );
 
   return (
     <motion.div
       initial={motionEnabled ? { opacity: 0, y: 8 } : false}
-      animate={{ opacity: 1, y: 0 }}
-      exit={motionEnabled ? { opacity: 0, y: -6 } : { opacity: 1 }}
-      transition={motionEnabled ? { duration: 0.18, ease: [0.16, 1, 0.3, 1] } : { duration: 0 }}
-      style={{
-        width: '100%',
-        minHeight: '100%',
-        ...(motionEnabled ? { willChange: 'opacity, transform' } : null),
-      }}
+      animate={ENTER}
+      exit={motionEnabled ? EXIT : EXIT_REDUCED}
+      transition={motionEnabled ? TRANSITION_MOTION : TRANSITION_REDUCED}
+      style={style}
     >
       {children}
     </motion.div>

@@ -107,7 +107,7 @@
 
   .modern-nav-links.mobile-only-nav {
     grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
-    gap: 0.25rem !important;
+    gap: 0.5rem !important;
   }
 
   .modern-nav-item {
@@ -251,7 +251,7 @@
 
   .more-sheet-item,
   .more-sheet-footer-btn {
-    min-height: var(--mobile-touch-size);
+    min-height: 48px;
     color: var(--text-primary);
     border-color: var(--border-color);
   }
@@ -366,12 +366,17 @@
   }
 
   .gym-floor-thumb-stepper {
-    min-width: 48px;
-    min-height: 48px;
+    min-width: 56px;
+    min-height: 56px;
     border-radius: 14px;
   }
 
-  .gym-floor-check-circle {
+  .gym-floor-complete-row .gym-floor-check-circle {
+    min-width: 64px !important;
+    min-height: 64px !important;
+  }
+
+  .gym-floor-set-row .gym-floor-check-circle {
     min-width: 48px !important;
     min-height: 48px !important;
   }
@@ -393,10 +398,10 @@
   .gym-floor-input-label { color: var(--text-secondary) !important; }
 
   .gym-floor-unit-toggle {
-    min-height: 40px;
+    min-height: 48px;
     color: var(--accent-cyan) !important;
     background: color-mix(in srgb, var(--accent-cyan) 14%, transparent) !important;
-    border-color: color-mix(in srgb, var(--accent-cyan) 36%, transparent) !important;
+    border-color: color-mix(in srgb, var(--accent-cyan) 40%, transparent) !important;
   }
 
   .gym-floor-current-set-card button:focus-visible,
@@ -506,15 +511,22 @@
 
   .mobile-brand-badge { display: none; }
   .mobile-top-center { padding-inline: 0.15rem; }
-  .mobile-top-actions { gap: 0.2rem !important; }
+  .mobile-top-actions { gap: 0.5rem !important; }
+
+  .mobile-top-btn,
+  .mobile-top-avatar {
+    width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+  }
 
   .modern-navbar { padding-inline: 0.25rem !important; }
-  .modern-nav-links.mobile-only-nav { gap: 0.08rem !important; }
+  .modern-nav-links.mobile-only-nav { gap: 0.4rem !important; }
   .modern-nav-item .nav-short-label { font-size: 0.69rem !important; }
   .modern-nav-item .nav-icon-wrap { width: 36px !important; }
 
   .gym-floor-current-set-card { padding: 0.8rem !important; }
-  .gym-floor-thumb-stepper { min-width: 44px; }
+  .gym-floor-thumb-stepper { min-width: 52px; min-height: 52px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

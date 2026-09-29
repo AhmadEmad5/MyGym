@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from './cn';
+import { useReducedMotion } from '../performance/useReducedMotion';
+import { MOTION_DISTANCE, MOTION_DURATION, MOTION_EASE } from '../../lib/motion';
 
 export interface EmptyStateProps {
   icon?: ReactNode;
@@ -22,12 +24,17 @@ export function EmptyState({
   titleAs = 'h3'
 }: EmptyStateProps) {
   const Heading = titleAs;
+  const reduced = useReducedMotion();
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={reduced ? false : { opacity: 0, y: MOTION_DISTANCE.xs }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
+      transition={
+        reduced
+          ? { duration: MOTION_DURATION.instant }
+          : { duration: MOTION_DURATION.base, ease: MOTION_EASE.standard }
+      }
       className={cn('ui-empty-state', className)}
     >
       {icon && <div className="ui-empty-icon">{icon}</div>}

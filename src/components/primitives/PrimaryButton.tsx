@@ -2,6 +2,8 @@ import { forwardRef } from 'react';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
 import { cn } from '../ui/cn';
+import { Pressable } from '../motion/Pressable';
+import { MOTION_SCALE } from '../../lib/motion';
 
 export interface PrimaryButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
@@ -16,9 +18,11 @@ export const PrimaryButton = forwardRef<HTMLButtonElement, PrimaryButtonProps>(f
   const isInactive = disabled || isLoading;
 
   return (
-    <button
+    <Pressable
+      as="button"
       ref={ref}
       type={type}
+      scale={MOTION_SCALE.pressPrimary}
       disabled={isInactive}
       aria-busy={isLoading || undefined}
       className={cn('forma-primary-button ui-focus-ring', className)}
@@ -34,6 +38,6 @@ export const PrimaryButton = forwardRef<HTMLButtonElement, PrimaryButtonProps>(f
         )
       )}
       <span>{children}</span>
-    </button>
+    </Pressable>
   );
 });

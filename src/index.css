@@ -177,14 +177,16 @@ html[dir="rtl"], [dir="rtl"] {
   html {
     width: 100%;
     max-width: 100%;
+    /* `clip`, never `hidden`: the document must not become a scroll container,
+       or the browser restores *document* scroll on POP and fights the in-app
+       scroller. The old duplicate `overflow-x: hidden` silently won and did
+       exactly that. */
     overflow-x: clip;
-    overflow-x: hidden;
-    overscroll-behavior-x: none;
+    /* Root overscroll policy: no bounce, no chaining, no pull-to-refresh. */
+    overscroll-behavior: none;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
-    touch-action: pan-y;
-    scroll-padding-block-start: calc(var(--safe-top) + var(--space-lg));
-    scroll-padding-block-end: var(--hud-bottom-offset);
+    touch-action: pan-x pan-y;
   }
 
   body {
@@ -193,17 +195,14 @@ html[dir="rtl"], [dir="rtl"] {
     line-height: var(--leading-normal);
     color: var(--text-primary);
     background: var(--bg-primary);
-    overflow: hidden; /* App shell manages overflow */
+    overflow: hidden; /* App shell manages overflow - .content-area is the only scroller */
     overflow-x: clip;
-    overflow-x: hidden;
-    overscroll-behavior-x: none;
+    overscroll-behavior: none;
     height: 100vh;
     height: 100dvh;
     width: 100%;
     max-width: 100%;
     position: relative;
-    -webkit-overflow-scrolling: touch;
-    touch-action: pan-y;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -240,8 +239,7 @@ html[dir="rtl"], [dir="rtl"] {
     max-width: 100%;
     height: 100%;
     overflow-x: clip;
-    overflow-x: hidden;
-    overscroll-behavior-x: none;
+    overscroll-behavior: none;
   }
 
   :focus-visible {
@@ -262,7 +260,13 @@ html[dir="rtl"], [dir="rtl"] {
     outline: none;
   }
 
+  /* Reduced motion. `:root` is included so the root element itself is covered
+     too - it is the only place `scroll-behavior` could otherwise stay smooth
+     for the whole tree, and it keeps the opt-in switch honest. `!important` is
+     what lets this layered rule beat the unlayered `scroll-behavior: smooth`
+     opt-ins further down this file. */
   @media (prefers-reduced-motion: reduce) {
+    :root,
     *,
     *::before,
     *::after {
@@ -275,6 +279,7 @@ html[dir="rtl"], [dir="rtl"] {
     }
   }
 
+  [data-motion="reduced"],
   [data-motion="reduced"] *,
   [data-motion="reduced"] *::before,
   [data-motion="reduced"] *::after {
@@ -510,8 +515,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
   max-width: 100%;
   flex-direction: column;
   overflow-x: clip;
-  overflow-x: hidden;
-  overscroll-behavior-x: none;
+  overscroll-behavior: none;
 }
 
 /* Active Workout Full Immersion Mode (Edges to Edges, No Distractions) */
@@ -529,13 +533,16 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
   height: 100dvh;
 }
 
+/* In an active workout `.content-area` is still the same single scroller - it
+   only loses the nav/dock padding. `overflow-y: auto` is intentionally NOT
+   repeated here; it is declared once, on `.content-area` itself. */
 .main-content.in-workout-session-main .content-area {
   padding: clamp(0.75rem, 2vw, 1.5rem);
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
   height: 100%;
-  overflow-y: auto;
+  scroll-padding-block-end: calc(var(--shell-scroll-offset, 1.5rem) + var(--shell-safe-bottom, 0px));
 }
 
 /* Session HUD Header Elements */
@@ -1929,24 +1936,42 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
   min-width: 0;
   width: 100%;
   max-width: 100%;
-  overscroll-behavior-x: none;
+  overscroll-behavior: none;
 }
 
+/* The app scroller. Every other box in the shell is `overflow: hidden`, so this
+   is the only element in the tree a vertical finger can move, and the only
+   place scroll memory is ever written. */
 .content-area {
   flex: 1;
   overflow-y: auto;
   overflow-x: clip;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch; /* Smooth scrolling for iOS */
   padding: clamp(1.5rem, 3.2vw, 3.5rem);
   position: relative;
   min-height: 0;
   min-width: 0;
   width: 100%;
   max-width: 100%;
+  /* Scroller overscroll policy: absorb vertical overscroll here (no rubber band,
+     no pull-to-refresh), never let it chain, never allow horizontal chaining. */
   overscroll-behavior-y: contain;
   overscroll-behavior-x: none;
-  touch-action: pan-y;
+  /* Route restores are hard writes, not animated "flying" scrolls. Smooth
+     scrolling is opt-in per element (see .exercise-nav-carousel) and is forced
+     back to `auto` by the reduced-motion block in @layer base. */
+  scroll-behavior: auto;
+  /* `scroll-padding` belongs on the real scroller - the `html` copy never
+     applied because the document itself cannot scroll. Deliberately small: the
+     fixed top bar and the dock are already reserved by this element's own
+     padding, and scroll-padding is additive to padding, so repeating the full
+     chrome heights here would push focused elements twice as far down. This
+     only clears the sticky in-page bars that overlay the scrollport. */
+  scroll-padding-block-start: var(--shell-scroll-offset, 1.5rem);
+  scroll-padding-block-end: var(--shell-scroll-offset, 1.5rem);
+  /* No `touch-action` here on purpose. `pan-y` on the app scroller would
+     intersect with the horizontal rails nested inside it (exercise carousel,
+     calendar ribbon) and leave them unable to pan at all. `overflow-x: clip`
+     already means a sideways finger has nothing to move. */
 }
 
 /* Scrollbar */
@@ -4150,14 +4175,15 @@ button, a, input, select, textarea, .btn, .smart-chip-btn, .theme-popover-item, 
   touch-action: manipulation;
 }
 
-/* 3. Smooth rubberband / pull physics on mobile viewports & strict horizontal lock */
-body, .content-area, .page-surface, .session-detail-page, .forma-page-frame, .zen-page-container {
+/* 3. Rubberband / pull physics on mobile viewports & strict horizontal lock.
+   `body` is intentionally dropped from this list: it is `overflow: hidden` and
+   cannot scroll, so `overscroll-behavior-y: contain` there was meaningless.
+   `.content-area` keeps exactly the policy declared with it above. */
+.content-area, .page-surface, .session-detail-page, .forma-page-frame, .zen-page-container {
   overscroll-behavior-y: contain;
   overscroll-behavior-x: none;
   overflow-x: clip;
-  overflow-x: hidden;
   max-width: 100%;
-  -webkit-overflow-scrolling: touch;
 }
 
 /* 4. Responsive Floating Rest Timer HUD */
@@ -4331,13 +4357,18 @@ body, .content-area, .page-surface, .session-detail-page, .forma-page-frame, .ze
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
+/* One of the few deliberate `scroll-behavior: smooth` opt-ins (see the
+   SCROLL POLICY block at the end of this file). Reduced motion /
+   html[data-motion="reduced"] force it back to `auto` in @layer base.
+   No `touch-action` is needed here: `.content-area` no longer gates panning,
+   so a sideways finger pans this rail instead of dragging the page. */
 .exercise-nav-carousel {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   overflow-x: auto;
   scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-inline: contain;
   padding: 0.15rem 0.15rem;
 }
 
@@ -7208,3 +7239,35 @@ body, .content-area, .page-surface, .session-detail-page, .forma-page-frame, .ze
   }
 
 }
+
+/* ==========================================================================
+   SCROLL POLICY
+   ==========================================================================
+   Forma is an app shell, not a document. The single deliberate policy:
+
+     1. The document never scrolls. `body` is `overflow: hidden` and
+        `.content-area` is the one and only vertical scroller in the tree
+        (see `.content-area` below).
+     2. The root does not gate panning. `touch-action` intersects down the
+        tree, so `pan-y` on the root would leave every horizontal rail nested
+        inside the app (exercise carousel, calendar ribbon) completely
+        un-pannable, while `manipulation` on the root is the classic "the page
+        feels stuck / cancels the gesture" trap on Android and inside iOS and
+        Android WebViews. `html { touch-action: pan-x pan-y }` in `@layer
+        base` keeps both axes available to descendants and still suppresses
+        double-tap zoom - anything other than `auto` does that.
+     3. Overscroll: root is `none` (no bounce, no chaining, no pull-to-refresh,
+        no iOS edge-swipe back chaining), the app scroller is `contain`.
+     4. `scroll-behavior` is opt-in only. Route restores, skip links and
+        scroll-into-view are instant; the few rails that want smoothness ask
+        for it per element and are forced back to `auto` by the reduced-motion
+        / `html[data-motion="reduced"]` block in `@layer base`.
+
+   Horizontal rails keep working: the app scroller is `overflow-x: clip` (not
+   scrollable) rather than a `touch-action: pan-y` gate, so a sideways finger
+   on a rail pans that rail and a sideways finger anywhere else has nothing to
+   move - one finger, one surface, no horizontal wobble.
+
+   Scroll MEMORY is owned entirely by `src/hooks/useScrollRestoration.ts`;
+   nothing in CSS or in `RouteTransition` writes `scrollTop`.
+   ========================================================================== */

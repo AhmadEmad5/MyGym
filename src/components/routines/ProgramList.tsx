@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ProgramDeck3DCard } from '../ProgramDeck3DCard';
 import type { PredefinedRoutine } from '../ProgramDeck3DCard';
 import { ProgramEmptyState } from './ProgramEmptyState';
+import { Stagger, StaggerItem } from '../motion/Stagger';
 
 type ProgramListProps = {
   customPrograms: PredefinedRoutine[];
@@ -44,22 +45,24 @@ function ProgramGrid({
     <section className="routine-program-section">
       <h2 className="routine-program-section-title">{label}</h2>
       <ul className="routines-card-grid" aria-label={label}>
-        <AnimatePresence initial={false} mode="popLayout">
-          {routines.map(routine => (
-            <li key={routine.id} className="routine-program-list-item">
-              <ProgramDeck3DCard
-                routine={routine}
-                onApply={onApply}
-                onEdit={onEdit}
-                onDelete={custom ? onDelete : undefined}
-                isCustom={custom}
-                isRTL={isRTL}
-                t={t}
-                tTitle={tTitle}
-              />
-            </li>
-          ))}
-        </AnimatePresence>
+        <Stagger>
+          <AnimatePresence initial={false} mode="popLayout">
+            {routines.map((routine, index) => (
+              <StaggerItem key={routine.id} as="li" index={index} className="routine-program-list-item">
+                <ProgramDeck3DCard
+                  routine={routine}
+                  onApply={onApply}
+                  onEdit={onEdit}
+                  onDelete={custom ? onDelete : undefined}
+                  isCustom={custom}
+                  isRTL={isRTL}
+                  t={t}
+                  tTitle={tTitle}
+                />
+              </StaggerItem>
+            ))}
+          </AnimatePresence>
+        </Stagger>
       </ul>
     </section>
   );

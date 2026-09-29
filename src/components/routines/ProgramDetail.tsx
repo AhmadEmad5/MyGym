@@ -15,6 +15,9 @@ import type { ProgramDraft } from './types';
 import { ExerciseRow } from './ExerciseRow';
 import { useSortableList } from './sortable';
 import { useProgramDraft } from './useProgramDraft';
+import { Stagger, StaggerItem } from '../motion/Stagger';
+import { useReducedMotion } from '../performance/useReducedMotion';
+import { MOTION_DISTANCE, MOTION_DURATION, MOTION_EASE, MOTION_SCALE, MOTION_STAGGER, resolveTransition } from '../../lib/motion';
 
 type ProgramDetailProps = {
   program: ProgramDraft;
@@ -49,6 +52,7 @@ export function ProgramDetail({
   const [activeSession, setActiveSession] = useState(0);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [saveError, setSaveError] = useState<string | null>(null);
+  const reduced = useReducedMotion();
 
   const draft = draftApi.draft;
   const session = draft?.sessions[activeSession] ?? null;
@@ -105,8 +109,9 @@ export function ProgramDetail({
   return (
     <motion.section
       className="routine-detail"
-      initial={{ opacity: 0, y: 10 }}
+      initial={reduced ? false : { opacity: 0, y: MOTION_DISTANCE.xs }}
       animate={{ opacity: 1, y: 0 }}
+      transition={resolveTransition({ duration: MOTION_DURATION.base, ease: MOTION_EASE.emphasized }, !reduced)}
       aria-label={isRTL ? 'محرر البرنامج' : 'Program editor'}
     >
       <header className="routine-detail-header">
@@ -197,38 +202,44 @@ export function ProgramDetail({
       )}
 
       <div className="routine-session-tabs" role="tablist" aria-label={isRTL ? 'جلسات البرنامج' : 'Program sessions'}>
-        {draft.sessions.map((item, index) => {
-          const selected = index === activeSession;
-          return (
-            <button
-              key={`${item.title}-${index}`}
-              type="button"
-              role="tab"
-              id={`routine-session-tab-${index}`}
-              aria-selected={selected}
-              aria-controls={`routine-session-panel-${index}`}
-              tabIndex={selected ? 0 : -1}
-              className={`routine-session-tab ${selected ? 'is-active' : ''}`}
-              onClick={() => setActiveSession(index)}
-              onKeyDown={event => {
-                if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
-                event.preventDefault();
-                const delta = event.key === 'ArrowRight' ? 1 : -1;
-                const next = (index + delta + draft.sessions.length) % draft.sessions.length;
-                setActiveSession(next);
-                window.requestAnimationFrame(() => {
-                  document.getElementById(`routine-session-tab-${next}`)?.focus();
-                });
-              }}
-            >
-              <span className="routine-session-tab-index tabular-nums">{index + 1}</span>
-              <span className="routine-session-tab-title">{tTitle(item.title)}</span>
-              <span className="routine-session-tab-meta tabular-nums">
-                {item.exercises.length} {isRTL ? 'تمارين' : 'ex'}
-              </span>
-            </button>
-          );
-        })}
+        <Stagger step={MOTION_STAGGER.step} baseDelay={MOTION_STAGGER.base}>
+          {draft.sessions.map((item, index) => {
+            const selected = index === activeSession;
+            return (
+              <StaggerItem
+                key={`${item.title}-${index}`}
+                as="button"
+                index={index}
+                distance={MOTION_DISTANCE.hairline}
+                type="button"
+                role="tab"
+                id={`routine-session-tab-${index}`}
+                aria-selected={selected}
+                aria-controls={`routine-session-panel-${index}`}
+                tabIndex={selected ? 0 : -1}
+                className={`routine-session-tab ${selected ? 'is-active' : ''}`}
+                onClick={() => setActiveSession(index)}
+                whileTap={reduced ? undefined : { scale: MOTION_SCALE.press }}
+                onKeyDown={event => {
+                  if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+                  event.preventDefault();
+                  const delta = event.key === 'ArrowRight' ? 1 : -1;
+                  const next = (index + delta + draft.sessions.length) % draft.sessions.length;
+                  setActiveSession(next);
+                  window.requestAnimationFrame(() => {
+                    document.getElementById(`routine-session-tab-${next}`)?.focus();
+                  });
+                }}
+              >
+                <span className="routine-session-tab-index tabular-nums">{index + 1}</span>
+                <span className="routine-session-tab-title">{tTitle(item.title)}</span>
+                <span className="routine-session-tab-meta tabular-nums">
+                  {item.exercises.length} {isRTL ? 'تمارين' : 'ex'}
+                </span>
+              </StaggerItem>
+            );
+          })}
+        </Stagger>
       </div>
 
       <div

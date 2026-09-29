@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Delete, Check, Plus, Minus } from 'lucide-react';
 import { useTranslation } from '../lib/i18n';
 import { gymAudio } from '../lib/audio';
+import { useReducedMotion } from './performance/useReducedMotion';
 
 interface WorkoutNumberKeypadModalProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ export function WorkoutNumberKeypadModal({
   onSave
 }: WorkoutNumberKeypadModalProps) {
   const { isRTL, t } = useTranslation();
+  const reducedMotion = useReducedMotion();
   const [valStr, setValStr] = useState<string>('');
   const [activeUnit, setActiveUnit] = useState<string>(unit || 'kg');
   const [announcement, setAnnouncement] = useState('');
@@ -154,10 +156,10 @@ export function WorkoutNumberKeypadModal({
           aria-modal="true"
           aria-label={title}
           onClick={e => e.stopPropagation()}
-          initial={{ y: '100%' }}
-          animate={{ y: 0 }}
-          exit={{ y: '100%' }}
-          transition={{ type: 'spring', damping: 30, stiffness: 340 }}
+          initial={reducedMotion ? { opacity: 0 } : { y: '100%' }}
+          animate={reducedMotion ? { opacity: 1 } : { y: 0 }}
+          exit={reducedMotion ? { opacity: 0 } : { y: '100%' }}
+          transition={reducedMotion ? { duration: 0 } : { type: 'spring', damping: 30, stiffness: 340 }}
         >
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem' }}>
             <div style={{ minWidth: 0 }}>
@@ -187,7 +189,7 @@ export function WorkoutNumberKeypadModal({
               className="session-target session-target-ghost"
               onClick={onClose}
               aria-label={isRTL ? 'إغلاق' : 'Close'}
-              style={{ minWidth: '48px', minHeight: '48px', padding: 0, flexShrink: 0 }}
+              style={{ minWidth: '48px', minHeight: '56px', padding: 0, flexShrink: 0 }}
             >
               <X size={20} aria-hidden="true" />
             </button>
@@ -225,15 +227,14 @@ export function WorkoutNumberKeypadModal({
 
             <button
               type="button"
-              className="forma-3d-chip"
+              className="forma-3d-chip forma-keypad-clear"
               onClick={handleClear}
-              style={{ minHeight: '44px' }}
             >
               {isRTL ? 'مسح الكل' : 'Clear all'}
             </button>
           </div>
 
-          <div style={{ display: 'flex', gap: '0.45rem' }} role="group" aria-label={isRTL ? 'تعديل سريع' : 'Quick adjust'}>
+          <div className="forma-keypad-quick-row" role="group" aria-label={isRTL ? 'تعديل سريع' : 'Quick adjust'}>
             <button
               type="button"
               className="forma-keypad-key is-muted"

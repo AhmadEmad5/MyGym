@@ -1,10 +1,11 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Minus, X, Check, Volume2, VolumeX, Smartphone } from 'lucide-react';
 import { useTranslation } from '../lib/i18n';
 import { gymAudio } from '../lib/audio';
 import { useWorkoutTimer, workoutTimer } from '../lib/workoutTimer';
 import { useReducedMotion } from './performance/useReducedMotion';
+import { GYM_FLOOR_HAPTICS, pulseHaptic } from './mobile/gymFloorHaptics';
 
 interface RestTimerFloatingBarProps {
   secondsLeft?: number | null;
@@ -17,7 +18,7 @@ interface RestTimerFloatingBarProps {
   bottomOffset?: string;
 }
 
-const SAFE_BOTTOM = 'calc(0.75rem + max(0.75rem, env(safe-area-inset-bottom, 0px)))';
+const SAFE_BOTTOM = 'calc(0.75rem + max(0.75rem, var(--shell-safe-bottom, env(safe-area-inset-bottom, 0px))))';
 
 export function RestTimerFloatingBar({
   secondsLeft: propsSecondsLeft,
@@ -32,6 +33,7 @@ export function RestTimerFloatingBar({
   const { t, tExercise, isRTL } = useTranslation();
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(false);
   const reducedMotion = useReducedMotion();
+  const restStartAnnounced = useRef(false);
 
   const timerState = useWorkoutTimer();
   const secondsLeft = propsSecondsLeft !== undefined ? propsSecondsLeft : timerState.secondsLeft;
@@ -69,6 +71,7 @@ export function RestTimerFloatingBar({
       gymAudio.triggerSubtleHaptic([25]);
     } else if (secondsLeft === 0) {
       gymAudio.triggerSubtleHaptic([45, 60, 45]);
+      pulseHaptic(GYM_FLOOR_HAPTICS.pr);
       if (isVoiceEnabled) {
         gymAudio.playRestTimerChime();
         gymAudio.speakVoiceCoach(
@@ -78,6 +81,18 @@ export function RestTimerFloatingBar({
       }
     }
   }, [secondsLeft, isVoiceEnabled, isRTL]);
+
+  useEffect(() => {
+    if (secondsLeft === null || secondsLeft < 0) {
+      restStartAnnounced.current = false;
+      return;
+    }
+    if (restStartAnnounced.current) return;
+    if (secondsLeft > 0 && secondsLeft >= totalSeconds) {
+      restStartAnnounced.current = true;
+      pulseHaptic(GYM_FLOOR_HAPTICS.restStarted);
+    }
+  }, [secondsLeft, totalSeconds]);
 
   const spokenTime = useMemo(() => {
     if (secondsLeft === null || secondsLeft < 0) return '';
@@ -190,7 +205,7 @@ export function RestTimerFloatingBar({
               ) : (
                 <span
                   className="session-countdown"
-                  style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}
+                  style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--text-primary)' }}
                 >
                   {formattedTime}
                 </span>
@@ -206,44 +221,45 @@ export function RestTimerFloatingBar({
 
               <button
                 type="button"
+                className="rest-timer-voice-toggle rest-timer-control"
                 onClick={() => setIsVoiceEnabled(!isVoiceEnabled)}
                 aria-pressed={isVoiceEnabled}
                 aria-label={isVoiceEnabled ? (isRTL ? 'كتم المدرب الصوتي' : 'Mute Voice Coach') : (isRTL ? 'تشغيل المدرب الصوتي' : 'Enable Voice Coach')}
                 style={{
-                  background: isVoiceEnabled ? 'var(--premium-soft)' : 'rgba(255, 255, 255, 0.05)',
+                  background: isVoiceEnabled ? 'var(--premium-soft)' : 'color-mix(in srgb, var(--text-primary) 8%, transparent)',
                   border: `1px solid ${isVoiceEnabled ? 'color-mix(in srgb, var(--accent-primary) 30%, transparent)' : 'var(--premium-line)'}`,
-                  color: isVoiceEnabled ? 'var(--accent-primary)' : 'var(--text-muted)',
-                  minHeight: '32px',
-                  padding: '0.12rem 0.45rem',
-                  borderRadius: '8px',
+                  color: isVoiceEnabled ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                  padding: '0.12rem 0.6rem',
+                  borderRadius: '10px',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '0.25rem',
-                  fontSize: '0.68rem',
-                  fontWeight: 600,
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
                   cursor: 'pointer'
                 }}
               >
-                {isVoiceEnabled ? <Volume2 size={11} aria-hidden="true" /> : <VolumeX size={11} aria-hidden="true" />}
+                {isVoiceEnabled ? <Volume2 size={13} aria-hidden="true" /> : <VolumeX size={13} aria-hidden="true" />}
                 <span>{isRTL ? 'صوت' : 'Voice'}</span>
               </button>
 
               <span
+                className="rest-timer-lockscreen-chip"
                 style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
+                  background: 'color-mix(in srgb, var(--text-primary) 8%, transparent)',
                   border: '1px solid var(--premium-line)',
                   color: 'var(--accent-primary)',
-                  padding: '0.12rem 0.45rem',
-                  borderRadius: '8px',
+                  padding: '0.2rem 0.5rem',
+                  borderRadius: '10px',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '0.25rem',
-                  fontSize: '0.64rem',
-                  fontWeight: 600
+                  fontSize: '0.7rem',
+                  fontWeight: 700
                 }}
                 title={isRTL ? 'التحكم بالراحة معروض على شاشة القفل والإشعارات' : 'Rest timer active on lockscreen'}
               >
-                <Smartphone size={10} aria-hidden="true" />
+                <Smartphone size={11} aria-hidden="true" />
                 <span>{isRTL ? 'شاشة القفل' : 'Lockscreen'}</span>
               </span>
             </div>
@@ -256,70 +272,73 @@ export function RestTimerFloatingBar({
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', flexShrink: 0 }}>
+        <div className="rest-timer-control-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
           <button
             type="button"
+            className="rest-timer-control"
             onClick={() => onAdjust(-15)}
             aria-label={isRTL ? 'إنقاص 15 ثانية' : 'Remove 15 seconds'}
             style={{
-              minWidth: '44px',
-              minHeight: '44px',
-              padding: '0 0.55rem',
-              fontSize: '0.74rem',
-              fontWeight: 700,
-              borderRadius: '10px',
+              minWidth: '48px',
+              minHeight: '48px',
+              padding: '0 0.6rem',
+              fontSize: '0.78rem',
+              fontWeight: 750,
+              borderRadius: '12px',
               border: '1px solid var(--premium-line)',
               background: 'var(--bg-tertiary)',
               color: 'var(--text-secondary)',
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '0.15rem',
+              gap: '0.2rem',
               cursor: 'pointer'
             }}
           >
-            <Minus size={12} aria-hidden="true" />
+            <Minus size={14} aria-hidden="true" />
             <span>15</span>
           </button>
 
           <button
             type="button"
+            className="rest-timer-control"
             onClick={() => onAdjust(30)}
             aria-label={isRTL ? 'إضافة 30 ثانية' : 'Add 30 seconds'}
             style={{
-              minWidth: '44px',
-              minHeight: '44px',
-              padding: '0 0.55rem',
-              fontSize: '0.74rem',
-              fontWeight: 700,
-              borderRadius: '10px',
+              minWidth: '48px',
+              minHeight: '48px',
+              padding: '0 0.6rem',
+              fontSize: '0.78rem',
+              fontWeight: 750,
+              borderRadius: '12px',
               border: '1px solid color-mix(in srgb, var(--accent-primary) 30%, transparent)',
               background: 'var(--premium-soft)',
               color: 'var(--accent-primary)',
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '0.15rem',
+              gap: '0.2rem',
               cursor: 'pointer'
             }}
           >
-            <Plus size={12} aria-hidden="true" />
+            <Plus size={14} aria-hidden="true" />
             <span>30</span>
           </button>
 
           {onQuickWater && (
             <button
               type="button"
+              className="rest-timer-control"
               onClick={onQuickWater}
               aria-pressed={waterLogged}
               aria-label={isRTL ? 'تسجيل شرب 250 مل ماء' : 'Log 250ml water'}
               style={{
-                minWidth: '48px',
-                minHeight: '44px',
+                minWidth: '52px',
+                minHeight: '48px',
                 padding: '0 0.5rem',
-                fontSize: '0.74rem',
-                fontWeight: 700,
-                borderRadius: '10px',
+                fontSize: '0.78rem',
+                fontWeight: 750,
+                borderRadius: '12px',
                 border: '1px solid color-mix(in srgb, var(--accent-cyan) 35%, transparent)',
                 background: waterLogged ? 'color-mix(in srgb, var(--success) 20%, transparent)' : 'var(--premium-soft)',
                 color: waterLogged ? 'var(--success)' : 'var(--accent-cyan)',
@@ -337,18 +356,19 @@ export function RestTimerFloatingBar({
 
           <button
             type="button"
+            className="rest-timer-control"
             onClick={onSkip}
             aria-label={isRTL ? 'تخطي الراحة' : t('skipRest')}
             style={{
-              minWidth: '48px',
-              minHeight: '44px',
+              minWidth: '52px',
+              minHeight: '48px',
               padding: '0 0.6rem',
-              fontSize: '0.74rem',
-              fontWeight: 600,
-              borderRadius: '10px',
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              borderRadius: '12px',
               border: '1px solid var(--premium-line)',
               background: 'transparent',
-              color: 'var(--text-muted)',
+              color: 'var(--text-secondary)',
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -356,7 +376,7 @@ export function RestTimerFloatingBar({
               cursor: 'pointer'
             }}
           >
-            <X size={13} aria-hidden="true" />
+            <X size={14} aria-hidden="true" />
             <span>{isRTL ? 'تخطي' : t('skipRest')}</span>
           </button>
         </div>

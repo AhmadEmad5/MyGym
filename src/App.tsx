@@ -161,14 +161,16 @@ function RequireAdmin({ children }: { children: ReactNode }) {
 }
 
 function App() {
-  const { data, loading, updateSettings, saveSession } = useData();
+  const { data, loading, updateSettings, saveSession, signOutUser } = useData();
   const { isRTL } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [workoutReminderBanner, setWorkoutReminderBanner] = useState<{ title: string; message: string } | null>(null);
 
-  // Maintain smooth scroll restoration across tabs with zero layout jump
+  // Single source of truth for `.content-area` scroll memory. Restoration is
+  // applied by RouteTransition once the new route is actually mounted, so the
+  // exit animation is never fought by a stale scrollTop write.
   useScrollRestoration('.content-area');
 
   useEffect(() => {
@@ -288,7 +290,7 @@ function App() {
               element={(
                 <RequireAdmin>
                   <RouteTransition>
-                    <AdminDashboard onLogout={async () => { await navigate('/today'); }} />
+                    <AdminDashboard onLogout={async () => { await signOutUser(); }} />
                   </RouteTransition>
                 </RequireAdmin>
               )}

@@ -15,6 +15,7 @@ import { notify } from '../lib/feedback';
 import { useWakeLock } from '../hooks/useWakeLock';
 import { selectPreviousPerformance } from '../lib/selectors';
 import { GymFloorSetCard } from '../components/mobile/GymFloorSetCard';
+import { GYM_FLOOR_HAPTICS, pulseHaptic } from '../components/mobile/gymFloorHaptics';
 import { workoutTimer } from '../lib/workoutTimer';
 import { useReducedMotion } from '../components/performance/useReducedMotion';
 
@@ -230,6 +231,7 @@ export function SessionDetailView() {
 
       gymAudio.playSetCompleteChime();
       gymAudio.triggerSubtleHaptic([30, 45]);
+      pulseHaptic(GYM_FLOOR_HAPTICS.setComplete);
 
       const restSec = currentEx.restTime || data?.settings?.restTimerSeconds || 90;
       workoutTimer.start(
@@ -285,23 +287,24 @@ export function SessionDetailView() {
     if (!session) return;
     const ex = session.exercises[exerciseIdx];
     if (!ex || !ex.sets || ex.sets.length <= 1) return;
+    if (!window.confirm(`${t('deleteSet')} #${setIdx + 1}?`)) return;
     const updatedExercises = session.exercises.map((exercise, eIdx) => {
       if (eIdx !== exerciseIdx) return exercise;
       return { ...exercise, sets: exercise.sets.filter((_, s) => s !== setIdx) };
     });
     handleUpdateSession({ ...session, exercises: updatedExercises });
-  }, [session, handleUpdateSession]);
+  }, [session, t, handleUpdateSession]);
 
   const deleteExercise = useCallback((exerciseIdx: number) => {
     if (!session) return;
-    if (!window.confirm(isRTL ? 'هل أنت متأكد من حذف هذا التمرين؟' : 'Delete this exercise?')) return;
+    if (!window.confirm(t('deleteExerciseConfirm'))) return;
     const updated = session.exercises.filter((_, idx) => idx !== exerciseIdx);
     handleUpdateSession({ ...session, exercises: updated });
     setIsOverflowOpen(false);
     if (activeExerciseIndex >= updated.length) {
       setActiveExerciseIndex(Math.max(0, updated.length - 1));
     }
-  }, [session, activeExerciseIndex, isRTL, handleUpdateSession]);
+  }, [session, activeExerciseIndex, t, handleUpdateSession]);
 
   const handleCompleteCurrentExercise = useCallback(() => {
     if (!session || !currentExercise) return;
@@ -319,6 +322,7 @@ export function SessionDetailView() {
     handleUpdateSession({ ...session, exercises: updatedExercises });
     gymAudio.playCelebrationFanfare();
     gymAudio.triggerVibration([50, 40, 70]);
+    pulseHaptic(GYM_FLOOR_HAPTICS.pr);
     workoutTimer.stop();
 
     if (activeExerciseIndex < session.exercises.length - 1) {
@@ -339,14 +343,16 @@ export function SessionDetailView() {
 
   const handleFinishWorkout = useCallback(async () => {
     if (!session) return;
+    if (!window.confirm(t('finishWorkout'))) return;
     setIsOverflowOpen(false);
     const updatedSession = { ...session, isCompleted: true };
     await finishWorkoutSession(updatedSession);
     workoutTimer.stop();
     gymAudio.playCelebrationFanfare();
+    pulseHaptic(GYM_FLOOR_HAPTICS.pr);
     notify(isRTL ? 'تهانينا! تم حفظ التمرين في السجل بنجاح 🎉' : 'Workout completed and logged to History! 🎉', 'success');
     navigate('/today', { replace: true });
-  }, [session, finishWorkoutSession, isRTL, navigate]);
+  }, [session, finishWorkoutSession, isRTL, navigate, t]);
 
   const handleAddExerciseTemplate = (template: { name: string; targetMuscle: string; notes?: string }) => {    if (!session) return;
     const stamp = Date.now();
@@ -514,14 +520,14 @@ export function SessionDetailView() {
         </header>
 
         <section style={{ marginBottom: '0.75rem' }} aria-label={isRTL ? 'تصفية المجموعات العضلية' : 'Muscle Group Filter'}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.25rem' }} className="hide-scrollbar">
+          <div className="gym-floor-ribbon hide-scrollbar">
             <button
               type="button"
               onClick={() => setSelectedMuscleFilter('all')}
               aria-pressed={selectedMuscleFilter === 'all'}
               style={{
-                minHeight: '40px',
-                padding: '0.35rem 0.8rem',
+                minHeight: '44px',
+                padding: '0.35rem 0.9rem',
                 borderRadius: '20px',
                 fontSize: '0.8rem',
                 fontWeight: 700,
@@ -547,8 +553,8 @@ export function SessionDetailView() {
                   if (firstIdx !== -1) setActiveExerciseIndex(firstIdx);
                 }}
                 style={{
-                  minHeight: '40px',
-                  padding: '0.35rem 0.8rem',
+                  minHeight: '44px',
+                  padding: '0.35rem 0.9rem',
                   borderRadius: '20px',
                   fontSize: '0.8rem',
                   fontWeight: 700,
@@ -567,7 +573,7 @@ export function SessionDetailView() {
         </section>
 
         <nav style={{ marginBottom: '1rem' }} aria-label={isRTL ? 'تنتقل بين التمارين' : 'Exercise Stepper'}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', overflowX: 'auto', padding: '0.25rem' }} className="hide-scrollbar">
+          <div className="gym-floor-ribbon hide-scrollbar" style={{ padding: '0.25rem' }}>
             {filteredExercises.map((ex) => {
               const realIdx = exercises.findIndex(e => e.id === ex.id);
               const isSelected = realIdx === activeExerciseIndex;
@@ -689,14 +695,14 @@ export function SessionDetailView() {
                 </h2>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
+              <div className="session-inline-actions">
                 {currentExercise.notes && (
                   <button
                     type="button"
                     className="btn-icon btn-ghost"
                     onClick={() => setShowNotesAccordion(prev => !prev)}
                     aria-expanded={showNotesAccordion}
-                    style={{ color: showNotesAccordion ? 'var(--accent-primary)' : 'var(--text-muted)', minWidth: '44px', minHeight: '44px' }}
+                    style={{ color: showNotesAccordion ? 'var(--accent-primary)' : 'var(--text-muted)' }}
                     title={isRTL ? 'نصائح الأداء' : 'Form Advice & Tips'}
                   >
                     <Info className="w-5 h-5" aria-hidden="true" />
@@ -707,7 +713,7 @@ export function SessionDetailView() {
                     type="button"
                     className="btn-icon btn-ghost"
                     onClick={() => setShowTutorialModal(true)}
-                    style={{ color: 'var(--accent-primary)', minWidth: '44px', minHeight: '44px' }}
+                    style={{ color: 'var(--accent-primary)' }}
                     title={isRTL ? 'فيديو الشرح' : 'Video Tutorial'}
                     aria-label={isRTL ? 'فيديو الشرح' : 'Video tutorial'}
                   >
@@ -786,7 +792,7 @@ export function SessionDetailView() {
                   {currentExercise.sets?.map((set, sIdx) => {
                     const isCurrentActive = sIdx === activeSetIndex;
                     return (
-                      <div key={set.id || sIdx} style={{ display: 'grid', gap: '0.4rem' }}>
+                      <div key={set.id || sIdx} style={{ display: 'grid', gap: '0.5rem' }}>
                         <button
                           type="button"
                           className={`session-set-check ${isCurrentActive ? 'is-active' : ''}`.trim()}
@@ -849,7 +855,7 @@ export function SessionDetailView() {
                     ? `${doneSetsInExercise} من ${totalSetsInExercise} جولة مكتملة`
                     : `${doneSetsInExercise} of ${totalSetsInExercise} sets complete`)}
               </div>
-              <div style={{ display: 'flex', gap: '0.35rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <button
                   type="button"
                   className="session-target session-target-ghost"
@@ -901,7 +907,7 @@ export function SessionDetailView() {
             type="button"
             className="session-target session-target-ghost"
             onClick={handleCompleteCurrentExercise}
-            style={{ minHeight: '48px' }}
+            style={{ minHeight: '56px' }}
           >
             <CheckCircle2 className="w-5 h-5" aria-hidden="true" />
             <span style={{ fontSize: '0.85rem' }}>
@@ -1094,7 +1100,7 @@ function RestHudLayer({ reducedMotion, showCelebration, onDismissCelebration, on
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
             <div aria-hidden="true" style={{ inlineSize: '4px', blockSize: '40px', borderRadius: '999px', background: 'var(--bg-tertiary)', overflow: 'hidden' }}>
               <div style={{ inlineSize: '100%', blockSize: `${fraction * 100}%`, background: 'var(--accent-primary)', marginBlockStart: `${(1 - fraction) * 100}%` }} />
             </div>
@@ -1172,9 +1178,10 @@ function RestHudLayer({ reducedMotion, showCelebration, onDismissCelebration, on
             </div>
             <button
               type="button"
+              className="session-celebration-dismiss"
               onClick={onDismissCelebration}
               aria-label={isRTL ? 'إغلاق' : 'Dismiss'}
-              style={{ minWidth: '40px', minHeight: '40px', display: 'grid', placeItems: 'center', borderRadius: '10px', background: 'rgba(0, 0, 0, 0.16)', border: 'none', color: '#04140d', cursor: 'pointer' }}
+              style={{ background: 'rgba(0, 0, 0, 0.16)', border: 'none', color: '#04140d', cursor: 'pointer', borderRadius: '10px' }}
             >
               <X className="w-4 h-4" aria-hidden="true" />
             </button>

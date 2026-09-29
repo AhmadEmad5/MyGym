@@ -1,8 +1,10 @@
 import { forwardRef } from 'react';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
-import { motion, type HTMLMotionProps } from 'framer-motion';
+import type { HTMLMotionProps } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 import { cn } from './cn';
+import { Pressable } from '../motion/Pressable';
+import { MOTION_SCALE } from '../../lib/motion';
 
 export type ButtonVariant = 'primary' | 'cyan' | 'secondary' | 'ghost' | 'danger' | 'outline';
 export type ButtonSize = 'sm' | 'md' | 'lg' | 'icon';
@@ -52,10 +54,11 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   const isInactive = disabled || isLoading;
 
   return (
-    <motion.button
+    <Pressable
+      as="button"
       ref={ref}
       type={type}
-      whileTap={isInactive ? undefined : { scale: 0.97 }}
+      scale={MOTION_SCALE.press}
       disabled={isInactive}
       aria-busy={isLoading || undefined}
       aria-disabled={disabled || undefined}
@@ -75,6 +78,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       )}
       {children && <span>{children}</span>}
       {!isLoading && rightIcon && <span className="inline-flex shrink-0">{rightIcon}</span>}
-    </motion.button>
+    </Pressable>
   );
 });
