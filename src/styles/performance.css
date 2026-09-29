@@ -479,14 +479,6 @@
 
 @layer components {
   .forma-3d-shell { position: relative; display: grid; gap: 0.6rem; }
-  .forma-3d-stage {
-    position: relative;
-    overflow: hidden;
-    border: 1px solid var(--premium-line);
-    border-radius: 16px;
-    background: #060913;
-  }
-  .forma-3d-stage canvas { display: block; inline-size: 100%; block-size: 100%; touch-action: none; }
   .forma-3d-overlay {
     position: absolute;
     inset: 0;
@@ -500,7 +492,6 @@
     line-height: 1.5;
   }
   .forma-3d-overlay strong { display: block; color: var(--text-primary); font-size: 0.92rem; margin-block-end: 0.3rem; }
-  .forma-3d-controls { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
   .forma-3d-chip {
     display: inline-flex;
     align-items: center;
