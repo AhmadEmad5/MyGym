@@ -7,7 +7,6 @@ export interface WorkoutTimerState {
   exerciseName: string;
   isRunning: boolean;
   isPaused: boolean;
-  showCompleteToast: boolean;
 }
 
 class WorkoutTimerManager {
@@ -16,8 +15,7 @@ class WorkoutTimerManager {
     totalSeconds: 90,
     exerciseName: '',
     isRunning: false,
-    isPaused: false,
-    showCompleteToast: false
+    isPaused: false
   };
 
   private listeners = new Set<() => void>();
@@ -48,8 +46,7 @@ class WorkoutTimerManager {
       totalSeconds: validSeconds,
       exerciseName,
       isRunning: true,
-      isPaused: false,
-      showCompleteToast: false
+      isPaused: false
     };
     this.notify();
 
@@ -156,31 +153,17 @@ class WorkoutTimerManager {
     this.state = {
       ...this.state,
       secondsLeft: 0,
-      isRunning: false,
-      showCompleteToast: true
+      isRunning: false
     };
     this.notify();
 
     this.toastTimeoutId = setTimeout(() => {
       this.state = {
         ...this.state,
-        secondsLeft: null,
-        showCompleteToast: false
+        secondsLeft: null
       };
       this.notify();
     }, 4500);
-  }
-
-  public dismissToast() {
-    if (this.toastTimeoutId) {
-      clearTimeout(this.toastTimeoutId);
-      this.toastTimeoutId = null;
-    }
-    this.state = {
-      ...this.state,
-      showCompleteToast: false
-    };
-    this.notify();
   }
 }
 

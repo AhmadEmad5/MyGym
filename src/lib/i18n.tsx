@@ -441,8 +441,6 @@ export const TRANSLATIONS = {
     quickSubRep: '-1 rep',
 
     // Weekly AI Coach Digest
-    weeklyCoachDigest: 'Weekly Coach Digest',
-    weeklyCoachDigestDesc: 'Instant AI analysis of your effort, consistency, and highlights this week',
     generateWeeklyDigest: 'Generate Weekly Digest',
     generatingDigest: 'Analyzing your sessions and meals with AI Coach...',
     refreshDigest: 'Refresh Digest',
@@ -469,8 +467,6 @@ export const TRANSLATIONS = {
     overloadUp: 'Overload achieved! ↑',
     oneRepMax: 'Est. 1RM',
     newPR: 'New PR! 🏆',
-    personalRecords: 'Personal Records',
-    personalRecordsDesc: 'Your all-time heaviest lifts and estimated 1RM benchmarks',
     bestWeight: 'Heaviest Lift',
     best1RM: 'Best Est. 1RM',
     noPRsYet: 'No PRs recorded yet. Log completed workouts to see your records here!',
@@ -515,8 +511,6 @@ export const TRANSLATIONS = {
     exploreMuscles: 'Explore Muscles',
 
     // Body Weight & Measurements Tracker
-    bodyMetricsTitle: 'Body Weight & Measurements',
-    bodyMetricsSubtitle: 'Track your physical transformation, scale weight, and circumference progress over time',
     logMeasurement: 'Log Measurement',
     weightTrend: 'Weight Progression Trend',
     currentWeight: 'Current Weight',
@@ -764,7 +758,6 @@ export const TRANSLATIONS = {
     completedSetsStats: 'Completed Sets',
     workoutDurationStats: 'Duration',
     burnedCaloriesStats: 'Est. Calories',
-    newPersonalRecordsAchieved: 'New Personal Records Broken!',
     celebrationShareBtn: 'Share Story Card',
     celebrationDoneBtn: 'Done & Return Home',
 
@@ -1215,8 +1208,6 @@ export const TRANSLATIONS = {
     quickSubRep: '-1 تكرار',
 
     // Weekly AI Coach Digest
-    weeklyCoachDigest: 'تقرير المدرب الأسبوعي',
-    weeklyCoachDigestDesc: 'تحليل ذكي فوري لأدائك والتزامك وأبرز إنجازاتك هذا الأسبوع',
     generateWeeklyDigest: 'توليد تقرير الأسبوع',
     generatingDigest: 'جارِ تحليل جلساتك ووجباتك مع المدرب الذكي...',
     refreshDigest: 'تحديث التقرير',
@@ -1243,8 +1234,6 @@ export const TRANSLATIONS = {
     overloadUp: 'تم كسر الرقم السابق! ↑',
     oneRepMax: 'الـ 1RM المتوقع',
     newPR: 'رقم قياسي جديد! 🏆',
-    personalRecords: 'الأرقام القياسية',
-    personalRecordsDesc: 'أقوى أرقامك القياسية وأعلى أوزان تم رفعها لكل تمرين',
     bestWeight: 'أعلى وزن تم رفعه',
     best1RM: 'أفضل 1RM تقديري',
     noPRsYet: 'لم تسجل أي أرقام قياسية بعد. أتمم تمارينك لتظهر أرقامك القياسية هنا!',
@@ -1289,8 +1278,6 @@ export const TRANSLATIONS = {
     exploreMuscles: 'خريطة العضلات',
 
     // Body Weight & Measurements Tracker
-    bodyMetricsTitle: 'سجل وزن وقياسات الجسم',
-    bodyMetricsSubtitle: 'تتبع وزنك ونسبة الدهون وتغير مقاسات جسمك بدقة عبر الزمن مع رسم بياني للتطور',
     logMeasurement: 'تسجيل قياس جديد',
     weightTrend: 'منحنى تغير الوزن',
     currentWeight: 'الوزن الحالي',
@@ -1538,7 +1525,6 @@ export const TRANSLATIONS = {
     completedSetsStats: 'الجولات المكتملة',
     workoutDurationStats: 'مدة التمرين',
     burnedCaloriesStats: 'السعرات التقريبية',
-    newPersonalRecordsAchieved: 'أرقام قياسية جديدة محطمة! ✨',
     celebrationShareBtn: '📸 حفظ صورة الإنجاز (Story Card)',
     celebrationDoneBtn: '🏠 إنهاء والعودة للرئيسية',
 

@@ -117,20 +117,16 @@
   flex: 0 0 auto;
 }
 
-.modern-nav-item,
-.nav-item {
+.modern-nav-item {
   color: var(--text-secondary);
 }
 
 .modern-nav-item:hover,
-.nav-item:hover,
-.modern-nav-item:focus-visible,
-.nav-item:focus-visible {
+.modern-nav-item:focus-visible {
   color: var(--text-primary);
 }
 
-.modern-nav-item.is-active,
-.nav-item.active {
+.modern-nav-item.is-active {
   color: var(--shell-nav-active);
   font-weight: 800;
 }

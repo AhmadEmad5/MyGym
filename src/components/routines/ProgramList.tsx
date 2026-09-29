@@ -9,7 +9,6 @@ type ProgramListProps = {
   templatePrograms: PredefinedRoutine[];
   isFiltered: boolean;
   isRTL: boolean;
-  t: (key: any) => string;
   tTitle: (name: string) => string;
   onApply: (routine: PredefinedRoutine) => void;
   onEdit: (routine: PredefinedRoutine) => void;
@@ -24,7 +23,6 @@ function ProgramGrid({
   routines,
   custom,
   isRTL,
-  t,
   tTitle,
   onApply,
   onEdit,
@@ -34,7 +32,6 @@ function ProgramGrid({
   routines: PredefinedRoutine[];
   custom: boolean;
   isRTL: boolean;
-  t: (key: any) => string;
   tTitle: (name: string) => string;
   onApply: (routine: PredefinedRoutine) => void;
   onEdit: (routine: PredefinedRoutine) => void;
@@ -56,7 +53,6 @@ function ProgramGrid({
                   onDelete={custom ? onDelete : undefined}
                   isCustom={custom}
                   isRTL={isRTL}
-                  t={t}
                   tTitle={tTitle}
                 />
               </StaggerItem>
@@ -73,7 +69,6 @@ export function ProgramList({
   templatePrograms,
   isFiltered,
   isRTL,
-  t,
   tTitle,
   onApply,
   onEdit,
@@ -101,7 +96,6 @@ export function ProgramList({
         routines={customPrograms}
         custom
         isRTL={isRTL}
-        t={t}
         tTitle={tTitle}
         onApply={onApply}
         onEdit={onEdit}
@@ -112,7 +106,6 @@ export function ProgramList({
         routines={templatePrograms}
         custom={false}
         isRTL={isRTL}
-        t={t}
         tTitle={tTitle}
         onApply={onApply}
         onEdit={onEdit}

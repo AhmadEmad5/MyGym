@@ -102,12 +102,6 @@ export function formatTonnage(tonnage: number, unit: 'kg' | 'lb' = 'kg') {
   return `${Math.round(tonnage)} kg`;
 }
 
-export function nextTrainingDay(date: Date) {
-  let candidate = new Date(date);
-  if (candidate.getDay() === REST_DAY) candidate = addDays(candidate, 1);
-  return candidate;
-}
-
 export function toLocalDateTimeValue(date: Date) {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 }

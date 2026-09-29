@@ -418,7 +418,6 @@ export function RoutinesView() {
             templatePrograms={visibleTemplates}
             isFiltered={resultCount !== allPrograms.length}
             isRTL={isRTL}
-            t={t}
             tTitle={tTitle}
             onApply={handleApply}
             onEdit={handleEdit}

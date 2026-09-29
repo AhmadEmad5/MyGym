@@ -22,7 +22,6 @@ interface MobileHeroWorkoutCardProps {
   session: WorkoutSession | null;
   isCompletedToday: boolean;
   onQuickWorkout: () => void;
-  streakDays?: number;
 }
 
 const enterTransition = { duration: 0.28, ease: [0.22, 1, 0.36, 1] as const };

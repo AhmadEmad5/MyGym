@@ -612,12 +612,6 @@ export function kcalToEnergy(kcal: number, unit: EnergyUnit) {
   return unit === 'kcal' ? kcal : kcal * KJ_PER_KCAL;
 }
 
-export function formatGrams(grams: number, unit: MassUnit, digits = 1) {
-  const value = gramsToMass(grams, unit);
-  const rounded = unit === 'g' ? Math.round(value) : Math.round(value * 10) / 10;
-  return `${rounded.toLocaleString(undefined, { maximumFractionDigits: digits })} ${unit}`;
-}
-
 interface AIMealVisionModalProps {
   isOpen: boolean;
   onClose: () => void;

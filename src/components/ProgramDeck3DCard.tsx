@@ -28,7 +28,6 @@ interface ProgramDeck3DCardProps {
   routine: PredefinedRoutine;
   onApply: (routine: PredefinedRoutine) => void;
   isRTL: boolean;
-  t: (key: any) => string;
   tTitle: (name: string) => string;
   onEdit?: (routine: PredefinedRoutine) => void;
   onDelete?: (routine: PredefinedRoutine) => void;

@@ -17,11 +17,11 @@ This document tracks the end-to-end production readiness overhaul for **FORMA** 
 ### 2. Standard Shared UI Primitives ([`src/components/ui/`](file:///c:/Users/ahmad/OneDrive/Desktop/Projects/MyGym/src/components/ui/))
 - **`Button.tsx`**: Framer Motion physical tap responses, semantic variants (`primary`, `cyan`, `secondary`, `ghost`, `danger`), built-in spinner with `isLoading`, full accessible focus rings.
 - **`Input.tsx`**: Label, helper text, error validation state, left/right icon slots, password eye toggle, and instant clear button.
-- **`Card.tsx`**: Standard, interactive glow on hover, and glassmorphic variants (`CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter`).
+- **`Card.tsx`**: Standard, interactive glow on hover, and glassmorphic surface variants.
 - **`Badge.tsx`**: Pill tags supporting `emerald`, `cyan`, `lime`, `amber`, `purple`, `rose`, `neutral` with optional status indicator dots.
 - **`Modal.tsx`**: Accessible dialog portal, backdrop blur, exit animations, and adaptive mobile bottom-sheet conversion with swipe pill handle.
 - **`EmptyState.tsx`**: Glowing central icon canvas, expressive typography, and actionable CTA slot.
-- **`LoadingSpinner.tsx` & `Skeleton`**: Polished pulse loaders for async states.
+- **`PageSkeleton.tsx`**: Pulsing skeleton loaders for async states.
 - **`SegmentedControl.tsx`**: Smooth layoutId pill slider tabs.
 
 ### 3. Screen-by-Screen Redesigns & Refactors

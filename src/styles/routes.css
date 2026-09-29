@@ -9,8 +9,7 @@
     overflow-x: hidden;
   }
 
-  .zen-page-container::before,
-  .page-surface.session-detail-page::before {
+  .zen-page-container::before {
     position: absolute;
     inset-block-start: 0.4rem;
     inset-inline-start: 0;
@@ -127,8 +126,7 @@
   }
 
   .nutrition-page .meal-card,
-  .nutrition-page .meal-item,
-  .nutrition-page .logged-meal-card {
+.nutrition-page .meal-item {
     border-color: var(--premium-line) !important;
     border-radius: 0.8rem !important;
     box-shadow: none !important;
@@ -186,34 +184,8 @@
     border-block-end-color: var(--premium-line);
   }
 
-  .settings-page .theme-choice {
-    display: flex;
-    width: 100%;
-    min-height: 7.5rem;
-    flex-direction: column;
-    align-items: stretch;
-    text-align: start;
-    border-radius: 0.7rem;
-    box-shadow: none;
-  }
-
-  .settings-page .theme-preview {
-    width: 100%;
-    flex: 0 0 3.4rem;
-  }
-
-  .settings-page .theme-choice:hover {
-    transform: none;
-    border-color: var(--accent-cyan);
-  }
-
-  .session-detail-page .set-row.is-current-active-set {
-    background: color-mix(in srgb, var(--accent-cyan) 5%, transparent);
-  }
-
   @media (max-width: 900px) {
-    .zen-page-container::before,
-    .page-surface.session-detail-page::before { display: none; }
+    .zen-page-container::before { display: none; }
 
     .zen-page-container,
     .page-surface {
@@ -223,30 +195,6 @@
   }
 
   @media (max-width: 640px) {
-    .calendar-page .calendar-header-bar {
-      margin-block-end: 0.85rem !important;
-      gap: 0.65rem;
-    }
-
-    .calendar-page .calendar-nav-stepper {
-      width: 100%;
-      justify-content: space-between;
-    }
-
-    .calendar-page .calendar-header-buttons-row {
-      width: 100%;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.5rem;
-    }
-
-    .calendar-page .calendar-header-buttons-row > button {
-      min-height: 40px;
-      justify-content: center;
-      padding-block: 0.4rem;
-      padding-inline: 0.65rem;
-      font-size: 0.82rem;
-    }
 
     .calendar-page .calendar-week-ribbon {
       padding-block-end: 0.65rem !important;
@@ -322,8 +270,7 @@
       border-radius: 16px !important;
     }
 
-    .nutrition-page .meal-card,
-    .nutrition-page .logged-meal-card {
+    .nutrition-page .meal-card {
       padding-block: 0.65rem !important;
       padding-inline: 0.75rem !important;
       margin-block-end: 0.5rem !important;
@@ -347,10 +294,6 @@
     .settings-page .setting-row {
       min-height: 3.4rem !important;
       padding-block: 0.45rem !important;
-    }
-
-    .settings-page .theme-choice {
-      min-height: 5.5rem !important;
     }
   }
 

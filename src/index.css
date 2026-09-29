@@ -209,18 +209,16 @@ html[dir="rtl"], [dir="rtl"] {
 
   /* Instant tactile feedback and zero-tap-delay for all interactive elements */
   button,
-  a,
-  input,
-  select,
-  textarea,
-  [role="button"],
-  [role="tab"],
-  .btn,
-  .btn-icon,
-  .ui-button,
-  .nav-item,
-  .nav-tab,
-  .tab-trigger {
+a,
+input,
+select,
+textarea,
+[role="button"],
+[role="tab"],
+.btn,
+.btn-icon,
+.ui-button,
+.tab-trigger {
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
   }
@@ -379,7 +377,7 @@ input, textarea {
 }
 
 /* Universal Icon and Text Alignment Rules */
-button, .btn, .smart-chip-btn, .theme-popover-item, .nav-item, .modern-nav-item, .badge {
+button, .btn, .theme-popover-item, .modern-nav-item, .badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -540,21 +538,8 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
 
 /* In-App YouTube Player Component Styles */
 
-.in-app-youtube-container.is-compact {
-  padding: 0.6rem;
-  background: rgba(6, 10, 20, 0.85);
-  border-color: rgba(56, 189, 248, 0.18);
-}
-
-.player-preset-pill.is-active {
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(129, 140, 248, 0.18));
-  border-color: rgba(56, 189, 248, 0.5);
-  color: #38bdf8;
-  box-shadow: 0 0 12px rgba(56, 189, 248, 0.2);
-}
-
 /* Modern Cyber Navigation Bar (Desktop & Tablet) */
-.modern-nav-wrapper, .sidebar-wrapper {
+.modern-nav-wrapper {
   width: 100%;
   padding: 1rem clamp(1rem, 3.5vw, 3rem) 0;
   z-index: 100;
@@ -562,7 +547,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
   justify-content: center;
 }
 
-.modern-navbar, .sidebar {
+.modern-navbar {
   width: 100%;
   max-width: min(1440px, calc(100vw - 2.5rem));
   height: 66px;
@@ -606,7 +591,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
   transition: opacity 0.25s ease;
 }
 
-.modern-nav-brand, .sidebar-header {
+.modern-nav-brand {
   display: flex;
   align-items: center;
   gap: 0.65rem;
@@ -620,7 +605,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
   flex-shrink: 0;
 }
 
-.brand-logo-gem, .logo-box {
+.brand-logo-gem {
   width: 38px;
   height: 38px;
   border-radius: 12px;
@@ -669,7 +654,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
   letter-spacing: 0.05em;
 }
 
-.modern-nav-links, .sidebar-nav {
+.modern-nav-links {
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -679,7 +664,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
   flex-shrink: 1;
 }
 
-.modern-nav-item, .nav-item {
+.modern-nav-item {
   display: flex;
   align-items: center;
   gap: 0.38rem;
@@ -695,12 +680,12 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
   flex-shrink: 0;
 }
 
-.modern-nav-item:hover, .nav-item:hover {
+.modern-nav-item:hover {
   color: #ffffff;
   transform: translateY(-1px);
 }
 
-.modern-nav-item.is-active, .nav-item.active {
+.modern-nav-item.is-active {
   color: #ffffff;
   font-weight: 750;
 }
@@ -1190,51 +1175,8 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
 }
 
 /* ===================================================
-   GHOST REFERENCE (PREVIOUS WORKOUT INLINE BADGE)
-   =================================================== */
-
-.ghost-overload-chip.negative {
-  background: rgba(244, 63, 94, 0.15);
-  color: #fb7185;
-  border: 1px solid rgba(244, 63, 94, 0.25);
-}
-
-/* ===================================================
-   TODAY QUICK HYDRATION WIDGET
-   =================================================== */
-
-.hydration-pct-badge.done {
-  background: rgba(16, 185, 129, 0.18);
-  color: #34d399;
-  border-color: rgba(16, 185, 129, 0.4);
-}
-
-.hydration-liquid-fill.done {
-  background: linear-gradient(90deg, #059669, #10b981);
-  box-shadow: 0 0 12px rgba(16, 185, 129, 0.6);
-}
-
-/* ===================================================
    MUSCLE RECOVERY RADAR CARD
    =================================================== */
-
-.readiness-badge-pill.ready {
-  background: rgba(16, 185, 129, 0.16);
-  border: 1px solid rgba(16, 185, 129, 0.38);
-  color: #34d399;
-}
-
-.readiness-badge-pill.moderate {
-  background: rgba(245, 158, 11, 0.16);
-  border: 1px solid rgba(245, 158, 11, 0.38);
-  color: #fbbf24;
-}
-
-.readiness-badge-pill.fatigued {
-  background: rgba(239, 68, 68, 0.16);
-  border: 1px solid rgba(239, 68, 68, 0.38);
-  color: #f87171;
-}
 
 .muscle-heatmap-main-grid {
   display: grid;
@@ -1253,18 +1195,6 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
 /* ===================================================
    ZEN WORKOUT FOCUS MODE FULLSCREEN OVERLAY
    =================================================== */
-
-.zen-dot-btn.active {
-  background: #38bdf8;
-  color: #0b1020;
-  border-color: #38bdf8;
-}
-
-.zen-dot-btn.done {
-  background: rgba(16, 185, 129, 0.2);
-  color: #34d399;
-  border-color: rgba(16, 185, 129, 0.4);
-}
 
 .main-content {
   flex: 1;
@@ -1298,8 +1228,8 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
   overscroll-behavior-y: contain;
   overscroll-behavior-x: none;
   /* Route restores are hard writes, not animated "flying" scrolls. Smooth
-     scrolling is opt-in per element (see .exercise-nav-carousel) and is forced
-     back to `auto` by the reduced-motion block in @layer base. */
+     scrolling is opt-in per element and is forced back to `auto` by the
+     reduced-motion block in @layer base. */
   scroll-behavior: auto;
   /* `scroll-padding` belongs on the real scroller - the `html` copy never
      applied because the document itself cannot scroll. Deliberately small: the
@@ -1338,7 +1268,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
 /* Premium dashboard / Today view */
 .eyebrow, .section-label { color: #6ee8ff; font-size: .69rem; font-weight: 750; letter-spacing: .15em; text-transform: uppercase; }
 .eyebrow { display: flex; align-items: center; gap: .5rem; margin-bottom: .72rem; }
-.eyebrow-dot { width: 7px; height: 7px; border-radius: 50%; background: #69e4ff; box-shadow: 0 0 0 5px rgba(105, 228, 255, .1), 0 0 17px #69e4ff; }.is-completed { opacity: .72; }.session-cta.done { background: rgba(102, 226, 183, .88); }
+.eyebrow-dot { width: 7px; height: 7px; border-radius: 50%; background: #69e4ff; box-shadow: 0 0 0 5px rgba(105, 228, 255, .1), 0 0 17px #69e4ff; }.is-completed { opacity: .72; }
 
 /* Modern Clock Widget */
 @keyframes livePulse {
@@ -1355,38 +1285,35 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
 
 /* Shared treatment for the remaining product surfaces */
 .page-surface { width: min(1180px, 100%); margin: 0 auto; padding-bottom: 2rem; }
-.page-surface > div:first-child h1, .page-header h1 { letter-spacing: -.055em; font-weight: 750; }
+.page-surface > div:first-child h1 { letter-spacing: -.055em; font-weight: 750; }
 .page-surface .card { background: linear-gradient(145deg, rgba(25, 34, 54, .82), rgba(13, 18, 30, .92)); border-color: rgba(255,255,255,.085) !important; box-shadow: 0 16px 36px rgba(0,0,0,.14); }
 .page-surface .card { background: var(--premium-surface); border-color: var(--premium-line) !important; }
 .page-surface .input { border-color: rgba(137, 205, 255, .14); background: rgba(8, 13, 24, .58); }.page-surface .input:focus { border-color: #67e5ff; box-shadow: 0 0 0 4px rgba(83, 220, 255, .1); }
-.calendar-page .calendar-day-row { position: relative; overflow: hidden; background: linear-gradient(115deg, rgba(24, 33, 52, .82), rgba(13, 18, 30, .9)) !important; border-color: rgba(255,255,255,.08) !important; box-shadow: 0 11px 28px rgba(0,0,0,.12); transition: transform .28s cubic-bezier(.22,1,.36,1), border-color .28s ease; }.calendar-page .calendar-day-row:hover { transform: translateY(-2px); border-color: rgba(107,229,255,.25) !important; }.calendar-page .calendar-day-row::before { content:''; position:absolute; left:0; top:18px; bottom:18px; width:2px; background: linear-gradient(#6de7ff, #8664ff); opacity:.75; }.calendar-page .calendar-session-card { border-color: rgba(128, 221, 255, .16) !important; box-shadow: 0 10px 24px rgba(0,0,0,.15); }.calendar-page .calendar-add-btn { border-radius: 14px !important; border-color: rgba(105,228,255,.18) !important; transition: background .25s ease, border-color .25s ease, transform .25s ease !important; }.calendar-page .calendar-add-btn:hover { transform: translateY(-2px); background: rgba(100,224,255,.08) !important; border-color: rgba(105,228,255,.42) !important; }
 .routines-page > div:nth-child(2) { background: linear-gradient(100deg, rgba(55, 198, 255, .11), rgba(125, 92, 255, .1)) !important; border-color: rgba(104,224,255,.25) !important; border-radius: 16px !important; }.routine-card { min-height: 220px; position: relative; overflow: hidden; }.routine-card::after { content:''; position:absolute; width:10rem; height:10rem; border-radius:50%; right:-4rem; top:-5rem; background: rgba(124, 101, 255, .11); filter: blur(5px); }.routine-card .btn { position: relative; z-index: 1; }
-.history-page > div:nth-child(2) .card { position: relative; overflow: hidden; }.history-page > div:nth-child(2) .card > div:first-child { background: rgba(100, 222, 255, .1) !important; border: 1px solid rgba(104,224,255,.13); }.history-page > div:nth-child(2) .card::after { content:''; position:absolute; width:100px; height:100px; right:-42px; top:-48px; border-radius:50%; background:rgba(126, 98, 255, .1); }
-.settings-page section > h2 { color: #b7c6dc !important; font-size: .74rem !important; letter-spacing: .12em; text-transform: uppercase; }.settings-page section .card { border-radius: 18px; }.settings-page select.input { border-radius: 10px; }.settings-page label[title] { background: linear-gradient(135deg, #64e4ff, #7b63ff) !important; box-shadow: 0 8px 20px rgba(84,209,255,.18); }.session-detail-page .card { border-radius: 19px; }.session-detail-page .card:hover { border-color: rgba(104,224,255,.22); }.premium-modal { padding: 1.45rem !important; border-radius: 21px !important; background: rgba(17, 23, 39, .94) !important; backdrop-filter: blur(22px); box-shadow: 0 30px 80px rgba(0,0,0,.48) !important; }
+.settings-page section > h2 { color: #b7c6dc !important; font-size: .74rem !important; letter-spacing: .12em; text-transform: uppercase; }.settings-page section .card { border-radius: 18px; }.settings-page select.input { border-radius: 10px; }.settings-page label[title] { background: linear-gradient(135deg, #64e4ff, #7b63ff) !important; box-shadow: 0 8px 20px rgba(84,209,255,.18); }.premium-modal { padding: 1.45rem !important; border-radius: 21px !important; background: rgba(17, 23, 39, .94) !important; backdrop-filter: blur(22px); box-shadow: 0 30px 80px rgba(0,0,0,.48) !important; }
 .ai-fab { background: linear-gradient(135deg, #58e1ff, #7963ff) !important; color: #07101e !important; box-shadow: 0 12px 32px rgba(83,215,255,.28) !important; }.ai-panel { background: rgba(15, 21, 36, .94) !important; border-color: rgba(118,224,255,.18) !important; border-radius: 20px !important; box-shadow: 0 28px 65px rgba(0,0,0,.42) !important; backdrop-filter: blur(22px); }
 button, .btn, .btn-icon { -webkit-tap-highlight-color: transparent; }
 
-@media (max-width: 720px) { .page-surface > div:first-child h1, .page-header h1 { font-size: 2.25rem !important; }.calendar-page .calendar-day-row { border-radius: 18px !important; }.history-page > div:nth-child(3) .input { width: 100% !important; }.settings-page section .card > div { padding: 1.1rem !important; } }
+@media (max-width: 720px) { .page-surface > div:first-child h1 { font-size: 2.25rem !important; }.settings-page section .card > div { padding: 1.1rem !important; } }
 
 /* Settings control center */
 .settings-hero { display:flex; align-items:flex-end; justify-content:space-between; gap:1rem; margin:.25rem 0 2rem; }.settings-hero .eyebrow { margin-bottom:.8rem; }.settings-hero h1 { margin:0; font-size:clamp(2.5rem,5vw,4rem); letter-spacing:-.065em; }.settings-hero h1 span { color:#8c7dff; }.settings-hero p { margin:.7rem 0 0; }.settings-status { display:flex; align-items:center; gap:.45rem; padding:.55rem .75rem; border:1px solid var(--premium-line); border-radius:999px; color:var(--text-secondary); font-size:.72rem; background:var(--premium-soft); }.status-pulse { width:7px; height:7px; border-radius:50%; background:#56e0a9; box-shadow:0 0 0 4px rgba(86,224,169,.12); }
-.settings-profile { display:flex; align-items:center; gap:1.15rem; padding:1.25rem !important; margin-bottom:2.3rem; border-radius:21px !important; }.profile-avatar { position:relative; display:grid; place-items:center; flex:0 0 auto; width:64px; height:64px; overflow:hidden; border-radius:20px; cursor:pointer; color:#07101e; background:linear-gradient(135deg,#62e4ff,#7d60ff); font-weight:800; font-size:1.15rem; box-shadow:0 10px 26px rgba(79,207,255,.2); }.profile-avatar input { display:none; }.profile-avatar img { width:100%; height:100%; object-fit:cover; }.profile-avatar i { position:absolute; right:-3px; bottom:-3px; display:grid; place-items:center; width:21px; height:21px; border-radius:50%; background:#e9faff; color:#101a2c; font-style:normal; border:2px solid var(--bg-secondary); }.profile-copy h2 { margin:.22rem 0; font-size:1.25rem; }.profile-copy p { margin:0; font-size:.8rem; }.subtle-action { margin-left:auto; display:inline-flex; align-items:center; gap:.35rem; padding:.65rem .75rem; border:0; border-radius:10px; cursor:pointer; background:transparent; color:var(--accent-primary); font:inherit; font-size:.78rem; font-weight:700; transition:background .2s ease, transform .2s ease; }.subtle-action:hover { background:var(--premium-soft); transform:translateX(2px); }.settings-section-title { display:flex; gap:.7rem; align-items:center; margin-bottom:1rem; color:var(--accent-primary); }.settings-section-title h2 { margin:.18rem 0 0; color:var(--text-primary) !important; font-size:1.22rem !important; letter-spacing:-.035em !important; text-transform:none !important; }.theme-choice.selected { border-color:var(--accent-primary); box-shadow:0 0 0 3px var(--premium-soft), 0 12px 25px rgba(0,0,0,.13); }.theme-choice.light .theme-preview { background:#edf5ff; }.theme-choice.light .theme-preview i { background:#d2e0f0; }.theme-choice.midnight .theme-preview { background:#071834; }.theme-choice.midnight .theme-preview i { background:#123a7a; }.theme-choice.neon .theme-preview { background:#1b1422; }.theme-choice.neon .theme-preview i { background:#6f286e; }
-.settings-list { overflow:hidden; padding:0 !important; border-radius:19px !important; }.setting-row { display:flex; align-items:center; gap:.9rem; padding:1.1rem 1.25rem; border-bottom:1px solid var(--premium-line); }.setting-row:last-child { border-bottom:0; }.setting-icon { display:grid; place-items:center; flex:0 0 auto; width:37px; height:37px; border-radius:11px; color:var(--accent-primary); background:var(--premium-soft); }.calendar-glyph { font-size:1.45rem; line-height:1; }.setting-copy { min-width:0; }.setting-copy strong { display:block; font-size:.9rem; }.setting-copy span { display:block; margin-top:.2rem; color:var(--text-muted); font-size:.72rem; }.segmented button.active { color:#06121b; background:#70e5ff; box-shadow:0 3px 10px rgba(91,220,255,.2); }
+.settings-profile { display:flex; align-items:center; gap:1.15rem; padding:1.25rem !important; margin-bottom:2.3rem; border-radius:21px !important; }.profile-avatar { position:relative; display:grid; place-items:center; flex:0 0 auto; width:64px; height:64px; overflow:hidden; border-radius:20px; cursor:pointer; color:#07101e; background:linear-gradient(135deg,#62e4ff,#7d60ff); font-weight:800; font-size:1.15rem; box-shadow:0 10px 26px rgba(79,207,255,.2); }.profile-avatar input { display:none; }.profile-avatar img { width:100%; height:100%; object-fit:cover; }.profile-avatar i { position:absolute; right:-3px; bottom:-3px; display:grid; place-items:center; width:21px; height:21px; border-radius:50%; background:#e9faff; color:#101a2c; font-style:normal; border:2px solid var(--bg-secondary); }.profile-copy h2 { margin:.22rem 0; font-size:1.25rem; }.profile-copy p { margin:0; font-size:.8rem; }.subtle-action { margin-left:auto; display:inline-flex; align-items:center; gap:.35rem; padding:.65rem .75rem; border:0; border-radius:10px; cursor:pointer; background:transparent; color:var(--accent-primary); font:inherit; font-size:.78rem; font-weight:700; transition:background .2s ease, transform .2s ease; }.subtle-action:hover { background:var(--premium-soft); transform:translateX(2px); }.settings-section-title { display:flex; gap:.7rem; align-items:center; margin-bottom:1rem; color:var(--accent-primary); }.settings-section-title h2 { margin:.18rem 0 0; color:var(--text-primary) !important; font-size:1.22rem !important; letter-spacing:-.035em !important; text-transform:none !important; }
+.settings-list { overflow:hidden; padding:0 !important; border-radius:19px !important; }.setting-row { display:flex; align-items:center; gap:.9rem; padding:1.1rem 1.25rem; border-bottom:1px solid var(--premium-line); }.setting-row:last-child { border-bottom:0; }.setting-icon { display:grid; place-items:center; flex:0 0 auto; width:37px; height:37px; border-radius:11px; color:var(--accent-primary); background:var(--premium-soft); }.calendar-glyph { font-size:1.45rem; line-height:1; }.setting-copy { min-width:0; }.setting-copy strong { display:block; font-size:.9rem; }.setting-copy span { display:block; margin-top:.2rem; color:var(--text-muted); font-size:.72rem; }
 [data-density="compact"] .setting-row { padding:.72rem 1.25rem; }
 @media(max-width:720px) { .settings-hero { align-items:flex-start; flex-direction:column; }.settings-profile { align-items:flex-start; flex-wrap:wrap; }.subtle-action { width:100%; justify-content:center; margin-left:0; }.setting-row { align-items:flex-start; flex-wrap:wrap; }.setting-copy { flex:1; } }
 
 /* Visual language changes per appearance preset — beyond palette alone. */
-.sidebar, .card, .premium-modal, .progress-panel, .workout-card, .calendar-day-row, .ai-panel { box-shadow: var(--theme-shadow); }
-[data-theme="ocean"] .sidebar, [data-theme="ocean"] .card, [data-theme="ocean"] .premium-modal, [data-theme="ocean"] .workout-card, [data-theme="ocean"] .calendar-day-row { border-radius:var(--theme-radius) !important; backdrop-filter:blur(28px) saturate(145%); }
+.card, .premium-modal, .ai-panel { box-shadow: var(--theme-shadow); }
+[data-theme="ocean"] .card, [data-theme="ocean"] .premium-modal { border-radius:var(--theme-radius) !important; backdrop-filter:blur(28px) saturate(145%); }
 [data-theme="ocean"] body::before { width:75vw; background:rgba(40,220,225,.18); } [data-theme="ocean"] body::after { background:rgba(41,117,227,.18); }
-[data-theme="forest"] body::before { background:rgba(163,223,105,.13); filter:blur(125px); } [data-theme="forest"] body::after { background:rgba(49,166,106,.15); } [data-theme="forest"] .sidebar, [data-theme="forest"] .card, [data-theme="forest"] .workout-card { border-radius:var(--theme-radius) !important; }
-[data-theme="sunset"] body::before { background:rgba(255,159,89,.2); } [data-theme="sunset"] body::after { background:rgba(238,75,128,.19); } [data-theme="sunset"] .sidebar, [data-theme="sunset"] .card, [data-theme="sunset"] .premium-modal, [data-theme="sunset"] .workout-card { border-radius:var(--theme-radius) !important; } [data-theme="sunset"] .btn-primary, [data-theme="sunset"] .session-cta { letter-spacing:.015em; }
-[data-theme="paper"] body { background-image:linear-gradient(rgba(120,95,71,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(120,95,71,.04) 1px,transparent 1px); background-size:24px 24px; } [data-theme="paper"] body::before, [data-theme="paper"] body::after { display:none; } [data-theme="paper"] .card, [data-theme="paper"] .premium-modal, [data-theme="paper"] .workout-card, [data-theme="paper"] .calendar-day-row { border-radius:var(--theme-radius) !important; box-shadow:var(--theme-shadow); } [data-theme="paper"] .btn-primary, [data-theme="paper"] .session-cta { border-radius:4px; } [data-theme="paper"] h1, [data-theme="paper"] h2, [data-theme="paper"] h3 { letter-spacing:-.04em; }
-[data-theme="neon"] body::before { background:rgba(227,70,239,.16); } [data-theme="neon"] body::after { background:rgba(6,182,212,.12); } [data-theme="neon"] .sidebar, [data-theme="neon"] .card, [data-theme="neon"] .workout-card { box-shadow:0 0 0 1px rgba(229,76,241,.09),0 18px 55px rgba(0,0,0,.4); }
-[data-theme="midnight"] .sidebar, [data-theme="midnight"] .card, [data-theme="midnight"] .workout-card { backdrop-filter:blur(24px) saturate(130%); } [data-theme="light"] .sidebar, [data-theme="light"] .card, [data-theme="light"] .workout-card { box-shadow:0 16px 35px rgba(43,76,113,.1); }
-.theme-choice.ocean .theme-preview { background:#063243; }.theme-choice.ocean .theme-preview i { background:#0e6378; }.theme-choice.ocean .theme-preview i:first-child { background:#4ce4e7; }.theme-choice.forest .theme-preview { background:#112b19; }.theme-choice.forest .theme-preview i { background:#376a42; }.theme-choice.forest .theme-preview i:first-child { background:#b9e875; }.theme-choice.sunset .theme-preview { background:#3a1a2a; }.theme-choice.sunset .theme-preview i { background:#914653; }.theme-choice.sunset .theme-preview i:first-child { background:#ffbc67; }.theme-choice.paper .theme-preview { background:#fbf5ec; }.theme-choice.paper .theme-preview i { background:#d7c9b9; }.theme-choice.paper .theme-preview i:first-child { background:#aa5546; }
+[data-theme="forest"] body::before { background:rgba(163,223,105,.13); filter:blur(125px); } [data-theme="forest"] body::after { background:rgba(49,166,106,.15); } [data-theme="forest"] .card { border-radius:var(--theme-radius) !important; }
+[data-theme="sunset"] body::before { background:rgba(255,159,89,.2); } [data-theme="sunset"] body::after { background:rgba(238,75,128,.19); } [data-theme="sunset"] .card, [data-theme="sunset"] .premium-modal { border-radius:var(--theme-radius) !important; } [data-theme="sunset"] .btn-primary { letter-spacing:.015em; }
+[data-theme="paper"] body { background-image:linear-gradient(rgba(120,95,71,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(120,95,71,.04) 1px,transparent 1px); background-size:24px 24px; } [data-theme="paper"] body::before, [data-theme="paper"] body::after { display:none; } [data-theme="paper"] .card, [data-theme="paper"] .premium-modal { border-radius:var(--theme-radius) !important; box-shadow:var(--theme-shadow); } [data-theme="paper"] .btn-primary { border-radius:4px; } [data-theme="paper"] h1, [data-theme="paper"] h2, [data-theme="paper"] h3 { letter-spacing:-.04em; }
+[data-theme="neon"] body::before { background:rgba(227,70,239,.16); } [data-theme="neon"] body::after { background:rgba(6,182,212,.12); } [data-theme="neon"] .card { box-shadow:0 0 0 1px rgba(229,76,241,.09),0 18px 55px rgba(0,0,0,.4); }
+[data-theme="midnight"] .card { backdrop-filter:blur(24px) saturate(130%); } [data-theme="light"] .card { box-shadow:0 16px 35px rgba(43,76,113,.1); }
 
-/* Silent, visual first-run product guide */.tour-progress span.active { background:var(--accent-primary); }.tour-visual.purple { background:linear-gradient(135deg,#b393ff,#6b64ff); }.tour-visual.orange { background:linear-gradient(135deg,#ffd16a,#fb8b67); }.tour-orbit.one { width:145px; height:76px; transform:rotate(-25deg); }.tour-orbit.two { width:125px; height:62px; transform:rotate(54deg); }.onboarding-card .eyebrow { justify-content:center; margin-bottom:.6rem; }
+/* Silent, visual first-run product guide */
 .hide-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -1397,12 +1324,12 @@ button, .btn, .btn-icon { -webkit-tap-highlight-color: transparent; }
   .modern-navbar {
     padding: 0 0.85rem;
   }
-  .modern-nav-item, .nav-item {
+  .modern-nav-item {
     padding: 0.42rem 0.52rem;
     font-size: 0.8rem;
     gap: 0.28rem;
   }
-  .modern-nav-brand, .sidebar-header {
+  .modern-nav-brand {
     margin-inline-end: 0.65rem;
   }
   .live-workout-title-truncate {
@@ -1619,13 +1546,6 @@ button, .btn, .btn-icon { -webkit-tap-highlight-color: transparent; }
     flex-shrink: 0;
   }
 
-  .mobile-top-streak.compact-streak {
-    padding: 0 0.35rem;
-    font-size: 0.7rem;
-    height: 30px;
-    min-height: 30px;
-  }
-
   .mobile-top-avatar {
     width: 36px !important;
     height: 36px !important;
@@ -1691,7 +1611,7 @@ button, .btn, .btn-icon { -webkit-tap-highlight-color: transparent; }
     margin-inline-end: auto !important;
   }
 
-  .modern-nav-wrapper, .sidebar-wrapper {
+  .modern-nav-wrapper {
     position: fixed;
     bottom: 0;
     left: 0;
@@ -1703,7 +1623,7 @@ button, .btn, .btn-icon { -webkit-tap-highlight-color: transparent; }
     pointer-events: none;
   }
 
-  .modern-navbar, .sidebar {
+  .modern-navbar {
     pointer-events: auto;
     width: 100%;
     max-width: 480px;
@@ -1723,18 +1643,18 @@ button, .btn, .btn-icon { -webkit-tap-highlight-color: transparent; }
     justify-content: center;
   }
 
-  .modern-nav-brand, .sidebar-header, .modern-nav-actions {
+  .modern-nav-brand, .modern-nav-actions {
     display: none;
   }
 
-  .modern-nav-links, .sidebar-nav {
+  .modern-nav-links {
     flex-direction: row;
     justify-content: space-around;
     width: 100%;
     gap: 0.2rem;
   }
 
-  .modern-nav-item, .nav-item {
+  .modern-nav-item {
     appearance: none;
     -webkit-appearance: none;
     font: inherit;
@@ -1775,7 +1695,7 @@ button, .btn, .btn-icon { -webkit-tap-highlight-color: transparent; }
     position: relative;
   }
 
-  .modern-nav-item .nav-icon, .nav-item svg {
+  .modern-nav-item .nav-icon {
     width: 20px;
     height: 20px;
     transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s ease;
@@ -1861,10 +1781,9 @@ button, .btn, .btn-icon { -webkit-tap-highlight-color: transparent; }
   }
 
   /* Guarantees tap comfort for controls that are not part of a custom compact UI. */
-  button:not(.smart-chip-btn):not(.mobile-top-btn):not(.modern-nav-item):not(.btn-icon):not(.theme-popover-close-btn):not(.mobile-set-aux-btn),
   a.more-sheet-item,
-  .more-sheet-footer-btn,
-  .more-sheet-close-btn {
+.more-sheet-footer-btn,
+.more-sheet-close-btn {
     min-height: 44px;
   }
 
@@ -2026,12 +1945,6 @@ button, .btn, .btn-icon { -webkit-tap-highlight-color: transparent; }
   }
 
   /* ---- Active Session HUD & Controls Mobile Touch Ergonomics ---- */
-
-  .sticky-hud-btn.finish {
-    padding: 0 0.85rem !important;
-    font-size: 0.82rem !important;
-    font-weight: 800 !important;
-  }
 }
 
 /* Hide floating elements when any modal or dialog is open */
@@ -2074,10 +1987,6 @@ body:has(.modal-card) .ai-fab {
 }
 
 /* Login View */
-
-.password-group .input {
-  padding-right: 2.5rem;
-}
 
 /* Mobile Calendar Adjustments */
 
@@ -2156,9 +2065,6 @@ body:has(.modal-card) .ai-fab {
   /* AI analyze button: full width below textarea */
 
   /* Logged meals list: compact */
-  .logged-meals-list .card {
-    padding: 0.85rem !important;
-  }
 }
 
 /* ---- 3. HISTORY VIEW ---- */
@@ -2166,12 +2072,6 @@ body:has(.modal-card) .ai-fab {
   /* History header: stack */
 
   /* Stats cards: 2x2 grid (more comfortable than 1-col) */
-  .history-stats-grid .card {
-    padding: 0.9rem !important;
-  }
-  .history-stats-grid .card > div:last-child > div:first-child {
-    font-size: 1.45rem !important;
-  }
 
   /* Filter + search: stacked */
 
@@ -2281,8 +2181,7 @@ body:has(.modal-card) .ai-fab {
 @media (max-width: 640px) {
   /* All page h1 titles: responsive size */
   .page-surface h1,
-  .page-surface > div:first-child h1,
-  .page-header h1 {
+.page-surface > div:first-child h1 {
     font-size: clamp(1.8rem, 8vw, 2.4rem) !important;
   }
 
@@ -2372,8 +2271,7 @@ body:has(.modal-card) .ai-fab {
   }
 
   /* Nav items: slightly larger labels for legibility */
-  .modern-nav-item .nav-short-label,
-  .nav-item span {
+  .modern-nav-item .nav-short-label {
     font-size: 0.65rem !important;
   }
 }
@@ -2493,17 +2391,6 @@ html.warm-night-filter {
   cursor: default;
 }
 
-.quick-stepper-btn.positive {
-  color: #38bdf8;
-  border-color: rgba(56, 189, 248, 0.3);
-  background: rgba(56, 189, 248, 0.08);
-}
-
-.quick-stepper-btn.positive:hover:not(:disabled) {
-  background: rgba(56, 189, 248, 0.18);
-  border-color: rgba(56, 189, 248, 0.45);
-}
-
 .quick-stepper-btn.warm {
   color: #fbbf24;
   border-color: rgba(251, 191, 36, 0.3);
@@ -2524,26 +2411,6 @@ html.warm-night-filter {
 
 /* 1. Focus Dimming for Finished Sets & Active Next-Set Glow */
 
-.set-row.is-completed-set {
-  opacity: 0.52;
-  background-color: rgba(16, 185, 129, 0.035) !important;
-  filter: saturate(0.85);
-}
-
-.set-row.is-completed-set input {
-  opacity: 0.8;
-  color: var(--text-muted) !important;
-  background-color: rgba(0, 0, 0, 0.15) !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
-}
-
-.set-row.is-current-active-set {
-  position: relative;
-  background: linear-gradient(90deg, rgba(56, 189, 248, 0.09), rgba(56, 189, 248, 0.02)) !important;
-  box-shadow: inset 0 0 0 1.5px rgba(56, 189, 248, 0.65), 0 4px 18px rgba(56, 189, 248, 0.14) !important;
-  border-radius: 12px;
-}
-
 @keyframes beaconPulse {
   0%, 100% {
     transform: scale(1);
@@ -2562,20 +2429,6 @@ html.warm-night-filter {
 /* 3. Celebration Modal Overlay & Confetti Wrap */
 
 /* ==========================================================================
-   Spacious Exercise Cards & Generous Padding (Prevent Text Clumping)
-   ========================================================================== */
-
-/* Set Rows: Generous Padding & Comfortable Line-Height */
-
-/* Ghost Reference Pill: Comfortable Spacing */
-
-/* Smart Stepper Bar: Ample breathing space */
-
-/* Collapsed Exercise Card: Generous Padding */
-
-/* Zen Mode Subtle Circular Rest Timer */
-
-/* ==========================================================================
    Comprehensive Mobile Experience & Native Feel Optimizations
    ========================================================================== */
 
@@ -2591,7 +2444,7 @@ html.warm-night-filter {
   -webkit-tap-highlight-color: transparent;
 }
 
-button, a, input, select, textarea, .btn, .smart-chip-btn, .theme-popover-item, .nav-item, .modern-nav-item {
+button, a, input, select, textarea, .btn, .theme-popover-item, .modern-nav-item {
   touch-action: manipulation;
 }
 
@@ -2599,7 +2452,7 @@ button, a, input, select, textarea, .btn, .smart-chip-btn, .theme-popover-item, 
    `body` is intentionally dropped from this list: it is `overflow: hidden` and
    cannot scroll, so `overscroll-behavior-y: contain` there was meaningless.
    `.content-area` keeps exactly the policy declared with it above. */
-.content-area, .page-surface, .session-detail-page, .forma-page-frame, .zen-page-container {
+.content-area, .page-surface, .forma-page-frame, .zen-page-container {
   overscroll-behavior-y: contain;
   overscroll-behavior-x: none;
   overflow-x: clip;
@@ -2619,7 +2472,7 @@ button, a, input, select, textarea, .btn, .smart-chip-btn, .theme-popover-item, 
   /* Expand the invisible touch target without changing visual layout */
 
   /* Native touch press feel on cards */
-  .card:active, .workout-card:active, .exercise-session-card:active {
+  .card:active {
     transform: scale(0.992);
     transition: transform 0.1s ease;
   }
@@ -2639,32 +2492,7 @@ button, a, input, select, textarea, .btn, .smart-chip-btn, .theme-popover-item, 
    No `touch-action` is needed here: `.content-area` no longer gates panning,
    so a sideways finger pans this rail instead of dragging the page. */
 
-.exercise-nav-pill.active {
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(16, 185, 129, 0.2));
-  border-color: #38bdf8;
-  color: #f8fafc;
-  font-weight: 700;
-  box-shadow: 0 0 14px rgba(56, 189, 248, 0.25);
-}
-
-.exercise-nav-pill.completed {
-  border-color: rgba(16, 185, 129, 0.4);
-  color: #10b981;
-}
-
-.exercise-nav-pill.active .pill-badge {
-  background: rgba(56, 189, 248, 0.25);
-  color: #38bdf8;
-}
-
 /* 2. View Mode Toggle Pill */
-
-.view-mode-btn.active {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  font-weight: 700;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-}
 
 /* 3. High-Contrast Active Set Beacon and Row Highlight */
 .is-current-active-set {
@@ -2691,12 +2519,6 @@ button, a, input, select, textarea, .btn, .smart-chip-btn, .theme-popover-item, 
 
 /* 6. Focused Navigation Bottom Bar */
 
-.focused-nav-btn.primary {
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(16, 185, 129, 0.25));
-  border-color: #38bdf8;
-  color: #38bdf8;
-}
-
 /* ==========================================================================
    PRINT STYLES FOR ATHLETE REPORT PDF EXPORT
    ========================================================================== */
@@ -2713,8 +2535,7 @@ button, a, input, select, textarea, .btn, .smart-chip-btn, .theme-popover-item, 
     visibility: visible !important;
   }
 
-  .report-no-print,
-  .navbar {
+  .report-no-print {
     display: none !important;
   }
 
@@ -2786,16 +2607,6 @@ button, a, input, select, textarea, .btn, .smart-chip-btn, .theme-popover-item, 
 }
 
 /* Zen Focus Mode Exercise Pills Navigation Bar */
-.zen-ex-pill.active {
-  background: rgba(56, 189, 248, 0.18);
-  border-color: #38bdf8;
-  color: #38bdf8;
-  box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
-  font-weight: 700;
-}
-.zen-ex-pill.done {
-  border-color: rgba(16, 185, 129, 0.4);
-}
 
 /* Mobile Responsive Calendar / Schedule View */
 
@@ -3143,10 +2954,6 @@ button, a, input, select, textarea, .btn, .smart-chip-btn, .theme-popover-item, 
   gap: 0.25rem;
 }
 
-.calendar-workout-card .card-stat-divider {
-  color: var(--text-muted);
-}
-
 .calendar-workout-card .card-go-btn {
   display: flex;
   align-items: center;
@@ -3328,66 +3135,6 @@ button, a, input, select, textarea, .btn, .smart-chip-btn, .theme-popover-item, 
 }
 
 /* ==========================================================================
-   ACTIVE WORKOUT LOGGER HEADER & GYM TOOLS ARCHITECTURE
-   ========================================================================== */
-
-.session-status-badge.completed {
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 0.45rem !important;
-  background: rgba(16, 185, 129, 0.15) !important;
-  color: #10b981 !important;
-  border: 1px solid rgba(16, 185, 129, 0.3) !important;
-  padding: 0.5rem 0.9rem !important;
-  border-radius: 12px !important;
-  font-size: 0.85rem !important;
-  font-weight: 700 !important;
-  white-space: nowrap !important;
-}
-
-/* Gym Tools Bottom Sheet Drawer */
-
-.gym-tool-tile.danger {
-  background: rgba(239, 68, 68, 0.06);
-  border-color: rgba(239, 68, 68, 0.2);
-}
-
-.gym-tool-tile.danger:hover {
-  background: rgba(239, 68, 68, 0.12);
-  border-color: rgba(239, 68, 68, 0.4);
-}
-
-.gym-tool-tile-icon.warmup {
-  background: rgba(249, 115, 22, 0.15);
-  color: #f97316;
-}
-
-.gym-tool-tile-icon.prs {
-  background: rgba(245, 158, 11, 0.15);
-  color: #f59e0b;
-}
-
-.gym-tool-tile-icon.share {
-  background: rgba(168, 85, 247, 0.15);
-  color: #a855f7;
-}
-
-.gym-tool-tile-icon.delete {
-  background: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
-}
-
-.gym-tool-tile.danger .gym-tool-tile-info h4 {
-  color: #f87171;
-}
-
-.gym-tool-status-pill.active {
-  background: rgba(234, 179, 8, 0.25);
-  color: #facc15;
-  border: 1px solid rgba(234, 179, 8, 0.4);
-}
-
-/* ==========================================================================
    MODERN GYM & HEALTHY LIFESTYLE DESIGN SYSTEM
    ========================================================================== */
 :root {
@@ -3403,63 +3150,9 @@ button, a, input, select, textarea, .btn, .smart-chip-btn, .theme-popover-item, 
 
 /* 1. Live Athletic Workout HUD */
 
-.gym-hud-icon.timer {
-  background: rgba(56, 189, 248, 0.14);
-  color: #38bdf8;
-  border: 1px solid rgba(56, 189, 248, 0.3);
-}
-
-.gym-hud-icon.volume {
-  background: rgba(198, 244, 50, 0.14);
-  color: #c6f432;
-  border: 1px solid rgba(198, 244, 50, 0.3);
-}
-
-.gym-hud-icon.sets {
-  background: rgba(16, 185, 129, 0.14);
-  color: #10b981;
-  border: 1px solid rgba(16, 185, 129, 0.3);
-}
-
-.gym-hud-icon.calories {
-  background: rgba(249, 115, 22, 0.14);
-  color: #f97316;
-  border: 1px solid rgba(249, 115, 22, 0.3);
-}
-
 /* 2. Athlete Daily Readiness & Health Vitality Card */
 
-.prime-muscle-pill.ready {
-  background: rgba(16, 185, 129, 0.1);
-  border-color: rgba(16, 185, 129, 0.25);
-  color: #34d399;
-}
-
 /* 3. Athletic Nutrition Big-Three Macro Triad */
-
-.macro-triad-card.protein {
-  border-inline-start: 3px solid #38bdf8;
-}
-
-.macro-triad-card.carbs {
-  border-inline-start: 3px solid #f59e0b;
-}
-
-.macro-triad-card.fats {
-  border-inline-start: 3px solid #ec4899;
-}
-
-.macro-triad-bar-fill.protein {
-  background: linear-gradient(90deg, #0284c7, #38bdf8);
-}
-
-.macro-triad-bar-fill.carbs {
-  background: linear-gradient(90deg, #d97706, #fbbf24);
-}
-
-.macro-triad-bar-fill.fats {
-  background: linear-gradient(90deg, #db2777, #f472b6);
-}
 
 /* 4. Gym Lifestyle Nutrition Advice Card */
 .gym-lifestyle-advice-grid {
@@ -3495,60 +3188,6 @@ button, a, input, select, textarea, .btn, .smart-chip-btn, .theme-popover-item, 
   flex-shrink: 0;
   font-size: 1rem;
 }
-
-/* ==========================================================================
-   Sticky Quick Action HUD (Athletic Floating Glass Bar)
-   ========================================================================== */
-
-.sticky-hud-stat-item.timer .sticky-hud-val {
-  color: #38bdf8;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
-}
-
-.sticky-hud-stat-item.sets .sticky-hud-val {
-  color: #f8fafc;
-  font-variant-numeric: tabular-nums;
-}
-
-.sticky-hud-btn.water {
-  background: rgba(6, 182, 212, 0.14);
-  border: 1px solid rgba(6, 182, 212, 0.32);
-  color: #38bdf8;
-  padding: 0 0.65rem;
-}
-
-.sticky-hud-btn.water:hover {
-  background: rgba(6, 182, 212, 0.24);
-}
-
-.sticky-hud-btn.tools {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: var(--text-secondary);
-  width: 38px;
-  padding: 0;
-}
-
-.sticky-hud-btn.tools:hover {
-  background: rgba(255, 255, 255, 0.14);
-  color: var(--text-primary);
-}
-
-.sticky-hud-btn.finish {
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: #ffffff;
-  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
-  padding: 0 0.85rem;
-}
-
-.sticky-hud-btn.finish:hover {
-  background: linear-gradient(135deg, #059669, #047857);
-}
-
-/* Ghost values placeholder styling in set inputs */
-
-/* Autofill previous sets button styling */
 
 /* ---- DAY TAB BAR & HISTORY SECTIONS (Plan Screen) ---- */
 .calendar-day-tab-bar {
@@ -3771,30 +3410,6 @@ button, a, input, select, textarea, .btn, .smart-chip-btn, .theme-popover-item, 
   gap: 0.2rem;
 }
 
-.history-telemetry-stat .stat-label {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-.history-telemetry-stat .stat-value {
-  font-size: 1.05rem;
-  font-weight: 800;
-  line-height: 1.2;
-}
-
-.history-telemetry-stat .stat-value small {
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  margin-inline-start: 0.2rem;
-}
-
 /* Exercise preview chips */
 .history-card-pills-row {
   display: flex;
@@ -3820,13 +3435,6 @@ button, a, input, select, textarea, .btn, .smart-chip-btn, .theme-popover-item, 
   background: rgba(255, 255, 255, 0.08);
   color: var(--text-primary);
   border-color: rgba(255, 255, 255, 0.14);
-}
-
-.history-exercise-chip .chip-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #10b981;
 }
 
 .history-exercise-chip .chip-name {
@@ -4088,7 +3696,7 @@ button, a, input, select, textarea, .btn, .smart-chip-btn, .theme-popover-item, 
 
 /* Adaptive Ergonomic Layout: Mobile Landscape Side Rail */
 @media (orientation: landscape) and (max-height: 540px) {
-  .modern-nav-wrapper, .sidebar-wrapper {
+  .modern-nav-wrapper {
     position: fixed !important;
     top: 0 !important;
     bottom: 0 !important;
@@ -4100,7 +3708,7 @@ button, a, input, select, textarea, .btn, .smart-chip-btn, .theme-popover-item, 
     pointer-events: none !important;
     z-index: 1000 !important;
   }
-  .modern-navbar, .sidebar {
+  .modern-navbar {
     width: 58px !important;
     height: calc(100dvh - 16px) !important;
     max-height: none !important;
@@ -4109,14 +3717,14 @@ button, a, input, select, textarea, .btn, .smart-chip-btn, .theme-popover-item, 
     padding: 0.5rem 0.2rem !important;
     border-radius: 18px !important;
   }
-  .modern-nav-links, .sidebar-nav {
+  .modern-nav-links {
     flex-direction: column !important;
     justify-content: space-around !important;
     height: 100% !important;
     width: 100% !important;
     gap: 0.4rem !important;
   }
-  .modern-nav-item, .nav-item {
+  .modern-nav-item {
     min-height: 44px !important;
     max-height: 52px !important;
     padding: 0.2rem !important;

@@ -304,18 +304,15 @@
   .today-dashboard-stack { gap: 1rem; }
 
   .today-active-surface,
-  .today-sessions-sidebar,
-  .today-recovery-section .card,
-  .today-fuel-column .card,
-  .today-hydration-column .card {
+.today-sessions-sidebar,
+.today-fuel-column .card,
+.today-hydration-column .card {
     border-color: var(--border-highlight) !important;
     box-shadow: 0 12px 28px color-mix(in srgb, var(--bg-primary) 25%, transparent) !important;
   }
 
   .today-primary-row > *,
-  .today-empty-actions > *,
-  .forma-page-actions > *,
-  .calendar-header-buttons-row > button {
+.forma-page-actions > * {
     min-height: var(--mobile-touch-size);
   }
 
@@ -330,11 +327,10 @@
   .calendar-page .calendar-day-tab-bar::-webkit-scrollbar { display: none; }
 
   .calendar-page .calendar-workout-card,
-  .routines-page .routine-card,
-  .nutrition-page .meal-card,
-  .nutrition-page .logged-meal-card,
-  .performance-page > section,
-  .settings-page .settings-list {
+.routines-page .routine-card,
+.nutrition-page .meal-card,
+.performance-page > section,
+.settings-page .settings-list {
     box-shadow: 0 10px 24px color-mix(in srgb, var(--bg-primary) 20%, transparent) !important;
   }
 
@@ -345,11 +341,6 @@
 
   .session-detail-container {
     padding-block-end: calc(max(var(--hud-bottom-offset), 9rem) + 1rem) !important;
-  }
-
-  .session-detail-container .session-header-row {
-    inset-block-start: var(--shell-safe-top);
-    backdrop-filter: blur(18px);
   }
 
   .gym-floor-current-set-card {

@@ -262,7 +262,7 @@ export const DEFAULT_NUTRITION_GOALS: NutritionGoals = {
 const MAX_TEXT_LENGTH = 500;
 
 // ============================================================================
-// VALIDATION FUNCTIONS (Already existed, kept for reference)
+// VALIDATION FUNCTIONS
 // ============================================================================
 
 function assertId(value: unknown, entity: string): asserts value is string {
@@ -297,7 +297,7 @@ function assertValidGoals(goals: NutritionGoals) {
 }
 
 // ============================================================================
-// BUSINESS LOGIC FUNCTIONS (Already existed, kept for reference)
+// BUSINESS LOGIC FUNCTIONS
 // ============================================================================
 
 export type AppData = {
@@ -567,7 +567,6 @@ async function migrateLegacyDataIfNeeded(uid: string) {
   if (docSnap.exists()) {
     const data = docSnap.data();
     if (!data._migratedToSubcollections) {
-      console.debug('Migrating legacy monolithic data to sub-collections...');
       const batch = writeBatch(db);
       
       const settings = normalizeSettings(data.settings);
@@ -599,7 +598,6 @@ async function migrateLegacyDataIfNeeded(uid: string) {
       }
       
       await batch.commit();
-      console.debug('Migration complete.');
     }
   }
 }

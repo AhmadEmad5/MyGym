@@ -65,27 +65,6 @@ export function cloneProgramDraft(draft: ProgramDraft): ProgramDraft {
   };
 }
 
-export function draftToPredefinedRoutine(draft: ProgramDraft): PredefinedRoutine {
-  return {
-    id: draft.id,
-    name: draft.name,
-    category: draft.category,
-    description: draft.description,
-    daysRequired: draft.daysRequired,
-    difficulty: draft.difficulty,
-    difficultyScore: draft.difficultyScore,
-    estTime: draft.estTime,
-    primaryMuscles: draft.primaryMuscles,
-    accentColor: draft.accentColor,
-    badge: draft.badge,
-    sessions: draft.sessions.map(session => ({
-      title: session.title,
-      type: session.type,
-      exercises: session.exercises
-    }))
-  };
-}
-
 export function createBlankSet(unit: 'kg' | 'lb' = 'kg'): SetRecord {
   return {
     id: createEntityId('set'),
@@ -127,24 +106,4 @@ export function programStats(draft: ProgramDraft) {
     }
   }
   return { sessions, exercises, sets, workingSets };
-}
-
-export function findExerciseIndex(items: SessionExercise[], id: string) {
-  return items.findIndex(item => item.id === id);
-}
-
-export function replaceExercise(
-  exercises: SessionExercise[],
-  id: string,
-  updater: (exercise: SessionExercise) => SessionExercise
-): SessionExercise[] {
-  return exercises.map(exercise => (exercise.id === id ? updater(exercise) : exercise));
-}
-
-export function replaceSet(
-  sets: SetRecord[],
-  id: string,
-  updater: (set: SetRecord) => SetRecord
-): SetRecord[] {
-  return sets.map(set => (set.id === id ? updater(set) : set));
 }

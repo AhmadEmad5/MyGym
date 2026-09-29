@@ -637,8 +637,7 @@
   }
 
   .today-active-column,
-  .today-sessions-sidebar,
-  .today-queue-column {
+.today-sessions-sidebar {
     display: flex;
     flex-direction: column;
     min-width: 0;
@@ -684,11 +683,8 @@
   }
 
   .today-surface-topline,
-  .today-active-heading,
-  .today-primary-row,
-  .today-note-heading,
-  .today-water-actions,
-  .today-note-link {
+.today-active-heading,
+.today-primary-row {
     display: flex;
     align-items: center;
   }
@@ -1101,8 +1097,7 @@
   }
 
   .today-fuel-column,
-  .today-hydration-column,
-  .today-insight-column {
+.today-hydration-column {
     display: flex;
     flex-direction: column;
     min-width: 0;
@@ -1110,8 +1105,7 @@
   }
 
   .today-fuel-column > *,
-  .today-hydration-column > *,
-  .today-insight-column > * {
+.today-hydration-column > * {
     flex: 1;
   }
 
@@ -1285,19 +1279,6 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 5.5rem), 1fr));
     gap: 0.4rem;
-  }
-
-  /* ==========================================================================
-     Weekly activity chart
-     ========================================================================== */
-
-  /* ==========================================================================
-     Body weight
-     ========================================================================== */
-
-  .today-bodyweight-form .today-widget-error {
-    flex: 1 1 100%;
-    margin-block-start: 0.15rem;
   }
 
   /* ==========================================================================

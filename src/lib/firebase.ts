@@ -42,7 +42,6 @@ try {
   const existingApps = getApps();
   
   if (existingApps.length > 0) {
-    console.log('Firebase already initialized, reusing existing instance.');
     appInstance = existingApps[0];
     authInstance = getAuth(appInstance);
     try {
@@ -60,7 +59,6 @@ try {
       console.warn('Functions initialization failed:', fnErr);
     }
   } else if (validateFirebaseConfig()) {
-    console.log('Initializing Firebase...');
     appInstance = initializeApp({
       apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
       authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -73,19 +71,7 @@ try {
     // Initialize Auth with proper error handling
     try {
       authInstance = getAuth(appInstance);
-      console.log('Firebase Authentication initialized successfully.');
-      
-      // Add auth state listener for better UX
-      if (authInstance) {
-        authInstance.onAuthStateChanged((user) => {
-          if (user) {
-            console.log('User signed in:', user.email || user.uid);
-          } else {
-            console.log('No signed-in user or sign-in was canceled.');
-          }
-        });
-      }
-      
+
       // Initialize Firestore with persistent cache
       try {
         dbInstance = initializeFirestore(appInstance, {

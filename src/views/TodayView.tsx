@@ -339,7 +339,6 @@ export function TodayView() {
             session={heroSession}
             isCompletedToday={isDayCompleted}
             onQuickWorkout={openQuickWorkout}
-            streakDays={streakDays}
           />
           <MobileFloorVitals
             waterAmount={daily.waterMl}

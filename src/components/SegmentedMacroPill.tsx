@@ -10,8 +10,6 @@ interface SegmentedMacroPillProps {
   targetCarbs: number;
   fats: number;
   targetFats: number;
-  totalCalories?: number;
-  targetCalories?: number;
   compact?: boolean;
 }
 
