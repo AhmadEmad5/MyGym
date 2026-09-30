@@ -332,7 +332,10 @@
   scroll-padding-block: 0.75rem;
 }
 
-@media (max-width: 639px) {
+/* 640px, the documented --bp-md and the width every other mobile block in the
+   app uses. The old 639px left a one-pixel dead band where the dialog kept its
+   desktop sheet geometry. */
+@media (max-width: 640px) {
   .ui-modal-panel {
     max-block-size: min(90dvh, calc(var(--modal-vv-h, 100dvh) - 1rem));
     margin-block-end: var(--modal-vv-bottom, 0px);

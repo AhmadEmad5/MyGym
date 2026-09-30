@@ -180,14 +180,79 @@
   .routines-page .routines-title-row { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.35rem; }
   .routines-page .routines-hero-desc { margin: 0; color: var(--text-secondary); }
   .routines-page .routines-header-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; }
-  .routines-page .routines-muscle-map-btn { display: inline-flex; align-items: center; gap: 0.45rem; background: rgba(70, 217, 255, 0.08); border: 1px solid rgba(70, 217, 255, 0.25); color: #46d9ff; padding: 0.65rem 1.15rem; border-radius: 999px; font: inherit; font-size: 0.85rem; font-weight: 700; cursor: pointer; }
+  .routines-page .routines-muscle-map-btn { display: inline-flex; align-items: center; gap: 0.45rem; background: var(--color-info-soft); border: 1px solid var(--color-info-line); color: var(--color-info-ink); padding: 0.65rem 1.15rem; border-radius: 999px; font: inherit; font-size: 0.85rem; font-weight: 700; cursor: pointer; }
   .routines-page .routines-ai-btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.65rem 1.25rem; border-radius: 999px; font: inherit; font-weight: 700; background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%); border: none; color: #fff; box-shadow: 0 4px 18px rgba(168, 85, 247, 0.35); cursor: pointer; }
   .routines-page .routine-program-deck { display: flex; flex-direction: column; gap: 1.35rem; padding-bottom: 2rem; }
   .routines-page .routine-program-section-title { margin: 0 0 0.75rem; color: var(--text-muted); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
-  .routines-page .routine-program-list-item { display: flex; min-width: 0; }
+  /* Radius matches `.routine-ledger-card` so the hover/focus ring traces the
+     card edge instead of floating a hair outside it. */
+  .routines-page .routine-program-list-item { display: flex; min-width: 0; border-radius: 0.8rem; transition: transform var(--motion-fast) var(--ease-standard), box-shadow var(--motion-fast) var(--ease-standard); }
   .routines-page .routine-program-list-item > * { display: flex; flex: 1 1 auto; min-width: 0; }
   .routines-page .routine-flip { display: flex; min-width: 0; }
   .routines-page .routine-flip-inner { display: block; flex: 1 1 auto; }
+
+  /* ==========================================================================
+     Programme cards: ONE hover / focus treatment.
+
+     Every programme card is a `.routine-program-list-item` (the grid cell)
+     wrapping either a `.routine-flip` or a static `.routine-ledger-card`. The
+     transform lives on that grid item, not on the card: `.routine-flip` owns
+     `perspective` for its own children, so a transform on the card would
+     flatten the 3D flip. Depth, glow and border therefore compose out of the
+     theme tokens - `--shadow-card-hover` already carries each theme's own
+     accent ring plus glow, and `.routine-ledger-card:hover` supplies the
+     per-routine accent border shift.
+     ========================================================================== */
+  .routines-page .routine-program-list-item:hover,
+  .routines-page .routine-program-list-item:focus-within {
+    transform: translateY(var(--routine-card-lift, -2px));
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  /* Keyboard parity: :focus-within must be at least as loud as :hover, or a
+     keyboard user has no card-level indicator at all - the individual buttons
+     keep their own ring, but nothing marks the card they live in. The halo is
+     listed after the shadow so the theme's 1px card ring cannot mask it, and
+     the border takes the focus token so focus is distinguishable from hover. */
+  .routines-page .routine-program-list-item:focus-within {
+    box-shadow: var(--shadow-card-hover), 0 0 0 var(--focus-ring-width) var(--focus-ring-halo);
+  }
+
+  .routines-page .routine-program-list-item:focus-within .routine-ledger-card {
+    border-color: var(--border-focus);
+  }
+
+  /* Compact density tightens the deck; the lift follows it so a dense grid
+     never reads as a wall of floating cards. */
+  [data-density='compact'] .routines-page .routine-program-list-item {
+    --routine-card-lift: -1px;
+  }
+
+  /* `.routine-flip` is a div carrying an onClick, so the global element
+     selector for buttons/links never reaches it and a tap waited out the
+     double-tap timeout. `manipulation` still allows the vertical pan of the
+     app scroller, it only drops double-tap-to-zoom. */
+  .routines-page .routine-flip {
+    touch-action: manipulation;
+  }
+
+  /* Explicit ring for the controls inside a programme card, matching the
+     design-tokens ring recipe rather than relying on the UA/`:focus-visible`
+     outline, so the treatment is identical on all of them. */
+  .routine-ledger-action:focus-visible,
+  .routine-flip-toggle:focus-visible,
+  .routine-icon-btn:focus-visible,
+  .routine-ghost-btn:focus-visible,
+  .routine-add-exercise:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 var(--focus-ring-width) var(--focus-ring-halo), 0 0 0 1px var(--focus-ring-color);
+  }
+
+  /* The exercise row is the editor's counterpart of a programme card and needs
+     the same keyboard signal. */
+  .routines-page .routine-exercise-row:focus-within {
+    border-color: var(--border-focus);
+  }
 
   .routine-ledger-card {
     position: relative;
@@ -667,8 +732,13 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .routine-ledger-card, .routine-exercise-row, .day-nutrition-bar > span, .day-macro-bar > span { transition: none; }
+    .routine-ledger-card, .routine-exercise-row, .routine-program-list-item, .day-nutrition-bar > span, .day-macro-bar > span { transition: none; }
     .routine-ledger-card:hover { transform: none; }
+    /* Both the transform AND the transition have to be listed: the global
+       `transition-duration: 0.01ms` guard in index.css stops the animation but
+       not the end state, so the lift would still jump the card. */
+    .routine-program-list-item:hover,
+    .routine-program-list-item:focus-within { transform: none; }
     /* The [data-flipped] and :hover/:focus-within selectors above are compound and
        so outrank a bare .routine-flip-inner. Without listing them here the 3D
        rotateY(180deg) still played for a user who asked for reduced motion. */
@@ -678,6 +748,12 @@
     .routine-flip:hover .routine-flip-inner,
     .routine-flip:focus-within .routine-flip-inner { transform: none; transition: none; }
   }
+
+  /* The app's own motion gate needs its own copy: a media query adds no
+     specificity, so these cannot be folded into the block above. */
+  [data-motion='reduced'] .routine-program-list-item { transition: none; }
+  [data-motion='reduced'] .routine-program-list-item:hover,
+  [data-motion='reduced'] .routine-program-list-item:focus-within { transform: none; }
 
   [data-motion='reduced'] .routine-flip-inner,
   [data-motion='reduced'] .routine-flip-inner[data-flipped='true'],

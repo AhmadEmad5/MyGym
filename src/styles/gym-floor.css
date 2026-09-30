@@ -45,19 +45,19 @@ button, input {
   transform: scale(0.92);
   background: rgba(56, 189, 248, 0.25);
   border-color: rgba(56, 189, 248, 0.5);
-  color: #38bdf8;
+  color: var(--accent-cyan);
 }
 
 .gym-floor-thumb-stepper.stepper-cyan {
   background: rgba(56, 189, 248, 0.15);
   border-color: rgba(56, 189, 248, 0.35);
-  color: #38bdf8;
+  color: var(--accent-cyan);
 }
 
 .gym-floor-thumb-stepper.stepper-green {
   background: rgba(16, 185, 129, 0.15);
   border-color: rgba(16, 185, 129, 0.35);
-  color: #10b981;
+  color: var(--accent-emerald);
 }
 
 .gym-floor-check-circle {
@@ -78,7 +78,7 @@ button, input {
 }
 
 .gym-floor-check-circle.completed {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, var(--accent-emerald) 0%, color-mix(in srgb, var(--accent-emerald) 72%, rgb(0 0 0)) 100%);
   color: #ffffff;
   box-shadow: 0 0 20px rgba(16, 185, 129, 0.55);
   border: none;
@@ -442,7 +442,7 @@ button, input {
   padding: 0.75rem 1rem;
   border: 0;
   border-radius: 16px;
-  background: linear-gradient(135deg, var(--accent-emerald) 0%, #059669 100%);
+  background: linear-gradient(135deg, var(--accent-emerald) 0%, color-mix(in srgb, var(--accent-emerald) 72%, rgb(0 0 0)) 100%);
   color: #ffffff;
   font: inherit;
   font-size: 1rem;
@@ -452,7 +452,7 @@ button, input {
 }
 
 .mobile-hero-cta[data-variant='review'] {
-  background: linear-gradient(135deg, var(--accent-cyan) 0%, #0284c7 100%);
+  background: linear-gradient(135deg, var(--accent-cyan) 0%, color-mix(in srgb, var(--accent-cyan) 72%, rgb(0 0 0)) 100%);
   box-shadow: 0 8px 24px rgba(56, 189, 248, 0.35);
 }
 

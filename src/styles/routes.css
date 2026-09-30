@@ -2,11 +2,15 @@
   .zen-page-container,
   .page-surface {
     position: relative;
-    width: min(1240px, 100%);
+    width: min(var(--space-page-max), 100%);
     margin: 0 auto;
     padding-block-end: 3rem;
     scroll-margin-block: var(--shell-scroll-offset, 1.5rem);
-    overflow-x: hidden;
+    /* `clip`, never `hidden`: `overflow-x: hidden` computes the untouched block
+       axis to `auto`, which silently turns every page wrapper into a second
+       scroll container competing with `.content-area`. Matches the root policy
+       documented in index.css. */
+    overflow-x: clip;
   }
 
   .zen-page-container::before {
@@ -158,7 +162,7 @@
   }
 
   .settings-page {
-    max-width: 1240px;
+    max-width: var(--space-page-max);
   }
 
   .settings-page .settings-hero {

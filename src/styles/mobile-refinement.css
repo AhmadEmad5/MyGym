@@ -3,7 +3,9 @@
 
 @media (max-width: 900px) {
   :root {
-    --mobile-page-gutter: clamp(0.875rem, 4vw, 1.25rem);
+    /* 4/8dp gutter from the canonical spacing scale. The old clamp(0.875rem,
+       4vw, 1.25rem) resolved to 14-20px, which is on neither step. */
+    --mobile-page-gutter: clamp(var(--space-sm), 4vw, var(--space-md));
     --mobile-touch-size: 44px;
     --shell-scroll-offset: 0px;
 
@@ -45,6 +47,16 @@
   .app-layout.has-live-bar .content-area {
     padding-block-start: calc(var(--shell-livebar-inset) + 0.5rem) !important;
     padding-block-end: calc(max(var(--hud-bottom-offset), 148px) + 0.75rem) !important;
+    /* Padding reserves the band so the LAST row can be scrolled clear of the
+       chrome; scroll-padding is what a `scrollIntoView()` / focus restore
+       aligns against, and it was left at the no-live-bar values above. Without
+       it a focused row in a long session lands under the floating HUD at the
+       top and under the dock/HUD band at the bottom. Both are derived from the
+       same tokens the padding uses, so they cannot drift. */
+    scroll-padding-block-start: calc(
+      1rem + (var(--shell-livebar-inset) - var(--shell-topbar-inset))
+    );
+    scroll-padding-block-end: calc(max(var(--hud-bottom-offset), 148px) + 1rem);
   }
 
   .mobile-top-bar {
@@ -513,7 +525,7 @@
 }
 
 @media (max-width: 380px) {
-  :root { --mobile-page-gutter: 0.8rem; }
+  :root { --mobile-page-gutter: var(--space-sm); }
 
   .app-layout .content-area {
     padding-inline: var(--mobile-page-gutter);
@@ -537,6 +549,13 @@
 
   .gym-floor-current-set-card { padding: 0.8rem !important; }
   .gym-floor-thumb-stepper { min-width: 52px; min-height: 52px; }
+}
+
+/* The token-based gutter clamps to --space-md above ~400px, which is correct for
+   a phone but tight for a 700-900px tablet and a landscape phone. Step up to
+   the next scale value there; still mobile-first, still on the 4/8dp rhythm. */
+@media (min-width: 641px) and (max-width: 900px) {
+  :root { --mobile-page-gutter: var(--space-lg); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -717,6 +736,14 @@
   }
 
   .more-sheet-close-btn {
+    width: var(--mobile-touch-size);
+    height: var(--mobile-touch-size);
+    color: var(--text-secondary);
+  }
+
+  /* The theme palette's own close affordance was still the 22px desktop size on
+     a phone - the only sub-44px tap target left in the shell chrome. */
+  .theme-popover-close-btn {
     width: var(--mobile-touch-size);
     height: var(--mobile-touch-size);
     color: var(--text-secondary);

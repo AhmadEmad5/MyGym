@@ -33,6 +33,18 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* `.btn-icon` is 0.5rem of padding around a 20px glyph, i.e. ~36x36px - under
+   the 44px floor everywhere. The dense desktop pill stays dense; on a coarse
+   pointer or a phone the target grows to the same floor as every other
+   control. Unlayered, so this outranks the layered declaration in index.css
+   without `!important`. */
+@media (pointer: coarse), (max-width: 640px) {
+  .btn-icon {
+    min-inline-size: var(--space-touch-min);
+    min-block-size: var(--space-touch-min);
+  }
+}
+
 /* Primary gym-floor steps: 56px floor, forgiving under a shaky grip. */
 .gym-floor-thumb-stepper {
   min-block-size: var(--gym-floor-target);

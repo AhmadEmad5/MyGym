@@ -225,9 +225,9 @@
   .forma-page-frame {
     position: relative;
     width: 100%;
-    max-width: min(1240px, 100%);
+    max-width: min(var(--space-page-max), 100%);
     margin: 0 auto;
-    padding-block: clamp(1rem, 2vw, 2rem) 3rem;
+    padding-block: clamp(var(--space-md), 2vw, var(--space-xl)) var(--space-3xl);
     padding-inline: 0;
     scroll-margin-block: var(--shell-scroll-offset);
     overflow-x: clip;
@@ -558,7 +558,7 @@
 
     .forma-page-grid.has-northline-rail > .northline-rail-vertical {
       position: sticky;
-      inset-block-start: 1.5rem;
+      inset-block-start: var(--shell-scroll-offset);
       max-height: calc(100dvh - 3rem);
       overflow-y: auto;
     }

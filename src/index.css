@@ -417,9 +417,11 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
 }
 @media (max-width: 640px) {
   .toast-viewport {
-    left: 50%;
-    right: auto;
-    transform: translateX(-50%);
+    /* Logical centring: `left: 50%` + `translateX(-50%)` had to be re-asserted
+       per direction because `inset-inline-end` resolves to the left edge in RTL.
+       Auto inline margins centre it in both directions with no RTL rule. */
+    inset-inline: 0;
+    margin-inline: auto;
     width: calc(100vw - 1.5rem);
     max-width: 420px;
   }
@@ -896,13 +898,13 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
 .online-beacon {
   position: absolute;
   bottom: -2px;
-  right: -2px;
+  inset-inline-end: -2px;
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #10b981;
-  border: 2px solid #0b0f19;
-  box-shadow: 0 0 6px #10b981;
+  background: var(--color-success);
+  border: 2px solid var(--surface-input);
+  box-shadow: 0 0 6px var(--color-success);
 }
 
 /* Live Workout Nav Pill (Desktop & Tablet) */
@@ -976,7 +978,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
 .theme-popover-menu {
   position: fixed;
   top: calc(68px + max(4px, env(safe-area-inset-top, 0px)));
-  right: clamp(1rem, 5vw, 4rem);
+  inset-inline-end: clamp(1rem, 5vw, 4rem);
   width: 250px;
   background: rgba(13, 20, 36, 0.96);
   backdrop-filter: blur(28px) saturate(180%);
@@ -991,11 +993,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
   gap: 0.35rem;
 }
 
-[dir="rtl"] .theme-popover-menu {
-  right: auto;
-  left: clamp(1rem, 5vw, 4rem);
-}
-
+/* Anchored to the inline end so `dir="rtl"` mirrors it with no second rule. */
 .theme-popover-backdrop {
   position: fixed;
   inset: 0;
@@ -1102,9 +1100,8 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
 
 .more-sheet-panel {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  inset-block-end: 0;
+  inset-inline: 0;
   background: rgba(13, 20, 36, 0.96);
   backdrop-filter: blur(32px) saturate(190%);
   -webkit-backdrop-filter: blur(32px) saturate(190%);
@@ -1342,10 +1339,10 @@ button, .btn, .btn-icon { -webkit-tap-highlight-color: transparent; }
 
 /* Settings control center */
 .settings-hero { display:flex; align-items:flex-end; justify-content:space-between; gap:1rem; margin:.25rem 0 2rem; }.settings-hero .eyebrow { margin-bottom:.8rem; }.settings-hero h1 { margin:0; font-size:clamp(2.5rem,5vw,4rem); letter-spacing:-.065em; }.settings-hero h1 span { color:#8c7dff; }.settings-hero p { margin:.7rem 0 0; }.settings-status { display:flex; align-items:center; gap:.45rem; padding:.55rem .75rem; border:1px solid var(--premium-line); border-radius:999px; color:var(--text-secondary); font-size:.72rem; background:var(--premium-soft); }.status-pulse { width:7px; height:7px; border-radius:50%; background:#56e0a9; box-shadow:0 0 0 4px rgba(86,224,169,.12); }
-.settings-profile { display:flex; align-items:center; gap:1.15rem; padding:1.25rem !important; margin-bottom:2.3rem; border-radius:21px !important; }.profile-avatar { position:relative; display:grid; place-items:center; flex:0 0 auto; width:64px; height:64px; overflow:hidden; border-radius:20px; cursor:pointer; color:#07101e; background:linear-gradient(135deg,#62e4ff,#7d60ff); font-weight:800; font-size:1.15rem; box-shadow:0 10px 26px rgba(79,207,255,.2); }.profile-avatar input { display:none; }.profile-avatar img { width:100%; height:100%; object-fit:cover; }.profile-avatar i { position:absolute; right:-3px; bottom:-3px; display:grid; place-items:center; width:21px; height:21px; border-radius:50%; background:#e9faff; color:#101a2c; font-style:normal; border:2px solid var(--bg-secondary); }.profile-copy h2 { margin:.22rem 0; font-size:1.25rem; }.profile-copy p { margin:0; font-size:.8rem; }.subtle-action { margin-left:auto; display:inline-flex; align-items:center; gap:.35rem; padding:.65rem .75rem; border:0; border-radius:10px; cursor:pointer; background:transparent; color:var(--accent-primary); font:inherit; font-size:.78rem; font-weight:700; transition:background .2s ease, transform .2s ease; }.subtle-action:hover { background:var(--premium-soft); transform:translateX(2px); }.settings-section-title { display:flex; gap:.7rem; align-items:center; margin-bottom:1rem; color:var(--accent-primary); }.settings-section-title h2 { margin:.18rem 0 0; color:var(--text-primary) !important; font-size:1.22rem !important; letter-spacing:-.035em !important; text-transform:none !important; }
+.settings-profile { display:flex; align-items:center; gap:1.15rem; padding:1.25rem !important; margin-bottom:2.3rem; border-radius:21px !important; }.profile-avatar { position:relative; display:grid; place-items:center; flex:0 0 auto; width:64px; height:64px; overflow:hidden; border-radius:20px; cursor:pointer; color:#07101e; background:linear-gradient(135deg,#62e4ff,#7d60ff); font-weight:800; font-size:1.15rem; box-shadow:0 10px 26px rgba(79,207,255,.2); }.profile-avatar input { display:none; }.profile-avatar img { width:100%; height:100%; object-fit:cover; }.profile-avatar i { position:absolute; inset-inline-end:-3px; bottom:-3px; display:grid; place-items:center; width:21px; height:21px; border-radius:50%; background:#e9faff; color:#101a2c; font-style:normal; border:2px solid var(--bg-secondary); }.profile-copy h2 { margin:.22rem 0; font-size:1.25rem; }.profile-copy p { margin:0; font-size:.8rem; }.subtle-action { margin-inline-start:auto; display:inline-flex; align-items:center; gap:.35rem; padding:.65rem .75rem; border:0; border-radius:10px; cursor:pointer; background:transparent; color:var(--accent-primary); font:inherit; font-size:.78rem; font-weight:700; transition:background .2s ease, transform .2s ease; }.subtle-action:hover { background:var(--premium-soft); transform:translateX(2px); }.settings-section-title { display:flex; gap:.7rem; align-items:center; margin-bottom:1rem; color:var(--accent-primary); }.settings-section-title h2 { margin:.18rem 0 0; color:var(--text-primary) !important; font-size:1.22rem !important; letter-spacing:-.035em !important; text-transform:none !important; }
 .settings-list { overflow:hidden; padding:0 !important; border-radius:19px !important; }.setting-row { display:flex; align-items:center; gap:.9rem; padding:1.1rem 1.25rem; border-bottom:1px solid var(--premium-line); }.setting-row:last-child { border-bottom:0; }.setting-icon { display:grid; place-items:center; flex:0 0 auto; width:37px; height:37px; border-radius:11px; color:var(--accent-primary); background:var(--premium-soft); }.calendar-glyph { font-size:1.45rem; line-height:1; }.setting-copy { min-width:0; }.setting-copy strong { display:block; font-size:.9rem; }.setting-copy span { display:block; margin-top:.2rem; color:var(--text-muted); font-size:.72rem; }
 [data-density="compact"] .setting-row { padding:.72rem 1.25rem; }
-@media(max-width:720px) { .settings-hero { align-items:flex-start; flex-direction:column; }.settings-profile { align-items:flex-start; flex-wrap:wrap; }.subtle-action { width:100%; justify-content:center; margin-left:0; }.setting-row { align-items:flex-start; flex-wrap:wrap; }.setting-copy { flex:1; } }
+@media(max-width:720px) { .settings-hero { align-items:flex-start; flex-direction:column; }.settings-profile { align-items:flex-start; flex-wrap:wrap; }.subtle-action { width:100%; justify-content:center; margin-inline-start:0; }.setting-row { align-items:flex-start; flex-wrap:wrap; }.setting-copy { flex:1; } }
 
 /* Visual language changes per appearance preset — beyond palette alone. */
 .card, .premium-modal, .ai-panel { box-shadow: var(--theme-shadow); }
@@ -1437,13 +1434,11 @@ button, .btn, .btn-icon { -webkit-tap-highlight-color: transparent; }
   .mobile-top-bar {
     display: flex !important;
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
+    inset-block-start: 0;
+    inset-inline: 0;
     height: calc(52px + max(0px, env(safe-area-inset-top, 0px)));
     padding-top: max(0px, env(safe-area-inset-top, 0px));
-    padding-left: clamp(0.65rem, 3vw, 1rem);
-    padding-right: clamp(0.65rem, 3vw, 1rem);
+    padding-inline: clamp(0.65rem, 3vw, 1rem);
     z-index: 980;
     align-items: center;
     justify-content: space-between;
@@ -1641,18 +1636,11 @@ button, .btn, .btn-icon { -webkit-tap-highlight-color: transparent; }
   .theme-popover-menu {
     position: fixed !important;
     top: calc(54px + max(8px, env(safe-area-inset-top, 0px))) !important;
-    right: 12px !important;
-    left: 12px !important;
+    inset-inline: 12px !important;
     width: auto !important;
     max-width: 320px !important;
-    margin-inline-start: auto !important;
+    margin-inline: 0 !important;
     z-index: 1260 !important;
-  }
-
-  [dir="rtl"] .theme-popover-menu {
-    right: 12px !important;
-    left: 12px !important;
-    margin-inline-end: auto !important;
   }
 
   .modern-nav-wrapper {
@@ -1817,8 +1805,7 @@ button, .btn, .btn-icon { -webkit-tap-highlight-color: transparent; }
 
   .ai-panel {
     bottom: calc(76px + max(14px, env(safe-area-inset-bottom, 0px))) !important;
-    left: 0.75rem !important;
-    right: 0.75rem !important;
+    inset-inline: 0.75rem !important;
     width: auto !important;
     max-width: none !important;
     max-height: calc(100dvh - 100px) !important;
@@ -1887,9 +1874,7 @@ button, .btn, .btn-icon { -webkit-tap-highlight-color: transparent; }
 
   /* Make the theme popover safe on small screens */
   .theme-popover-menu {
-    left: 12px !important;
-    right: 12px !important;
-    width: auto !important;
+    inset-inline: 12px !important;
     max-width: none !important;
   }
 
@@ -2198,7 +2183,7 @@ body:has(.modal-card) .ai-fab {
   .subtle-action {
     width: 100% !important;
     justify-content: center !important;
-    margin-left: 0 !important;
+    margin-inline-start: 0 !important;
     margin-top: 0.5rem !important;
   }
 
