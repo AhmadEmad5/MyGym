@@ -192,239 +192,180 @@ export function GymFloorSetCard({
         )}
       </div>
 
-      <div className="gym-floor-inputs" style={{ display: 'grid', gap: '1rem' }}>
-        <div className="gym-floor-input-row" style={{ display: 'grid', gap: '0.75rem', alignItems: 'start' }}>
-          <div className="gym-floor-stepper-group" style={{ display: 'flex', gap: '0.5rem', flex: 1 }}>
-            <button
-              type="button"
-              className="gym-floor-thumb-stepper touch-target-comfortable stepper-cyan"
-              onClick={() => handleStep(() => onQuickWeightAdjust(-5))}
-              aria-label={isRTL ? 'إنقاص الوزن 5' : 'Decrease weight by 5'}
-              style={{
-                minWidth: '56px',
-                minHeight: '56px',
-                borderRadius: '12px',
-                border: '1px solid var(--premium-line)',
-                background: 'var(--bg-tertiary)',
-                color: 'var(--accent-cyan)',
-                fontSize: '1rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                touchAction: 'manipulation'
-              }}
-            >
-              −5
-            </button>
+      <div className="gym-floor-inputs" style={{ display: 'grid', gap: '0.5rem' }}>
+        {/* Weight row: four controls that must all fit a ~300px card.
+            A number input keeps a large intrinsic minimum, so the centre
+            column is `minmax(64px, 1fr)` and the input itself is given
+            `minWidth: 0` - without both, the input refuses to shrink, its
+            content overflows the column, and the +5 button is pushed past the
+            card edge and clipped. */}
+        <div
+          className="gym-floor-input-row"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'auto minmax(64px, 1fr) auto auto',
+            gap: '0.35rem',
+            alignItems: 'end'
+          }}
+        >
+          <button
+            type="button"
+            className="gym-floor-thumb-stepper touch-target-comfortable stepper-cyan"
+            onClick={() => handleStep(() => onQuickWeightAdjust(-5))}
+            aria-label={isRTL ? 'إنقاص الوزن 5' : 'Decrease weight by 5'}
+            style={{ minWidth: '48px', minHeight: '48px', padding: 0 }}
+          >
+            −5
+          </button>
 
-            <div className="gym-floor-input-value" style={{ flex: '2 1 160px', minWidth: 0 }}>
-              <label className="gym-floor-input-label ui-input-label" htmlFor={weightId} style={{ display: 'block' }}>
-                {isRTL ? 'الوزن' : 'Weight'}
-              </label>
-              <div className="gym-floor-input-line ui-input-box" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <input
-                  id={weightId}
-                  className="gym-floor-number-input ui-input-field"
-                  type="number"
-                  inputMode="decimal"
-                  step="0.5"
-                  value={set.weight === 0 ? '' : set.weight}
-                  placeholder="0"
-                  onFocus={setFloorInputActive}
-                  onBlur={setFloorInputActive}
-                  onChange={(event) => onUpdateSet('weight', parseFloat(event.target.value) || 0)}
-                  style={{ ...inputStyle, inlineSize: '100%', fontSize: '2.25rem', fontWeight: 900, fontFamily: 'var(--font-display)' }}
-                />
-                <button
-                  type="button"
-                  className="gym-floor-unit-toggle touch-target"
-                  onClick={() => handleStep(() => onUpdateSet('unit', set.unit === 'kg' ? 'lb' : 'kg'))}
-                  aria-label={isRTL ? `تبديل الوحدة، الحالية ${set.unit}` : `Switch unit, currently ${set.unit}`}
-                  style={{
-                    minWidth: '44px',
-                    minHeight: '44px',
-                    borderRadius: '10px',
-                    background: 'var(--surface-glass)',
-                    border: '1px solid var(--border-card)',
-                    color: 'var(--text-secondary)',
-                    fontSize: '0.85rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    touchAction: 'manipulation'
-                  }}
-                >
-                  {set.unit}
-                </button>
-              </div>
-            </div>
-
-            <div className="gym-floor-stepper-pair" style={{ display: 'flex', gap: '0.5rem', flex: 1 }}>
+          <div className="gym-floor-input-value" style={{ minWidth: 0 }}>
+            <label className="gym-floor-input-label ui-input-label" htmlFor={weightId} style={{ display: 'block' }}>
+              {isRTL ? 'الوزن' : 'Weight'}
+            </label>
+            <div className="gym-floor-input-line ui-input-box" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', minWidth: 0 }}>
+              <input
+                id={weightId}
+                className="gym-floor-number-input ui-input-field"
+                type="number"
+                inputMode="decimal"
+                step="0.5"
+                value={set.weight === 0 ? '' : set.weight}
+                placeholder="0"
+                onFocus={setFloorInputActive}
+                onBlur={setFloorInputActive}
+                onChange={(event) => onUpdateSet('weight', parseFloat(event.target.value) || 0)}
+                style={{
+                  ...inputStyle,
+                  inlineSize: '100%',
+                  minInlineSize: 0,
+                  fontSize: 'clamp(1.5rem, 7vw, 1.9rem)',
+                  fontWeight: 800,
+                  fontFamily: 'var(--font-display)',
+                  textAlign: 'center'
+                }}
+              />
               <button
                 type="button"
-                className="gym-floor-thumb-stepper touch-target-comfortable stepper-cyan"
-                onClick={() => handleStep(() => onQuickWeightAdjust(2.5))}
-                aria-label={isRTL ? 'زيادة الوزن 2.5' : 'Increase weight by 2.5'}
-                style={{
-                  minWidth: '56px',
-                  minHeight: '56px',
-                  borderRadius: '12px',
-                  border: '1px solid var(--premium-line)',
-                  background: 'var(--bg-tertiary)',
-                  color: 'var(--accent-cyan)',
-                  fontSize: '1rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  touchAction: 'manipulation'
-                }}
+                className="gym-floor-unit-toggle"
+                onClick={() => handleStep(() => onUpdateSet('unit', set.unit === 'kg' ? 'lb' : 'kg'))}
+                aria-label={isRTL ? `تبديل الوحدة، الحالية ${set.unit}` : `Switch unit, currently ${set.unit}`}
+                style={{ minWidth: '40px', minHeight: '40px', padding: '0.2rem 0.4rem', flexShrink: 0 }}
               >
-                +2.5
-              </button>
-              <button
-                type="button"
-                className="gym-floor-thumb-stepper touch-target-comfortable stepper-cyan"
-                onClick={() => handleStep(() => onQuickWeightAdjust(5))}
-                aria-label={isRTL ? 'زيادة الوزن 5' : 'Increase weight by 5'}
-                style={{
-                  minWidth: '56px',
-                  minHeight: '56px',
-                  borderRadius: '12px',
-                  border: '1px solid var(--premium-line)',
-                  background: 'var(--bg-tertiary)',
-                  color: 'var(--accent-cyan)',
-                  fontSize: '1rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  touchAction: 'manipulation'
-                }}
-              >
-                +5
+                {set.unit}
               </button>
             </div>
           </div>
 
-          {onRepeatPrevious && previousRecord && (
-            <button
-              type="button"
-              className="gym-floor-repeat-btn touch-target-comfortable"
-              onClick={() => {
-                onUpdateSet('weight', previousRecord.weight || 0);
-                onUpdateSet('repsActual', previousRecord.reps || 0);
-                onUpdateSet('unit', previousRecord.unit || 'kg');
-                pulseHaptic(GYM_FLOOR_HAPTICS.select);
-              }}
-              aria-label={isRTL ? 'تكرار الأداء السابق' : 'Repeat previous performance'}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                minHeight: '56px',
-                minWidth: '160px',
-                padding: '0 1.25rem',
-                borderRadius: '12px',
-                border: '1px solid var(--accent-amber)',
-                background: 'color-mix(in srgb, var(--accent-amber) 12%, transparent)',
-                color: 'var(--accent-amber)',
-                fontSize: '0.9rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                touchAction: 'manipulation',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <Repeat className="w-4 h-4" aria-hidden="true" />
-              <span>{isRTL ? 'تكرار الأداء' : 'Repeat Last'}</span>
-            </button>
-          )}
+          <button
+            type="button"
+            className="gym-floor-thumb-stepper touch-target-comfortable stepper-cyan"
+            onClick={() => handleStep(() => onQuickWeightAdjust(2.5))}
+            aria-label={isRTL ? 'زيادة الوزن 2.5' : 'Increase weight by 2.5'}
+            style={{ minWidth: '48px', minHeight: '48px', padding: 0 }}
+          >
+            +2.5
+          </button>
+          <button
+            type="button"
+            className="gym-floor-thumb-stepper touch-target-comfortable stepper-cyan"
+            onClick={() => handleStep(() => onQuickWeightAdjust(5))}
+            aria-label={isRTL ? 'زيادة الوزن 5' : 'Increase weight by 5'}
+            style={{ minWidth: '48px', minHeight: '48px', padding: 0 }}
+          >
+            +5
+          </button>
         </div>
 
-        <div className="gym-floor-input-row" style={{ display: 'grid', gap: '0.75rem', alignItems: 'start' }}>
-          <div className="gym-floor-stepper-group" style={{ display: 'flex', gap: '0.5rem', flex: 1 }}>
-            <button
-              type="button"
-              className="gym-floor-thumb-stepper touch-target-comfortable"
-              onClick={() => handleStep(() => onQuickRepAdjust(-1))}
-              aria-label={isRTL ? 'إنقاص التكرار' : 'Decrease reps'}
-              style={{
-                minWidth: '56px',
-                minHeight: '56px',
-                borderRadius: '12px',
-                border: '1px solid var(--premium-line)',
-                background: 'var(--bg-tertiary)',
-                color: 'var(--accent-emerald)',
-                fontSize: '1.25rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                touchAction: 'manipulation'
-              }}
-            >
-              −1
-            </button>
+        {/* Reps row: three controls, so it can give the number more room. */}
+        <div
+          className="gym-floor-input-row"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'auto minmax(64px, 1fr) auto',
+            gap: '0.35rem',
+            alignItems: 'end'
+          }}
+        >
+          <button
+            type="button"
+            className="gym-floor-thumb-stepper touch-target-comfortable"
+            onClick={() => handleStep(() => onQuickRepAdjust(-1))}
+            aria-label={isRTL ? 'إنقاص التكرار' : 'Decrease reps'}
+            style={{ minWidth: '48px', minHeight: '48px', padding: 0 }}
+          >
+            −1
+          </button>
 
-            <div className="gym-floor-input-value" style={{ flex: '2 1 160px', minWidth: 0 }}>
-              <label className="gym-floor-input-label ui-input-label" htmlFor={repsId} style={{ display: 'block' }}>
-                {isRTL ? 'التكرار' : 'Reps'}
-              </label>
-              <div className="gym-floor-input-line ui-input-box" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <input
-                  id={repsId}
-                  className="gym-floor-number-input ui-input-field"
-                  type="number"
-                  inputMode="numeric"
-                  value={set.repsActual || set.repsTarget || ''}
-                  placeholder="10"
-                  onFocus={setFloorInputActive}
-                  onBlur={setFloorInputActive}
-                  onChange={(event) => onUpdateSet('repsActual', parseInt(event.target.value) || 0)}
-                  style={{ ...inputStyle, inlineSize: '100%', fontSize: '2.25rem', fontWeight: 900, fontFamily: 'var(--font-display)' }}
-                />
-                <span className="gym-floor-input-suffix" style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-muted)', paddingInlineEnd: '0.5rem' }}>{isRTL ? 'عدة' : 'reps'}</span>
-              </div>
+          <div className="gym-floor-input-value" style={{ minWidth: 0 }}>
+            <label className="gym-floor-input-label ui-input-label" htmlFor={repsId} style={{ display: 'block' }}>
+              {isRTL ? 'التكرار' : 'Reps'}
+            </label>
+            <div className="gym-floor-input-line ui-input-box" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', minWidth: 0 }}>
+              <input
+                id={repsId}
+                className="gym-floor-number-input ui-input-field"
+                type="number"
+                inputMode="numeric"
+                value={set.repsActual || set.repsTarget || ''}
+                placeholder="10"
+                onFocus={setFloorInputActive}
+                onBlur={setFloorInputActive}
+                onChange={(event) => onUpdateSet('repsActual', parseInt(event.target.value) || 0)}
+                style={{
+                  ...inputStyle,
+                  inlineSize: '100%',
+                  minInlineSize: 0,
+                  fontSize: 'clamp(1.5rem, 7vw, 1.9rem)',
+                  fontWeight: 800,
+                  fontFamily: 'var(--font-display)',
+                  textAlign: 'center'
+                }}
+              />
+              <span className="gym-floor-input-suffix" style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', flexShrink: 0 }}>
+                {isRTL ? 'عدة' : 'reps'}
+              </span>
             </div>
-
-            <button
-              type="button"
-              className="gym-floor-thumb-stepper touch-target-comfortable stepper-green"
-              onClick={() => handleStep(() => onQuickRepAdjust(1))}
-              aria-label={isRTL ? 'زيادة التكرار' : 'Increase reps'}
-              style={{
-                minWidth: '56px',
-                minHeight: '56px',
-                borderRadius: '12px',
-                border: '1px solid var(--premium-line)',
-                background: 'var(--bg-tertiary)',
-                color: 'var(--accent-emerald)',
-                fontSize: '1.25rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                touchAction: 'manipulation'
-              }}
-            >
-              +1
-            </button>
           </div>
+
+          <button
+            type="button"
+            className="gym-floor-thumb-stepper touch-target-comfortable stepper-green"
+            onClick={() => handleStep(() => onQuickRepAdjust(1))}
+            aria-label={isRTL ? 'زيادة التكرار' : 'Increase reps'}
+            style={{ minWidth: '48px', minHeight: '48px', padding: 0 }}
+          >
+            +1
+          </button>
         </div>
+
+        {onRepeatPrevious && previousRecord && (
+          <button
+            type="button"
+            className="gym-floor-repeat-btn touch-target"
+            onClick={onRepeatPrevious}
+            aria-label={isRTL ? 'تكرار الأداء السابق' : 'Repeat previous performance'}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.45rem',
+              minHeight: '44px',
+              inlineSize: '100%',
+              padding: '0 1rem',
+              borderRadius: '12px',
+              border: '1px solid var(--color-pr-hit)',
+              background: 'color-mix(in srgb, var(--color-pr-hit) 12%, transparent)',
+              color: 'var(--color-pr-hit)',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              touchAction: 'manipulation'
+            }}
+          >
+            <Repeat className="w-4 h-4" aria-hidden="true" />
+            <span>{isRTL ? 'تكرار الأداء السابق' : 'Repeat last set'}</span>
+          </button>
+        )}
       </div>
 
       <div className="gym-floor-complete-row" style={{ display: 'flex', justifyContent: 'center', marginTop: '1.25rem' }}>
