@@ -138,15 +138,9 @@ export function InteractiveHydrationWaveCard({
               ? `مستوى الترطيب ${waterPct} بالمئة من ${waterGoal} مل.`
               : `Hydration level ${waterPct} percent of ${waterGoal} millilitres.`
           }
-          style={{
-            // today.css pins this to a fixed 6.75rem, which in a narrow bento
-            // cell left the metrics column roughly 40px and shattered the
-            // amount across four lines. A proportional floor keeps the flask
-            // readable without letting it consume the row.
-            inlineSize: 'clamp(4.25rem, 34%, 6.75rem)',
-            blockSize: 'clamp(7.5rem, 46%, 9.5rem)',
-            flexShrink: 0
-          }}
+          // Sizing is handled in today.css by a container query: the flask
+          // steps down when the widget is narrow, which a viewport media
+          // query cannot do because the constraint is the card, not the window.
         >
           <span className="today-hydration-tick" style={{ insetBlockStart: '25%' }} aria-hidden="true" />
           <span className="today-hydration-tick is-major" style={{ insetBlockStart: '50%' }} aria-hidden="true" />
@@ -191,12 +185,12 @@ export function InteractiveHydrationWaveCard({
           <p
             className="today-hydration-amount tabular-nums"
             dir="ltr"
-            style={{ display: 'flex', alignItems: 'baseline', gap: '0.3rem', margin: 0, minWidth: 0, flexWrap: 'wrap' }}
+            style={{ margin: 0, minWidth: 0 }}
           >
             <span style={{ fontWeight: 800, whiteSpace: 'nowrap', lineHeight: 1.1 }}>
               {todayWater.toLocaleString()}
-            </span>
-            <small style={{ fontSize: '0.78em', fontWeight: 600, whiteSpace: 'nowrap' }}>
+            </span>{' '}
+            <small style={{ fontSize: '0.8em', fontWeight: 600, whiteSpace: 'nowrap' }}>
               / {waterGoal.toLocaleString()} ml
             </small>
           </p>
@@ -217,7 +211,6 @@ export function InteractiveHydrationWaveCard({
             className="today-hydration-cups"
             role="group"
             aria-label={isRTL ? 'أكواب سريعة' : 'Quick add'}
-            style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0.35rem', minWidth: 0 }}
           >
             {quickCups.map((cup) => (
               <button
@@ -225,7 +218,6 @@ export function InteractiveHydrationWaveCard({
                 type="button"
                 className="forma-quick-tile is-cyan"
                 onClick={() => handleAdd(cup.amount)}
-                style={{ minWidth: 0, padding: '0.4rem 0.25rem' }}
               >
                 <span className="tabular-nums" style={{ whiteSpace: 'nowrap', fontSize: '0.78rem' }}>
                   {cup.label}

@@ -129,14 +129,10 @@ export function SegmentedMacroPill({
         )}
       </div>
 
-      <div
+<div
+        className="forma-macro-grid"
         style={{
           display: 'grid',
-          // minmax(0, 1fr), NOT 1fr. A bare `1fr` is `minmax(auto, 1fr)`, and
-          // an `auto` minimum refuses to shrink below the track's min-content
-          // width. With `nowrap` labels inside, each of the three tracks
-          // demanded its full text width and the cards overflowed into each
-          // other instead of truncating.
           gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
           gap: compact ? '0.4rem' : '0.5rem'
         }}

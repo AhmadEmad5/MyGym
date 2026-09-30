@@ -55,6 +55,7 @@ export function DailyNutritionTargetsCard({
 
   return (
     <section
+      className="nutrition-budget-card"
       style={{
         background: HERO_TINT,
         border: `1px solid ${isOver ? 'rgba(244, 63, 94, 0.4)' : 'var(--border-card)'}`,

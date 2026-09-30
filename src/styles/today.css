@@ -1464,16 +1464,13 @@
     gap: 0.4rem;
   }
 
-  @media (max-width: 400px) {
-    .today-hydration-layout {
-      grid-template-columns: minmax(0, 1fr);
-      justify-items: center;
-    }
-
-    .today-hydration-metrics {
-      inline-size: 100%;
-    }
-  }
+/* The narrow hydration layout used to be handled by
+     `@media (max-width: 400px)`. That is the wrong instrument: it fires on
+     the WINDOW width, while the thing that actually gets squeezed is the
+     CARD. In the two-up meals grid this widget can be ~165px wide inside a
+     700px+ viewport, so the query never fired and the metrics were painted
+     straight over the flask. It is now a `@container hydration` query at the
+     end of this file. */
 
   /* ==========================================================================
      Shared labels
@@ -1715,4 +1712,94 @@
   [data-motion='reduced'] .today-skeleton {
     animation: none;
   }
+}
+
+/* ==========================================================================
+   Meals: narrow-container adaptations
+   --------------------------------------------------------------------------
+   Both cards are placed by
+   `grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr))`,
+   so at some viewport widths they each receive roughly 165px. Neither card
+   can respond to that with a viewport media query, because the query would
+   fire on the WINDOW width while the constraint is on the CARD width - and
+   the same card is 340px wide on a wider screen in the same layout.
+
+   A container query fixes it: each card becomes a query container and adapts
+   to its own inline size, which is what actually changed.
+   ========================================================================== */
+
+.nutrition-budget-card {
+  container-type: inline-size;
+  container-name: budget;
+}
+
+.today-hydration-widget {
+  container-type: inline-size;
+  container-name: hydration;
+}
+
+/* ---- Macro cards: three across needs ~250px; below that, one per row. ---- */
+@container budget (max-width: 250px) {
+  .forma-macro-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  /* One macro per row, laid out horizontally: identity on the left, the
+     value on the right, the bar spanning underneath. Three full cards
+     stacked in a 165px column wastes vertical space and reads worse than a
+     single scannable list. */
+  .forma-macro-grid > button {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'name  value'
+      'bar   bar'
+      'meta  meta';
+    align-items: center;
+    column-gap: 0.5rem;
+    row-gap: 0.25rem;
+    padding: 0.5rem 0.6rem;
+  }
+
+  .forma-macro-grid > button > span:nth-of-type(1) { grid-area: name; }
+  .forma-macro-grid > button > span:nth-of-type(2) { grid-area: value; justify-self: end; }
+  .forma-macro-grid > button > span:nth-of-type(3) { grid-area: bar; }
+  .forma-macro-grid > button > span:nth-of-type(4) { grid-area: meta; }
+}
+
+/* ---- Hydration: flask above the metrics once the row cannot fit. ---- */
+@container hydration (max-width: 230px) {
+  .today-hydration-layout {
+    grid-template-columns: minmax(0, 1fr) !important;
+    justify-items: center;
+    row-gap: 0.9rem;
+  }
+
+  .today-hydration-flask {
+    inline-size: 5.25rem !important;
+    block-size: 7rem !important;
+  }
+
+  .today-hydration-metrics {
+    inline-size: 100%;
+    text-align: center;
+  }
+
+  .today-hydration-amount,
+  .today-hydration-cups {
+    justify-content: center;
+  }
+}
+
+/* Quick-add cups: three across whenever the card can hold them. The old
+   `repeat(auto-fit, minmax(min(100%, 5.5rem), 1fr))` collapsed to a single
+   stacked column inside a narrow metrics column, which is what turned three
+   small buttons into a vertical wall. */
+.today-hydration-cups {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.today-hydration-cups > button {
+  min-inline-size: 0;
+  padding-inline: 0.25rem;
 }

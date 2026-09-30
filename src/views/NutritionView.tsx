@@ -11,7 +11,7 @@ import { useData } from '../hooks/useData';
 import { useReducedMotion } from '../components/performance/useReducedMotion';
 import { MealRecord, MealType, estimateWorkoutCalories, DEFAULT_NUTRITION_GOALS } from '../lib/api';
 import { useTranslation, TranslationKey } from '../lib/i18n';
-import { Button, Badge, Hint, PageSkeleton } from '../components/ui';
+import { Button, Badge, Hint, PageSkeleton, EmptyState } from '../components/ui';
 import { TDEECalculatorModal } from '../components/TDEECalculatorModal';
 import { AIMealVisionModal, InlineNumberField, UnitToggle, FieldError, PrimaryAction, SecondaryAction, massToGrams, gramsToMass, energyToKcal, kcalToEnergy, type MassUnit, type EnergyUnit } from '../components/AIMealVisionModal';
 import { BarcodeFoodScannerModal } from '../components/BarcodeFoodScannerModal';
@@ -459,12 +459,11 @@ export function NutritionView() {
             <span aria-hidden="true" style={{ width: 40, height: 40, borderRadius: '12px', background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(6, 182, 212, 0.2))', border: '1px solid rgba(16, 185, 129, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981', flexShrink: 0 }}>
               <Wand2 size={20} />
             </span>
-            <div>
-              <h2 style={{ margin: 0, fontSize: '1.1rem' }}>{isRTL ? 'سجّل بسرعة' : 'Log it fast'}</h2>
-              <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
-                {isRTL ? 'صوّر الصحن أو امسح الباركود أو اكتب الأرقام.' : 'Snap the plate, scan the barcode, or type the numbers.'}
-              </span>
-            </div>
+            {/* No strapline here. It used to read "Snap the plate, scan the
+                barcode, or type the numbers" directly above three buttons that
+                say exactly that. The heading plus the labelled buttons carry
+                the meaning on their own. */}
+            <h2 style={{ margin: 0, fontSize: '1.1rem' }}>{isRTL ? 'سجّل بسرعة' : 'Log it fast'}</h2>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
@@ -506,53 +505,27 @@ export function NutritionView() {
           </div>
 
           {todayMeals.length === 0 ? (
-            <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'flex-start' }}>
-                <span aria-hidden="true" style={{ width: 46, height: 46, borderRadius: '14px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(16, 185, 129, 0.14)', border: '1px solid rgba(16, 185, 129, 0.32)', color: '#10b981' }}>
-                  <Camera size={22} />
-                </span>
-                <div style={{ minWidth: 0 }}>
-                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                    {isRTL ? 'ابدأ بأول وجبة' : 'Log your first meal'}
-                  </h3>
-                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                    {isRTL
-                      ? 'ثلاث طرق سريعة، كلها في ثوانٍ. اختر الأقرب لك:'
-                      : 'Three fast routes, all in seconds. Pick whichever fits the moment:'}
-                  </p>
-                </div>
-              </div>
-
-              <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
-                {([
-                  { icon: <Camera size={16} />, title: isRTL ? 'صوّر الصحن' : 'Photograph the plate', body: isRTL ? 'صوّر كل المكوّنات في إضاءة جيدة، وراجع الأرقام قبل الحفظ.' : 'Frame every component in good light, then check the numbers before saving.' },
-                  { icon: <Barcode size={16} />, title: isRTL ? 'امسح الباركود' : 'Scan the barcode', body: isRTL ? 'للأغلفة والسوبرماركت والمكمّلات — مع حفظ المنتجات المتكررة.' : 'For packs, supermarket items and supplements — repeat foods get saved for you.' },
-                  { icon: <Edit3 size={16} />, title: isRTL ? 'اكتب الأرقام' : 'Type the numbers', body: isRTL ? 'لا كاميرا؟ أدخل القيم من العبوة بوحدات ج أو أونصة.' : 'No camera? Type the label values in grams or ounces.' }
-                ]).map((step, index) => (
-                  <li key={step.title} style={{ display: 'flex', gap: '0.7rem', alignItems: 'flex-start' }}>
-                    <span aria-hidden="true" style={{ width: 30, height: 30, borderRadius: '9px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(16, 185, 129, 0.14)', color: '#10b981', fontWeight: 800, fontSize: '0.75rem' }}>
-                      {index + 1}
-                    </span>
-                    <span style={{ minWidth: 0 }}>
-                      <strong style={{ display: 'block', fontSize: '0.88rem', color: 'var(--text-primary)' }}>{step.title}</strong>
-                      <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{step.body}</span>
-                    </span>
-                  </li>
-                ))}
-              </ol>
-
-              <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+            /* The three routes were already presented, with proper
+               primary/secondary hierarchy, by the "Log it fast" card directly
+               above. This empty state used to restate them a second time as a
+               numbered list AND a third time as another row of buttons, so a
+               single empty screen carried nine representations of three
+               actions. Duplicated calls to action split focus and read as a
+               mistake. It now acknowledges the empty day and offers the single
+               flagship route; the full set stays where it belongs. */
+            <EmptyState
+              size="compact"
+              icon={<Camera size={20} />}
+              title={isRTL ? 'لا وجبات مسجّلة اليوم' : 'No meals logged yet'}
+              description={isRTL
+                ? 'استخدم الخيارات بالأعلى لإضافة أول وجبة.'
+                : 'Use the options above to add your first meal.'}
+              action={
                 <Button variant="primary" onClick={() => setIsAIMealVisionOpen(true)} leftIcon={<Camera size={16} />}>
-                  {isRTL ? 'ماسح الكاميرا' : 'Camera scanner'}
+                  {isRTL ? 'صوّر الصحن' : 'Photograph the plate'}
                 </Button>
-                <Button variant="secondary" onClick={() => setIsBarcodeScannerOpen(true)} leftIcon={<Barcode size={16} />}>
-                  {isRTL ? 'ماسح الباركود' : 'Barcode scanner'}
-                </Button>
-                <Button variant="ghost" onClick={() => { setEditingMeal(null); setIsManualMealModalOpen(true); }} leftIcon={<Edit3 size={16} />}>
-                  {isRTL ? 'إدخال يدوي' : 'Manual entry'}
-                </Button>
-              </div>
-            </div>
+              }
+            />
           ) : (
             <ul aria-labelledby="nutrition-meals-heading" style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
               <AnimatePresence initial={false}>
