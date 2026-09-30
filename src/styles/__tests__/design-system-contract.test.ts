@@ -23,12 +23,21 @@ const TOKENS_CSS = 'src/styles/design-tokens.css';
 const INDEX_CSS = 'src/index.css';
 const MAIN_TSX = 'src/main.tsx';
 
-/** Collects `--token: value` pairs from the first block opened by `selector`. */
+/**
+ * Collects `--token: value` pairs for every block opened by `selector`.
+ *
+ * It must MERGE across repeat openings, not return the first match. Several
+ * selectors open more than once in the same file - `[data-theme="midnight"]`
+ * opens at index.css L92 and again at L95 - and returning only the first made
+ * the second block's declarations permanently invisible to the counter. That
+ * is how 24 genuinely dead declarations survived a cleanup that reported
+ * zero remaining.
+ */
 function blockTokens(file: string, selector: string): Map<string, string> {
   const lines = stripComments(read(file)).split(/\r?\n/);
+  const found = new Map<string, string>();
   for (let i = 0; i < lines.length; i++) {
     if (!lines[i].trim().startsWith(selector)) continue;
-    const found = new Map<string, string>();
     let depth = 0;
     let started = false;
     for (let j = i; j < lines.length; j++) {
@@ -44,9 +53,8 @@ function blockTokens(file: string, selector: string): Map<string, string> {
       }
       if (started && depth === 0) break;
     }
-    return found;
   }
-  return new Map();
+  return found;
 }
 
 const THEMES = ['light', 'midnight', 'neon', 'ocean', 'forest', 'sunset', 'paper'] as const;
@@ -162,15 +170,30 @@ describe('design-token contract', () => {
           if (!canonical.has(t)) canonicalOnly.add(t);
         }
       }
-      // These six are declared in index.css and consumed today, so they are
-      // the migration backlog rather than dead code. The `--premium-*` family
-      // is the important one: the session HUD and the gym-floor set card both
-      // read --premium-surface / --premium-line / --premium-soft, and the
-      // canonical token file never defined them. --theme-radius is read with
-      // !important by the per-theme card rules, so it cannot simply move.
-      // Migrating these into design-tokens.css is the next contract change.
+      // These are declared in index.css and consumed today, so they are the
+      // migration backlog rather than dead code. They come from a SECOND
+      // `:root` block in index.css that the first version of this helper
+      // never read, which is why the list was once recorded as 6.
+      //
+      //   --premium-*  the session HUD and the gym-floor set card read
+      //                --premium-surface / -line / -soft.
+      //   --gym-*      the gym-floor stylesheets read --gym-cyan, --gym-flame,
+      //                --gym-emerald, --gym-purple and their -glow variants.
+      //   --theme-shadow / --gym-lime  single-value stragglers.
+      //
+      // Note that design-tokens.css does define --premium-line and
+      // --premium-soft, but only inside [data-high-contrast], so they are
+      // still homeless with respect to the normal themes.
       expect([...canonicalOnly].sort()).toEqual([
+        '--gym-cyan',
+        '--gym-cyan-glow',
+        '--gym-emerald',
+        '--gym-flame',
+        '--gym-flame-glow',
         '--gym-lime',
+        '--gym-lime-glow',
+        '--gym-purple',
+        '--premium-ink',
         '--premium-line',
         '--premium-panel',
         '--premium-soft',

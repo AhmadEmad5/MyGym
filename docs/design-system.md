@@ -198,30 +198,47 @@ ships its own toggle.
 Recorded here so workstreams do not each try to solve it, and so the migration
 is measurable.
 
-**1. `src/index.css` shadows 55 token declarations.**
-Both files declare `:root` and the same 7 themes. `design-tokens.css` wins by
-import order, so the `index.css` copies are dead. The contract test pins the
-count at 55 — it may only go down.
+**1. `src/index.css` shadowed 51 token declarations. All 51 are now removed.**
+Both files declared `:root` and the same 7 themes; `design-tokens.css` won by
+import order, so the `index.css` copies could never affect a computed value.
+They have been deleted. The contract test keeps the count at **0** and fails
+if it ever rises.
 
-**2. Six tokens still live only in `src/index.css`:**
+> The original figure recorded here was 55. The measured baseline was 51.
+> The extra 4 were a counting artefact: `index.css` opens several selectors
+> twice, and the test helper read only the first opening.
+
+**2. Fourteen tokens still live only in `src/index.css`:**
 `--premium-surface`, `--premium-panel`, `--premium-line`, `--premium-soft`,
-`--theme-shadow`, `--gym-lime`.
+`--premium-ink`, `--theme-shadow`, `--gym-lime`, `--gym-lime-glow`,
+`--gym-cyan`, `--gym-cyan-glow`, `--gym-flame`, `--gym-flame-glow`,
+`--gym-emerald`, `--gym-purple`.
 
-The `--premium-*` family is the important one: the session HUD and the
-gym-floor set card read `--premium-surface` / `--premium-line` /
-`--premium-soft`, and the canonical file never defined them. These are **live,
-consumed, and homeless** — the biggest hole in the contract. Migrating them is
-the next contract change, and it needs a rendered comparison because
-`--theme-radius` is read with `!important` by the per-theme card rules.
+These are **live, consumed, and homeless** — the biggest remaining hole in the
+contract. `--premium-*` is read by the session HUD and the gym-floor set card;
+`--gym-*` by the gym-floor stylesheets. `design-tokens.css` does define
+`--premium-line` and `--premium-soft`, but only inside
+`[data-high-contrast]`, so they remain homeless with respect to the normal
+themes. Migrating them is the next contract change and needs a rendered
+comparison.
 
 **3. Two competing radius mechanisms.** `--radius-*` (a scale, re-pointed per
 theme) and `--theme-radius` (a single per-theme value, overridden with
 `!important` in `index.css`). They cannot be merged without deciding what a
 theme's corner radius *means*.
 
-**4. Dead CSS.** `.routines-page .routine-card` — eight rules across two
-files, superseded by `.routine-ledger-card`. This is why routine-card hover
-appeared to be missing.
+**4. Density makes `--space-md` and above unsafe to adopt in new CSS.**
+`[data-density="compact"]` re-points them (`1rem` → `0.85rem`). So replacing a
+hardcoded `1rem` with `var(--space-md)` is **not** value-identical — it
+changes rendering in compact mode. Only `--space-3xs` through `--space-sm` are
+stable enough to substitute mechanically.
+
+**5. Dead CSS.** `.routines-page .routine-card` spanned **three** files, not
+two. Removed, along with 25 other selectors proven to have no consumer.
+
+> Do not trust a `.css`-only grep when hunting dead code. `livePulse` and
+> `clockColonBlink` have zero stylesheet references but are referenced from
+> inline style objects in `ModernClockWidget.tsx`.
 
 ---
 
