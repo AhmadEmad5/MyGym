@@ -732,7 +732,7 @@ Do not hallucinate numbers not visible on the screen. Output raw JSON only.`;
                         }}
                       >
                         <span aria-hidden="true">{item.icon}</span>
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <span title={t(item.nameKey)} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {t(item.nameKey)}
                         </span>
                       </button>

@@ -197,6 +197,20 @@ export function GlobalCardioBar() {
             exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -50 }}
             transition={reducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 28 }}
             onClick={handleReturnToWorkout}
+            onKeyDown={(event) => {
+              // The whole bar is tappable, so it needs a keyboard equivalent.
+              // The role stays `complementary` (not `button`) so the timer
+              // controls nested inside keep their own semantics.
+              if (event.target !== event.currentTarget) return;
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                if (activeCardio) {
+                  gymAudio.triggerSubtleHaptic([15]);
+                  navigate(`/session/${activeCardio.sessionId}`);
+                }
+              }
+            }}
+            tabIndex={0}
             style={{
               position: 'fixed',
               insetBlockStart: 'calc(0.6rem + max(0px, var(--shell-safe-top, 0px)))',
@@ -260,7 +274,10 @@ export function GlobalCardioBar() {
                     )}
                   </div>
 
-                  <h4 style={{ margin: '0.1rem 0 0', fontSize: '0.86rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <h4
+                    title={tExercise(activeCardio.exerciseName)}
+                    style={{ margin: '0.1rem 0 0', fontSize: '0.86rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                  >
                     {tExercise(activeCardio.exerciseName)}
                     <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 500, margin: '0 0.35rem' }}>
                       ({tTitle(activeCardio.sessionTitle)})
@@ -399,8 +416,9 @@ export function GlobalCardioBar() {
                 <button
                   type="button"
                   onClick={handleReturnToWorkout}
+                  className="touch-target"
                   style={{
-                    minHeight: '40px',
+                    minHeight: '44px',
                     fontSize: '0.72rem',
                     fontWeight: 700,
                     color: 'var(--accent-primary)',

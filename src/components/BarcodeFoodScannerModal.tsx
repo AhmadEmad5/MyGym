@@ -831,8 +831,7 @@ Respond ONLY with valid JSON:
                   borderRadius: '12px',
                   border: '1px solid var(--border-color)',
                   backgroundColor: 'var(--bg-tertiary)',
-                  color: 'var(--text-primary)',
-                  outline: 'none'
+                  color: 'var(--text-primary)'
                 }}
               />
             </div>
@@ -1017,7 +1016,7 @@ Respond ONLY with valid JSON:
                       onChange={event => { setEditTitle(event.target.value); if (editErrors.title) setEditErrors(prev => ({ ...prev, title: undefined })); }}
                       aria-invalid={editErrors.title ? true : undefined}
                       aria-describedby={editErrors.title ? 'product-title-error' : undefined}
-                      style={{ width: '100%', boxSizing: 'border-box', fontSize: '1rem', fontWeight: 700, padding: '0.6rem 0.8rem', borderRadius: '11px', border: `1px solid ${editErrors.title ? '#f87171' : 'var(--border-color)'}`, background: 'var(--bg-secondary)', color: 'var(--text-primary)', outline: 'none' }}
+                      style={{ width: '100%', boxSizing: 'border-box', fontSize: '1rem', fontWeight: 700, padding: '0.6rem 0.8rem', borderRadius: '11px', border: `1px solid ${editErrors.title ? '#f87171' : 'var(--border-color)'}`, background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
                     />
                     {editErrors.title && <FieldError id="product-title-error" message={editErrors.title} />}
                   </div>
@@ -1031,7 +1030,7 @@ Respond ONLY with valid JSON:
                       type="text"
                       value={editBrand}
                       onChange={event => setEditBrand(event.target.value)}
-                      style={{ width: '100%', boxSizing: 'border-box', fontSize: '1rem', padding: '0.6rem 0.8rem', borderRadius: '11px', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', outline: 'none' }}
+                      style={{ width: '100%', boxSizing: 'border-box', fontSize: '1rem', padding: '0.6rem 0.8rem', borderRadius: '11px', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
                     />
                   </div>
 

@@ -18,6 +18,7 @@ import { MealRecord, MealType } from '../lib/api';
 import { useTranslation, TranslationKey } from '../lib/i18n';
 import { gymAudio } from '../lib/audio';
 import { validateClientFile, MAX_IMAGE_UPLOAD_BYTES, ALLOWED_IMAGE_MIME_TYPES } from '../lib/fileValidation';
+import { useReducedMotion } from './performance/useReducedMotion';
 
 const FOCUSABLE_SELECTOR = [
   'a[href]',
@@ -35,8 +36,8 @@ function getFocusable(container: HTMLElement | null): HTMLElement[] {
   );
 }
 
-export function useModalA11y(isOpen: boolean, onClose: () => void, options?: { initialFocus?: 'first' | 'none' }) {
-  const panelRef = useRef<HTMLDivElement>(null);
+export function useModalA11y<T extends HTMLElement = HTMLDivElement>(isOpen: boolean, onClose: () => void, options?: { initialFocus?: 'first' | 'none' }) {
+  const panelRef = useRef<T>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
   const closeRef = useRef(onClose);
   const initialFocus = options?.initialFocus ?? 'first';
@@ -135,6 +136,7 @@ export function ModalShell({
   backdropContent
 }: ModalShellProps) {
   const { isRTL } = useTranslation();
+  const reducedMotion = useReducedMotion();
   const { panelRef } = useModalA11y(isOpen, onClose, { initialFocus });
 
   if (typeof document === 'undefined') return null;
@@ -166,10 +168,10 @@ export function ModalShell({
             aria-modal="true"
             aria-labelledby={titleId}
             tabIndex={-1}
-            initial={{ opacity: 0, scale: 0.96, y: 18 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96, y: 18 }}
-            transition={{ type: 'spring', damping: 26, stiffness: 340 }}
+            initial={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: 18 }}
+            animate={reducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
+            exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: 18 }}
+            transition={reducedMotion ? { duration: 0.12 } : { type: 'spring', damping: 26, stiffness: 340 }}
             onClick={event => event.stopPropagation()}
             style={{
               width: '100%',
@@ -234,8 +236,8 @@ export function ModalShell({
                   onClick={onClose}
                   aria-label={closeLabel ?? (isRTL ? 'Ø¥ØºÙ„Ø§Ù‚' : 'Close dialog')}
                   style={{
-                    width: 38,
-                    height: 38,
+                    minWidth: 44,
+                    minHeight: 44,
                     borderRadius: '50%',
                     border: '1px solid var(--border-color)',
                     background: 'rgba(255, 255, 255, 0.06)',
@@ -247,7 +249,7 @@ export function ModalShell({
                     flexShrink: 0
                   }}
                 >
-                  <X size={17} />
+                  <X size={17} aria-hidden="true" />
                 </button>
               </div>
             </div>
@@ -375,7 +377,8 @@ export function InlineNumberField({
           border: `1px solid ${invalid ? '#f87171' : 'var(--border-color)'}`,
           borderRadius: '11px',
           padding: '0.6rem 0.35rem',
-          outline: 'none',
+          // No inline `outline: none` here: the global :focus-visible rule in
+          // index.css is the only thing giving this field a focus ring.
           boxSizing: 'border-box',
           WebkitAppearance: 'none',
           appearance: 'none'

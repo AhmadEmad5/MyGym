@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import {
@@ -10,6 +10,7 @@ import { useData } from '../hooks/useData';
 import { useTranslation } from '../lib/i18n';
 import { computeAllPersonalRecords, estimateWorkoutCalories } from '../lib/api';
 import { useReducedMotion } from './performance/useReducedMotion';
+import { useModalA11y } from './AIMealVisionModal';
 
 interface AthleteReportModalProps {
   isOpen: boolean;
@@ -121,20 +122,9 @@ export function AthleteReportModal({ isOpen, onClose }: AthleteReportModalProps)
     };
   }, [filteredMeals]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    document.body.classList.add('modal-open');
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.body.classList.remove('modal-open');
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen, onClose]);
+  // Escape, focus containment, focus restore and the scroll lock all come from
+  // the shared hook so this dialog behaves like every other FORMA modal.
+  const { panelRef } = useModalA11y(isOpen, onClose);
 
   if (!isOpen) return null;
 
@@ -169,10 +159,12 @@ export function AthleteReportModal({ isOpen, onClose }: AthleteReportModalProps)
       }}
     >
       <motion.div
+        ref={panelRef}
         className="card athlete-report-modal"
         role="dialog"
         aria-modal="true"
         aria-label={getRangeLabel()}
+        tabIndex={-1}
         initial={reducedMotion ? false : { opacity: 0, scale: 0.96, y: 15 }}
         animate={reducedMotion ? {} : { opacity: 1, scale: 1, y: 0 }}
         onClick={(e) => e.stopPropagation()}
@@ -229,7 +221,11 @@ export function AthleteReportModal({ isOpen, onClose }: AthleteReportModalProps)
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
             {/* Filter Buttons */}
-            <div style={{ display: 'flex', background: 'var(--bg-secondary)', borderRadius: '10px', padding: '0.2rem', border: '1px solid var(--border-color)' }}>
+            <div
+              role="group"
+              aria-label={isRTL ? 'نطاق التقرير' : 'Report range'}
+              style={{ display: 'flex', background: 'var(--bg-secondary)', borderRadius: '10px', padding: '0.2rem', border: '1px solid var(--border-color)' }}
+            >
               {[
                 { id: '30days', labelAr: '30 يوم', labelEn: '30D' },
                 { id: 'month', labelAr: 'الشهر', labelEn: 'Month' },
@@ -239,11 +235,13 @@ export function AthleteReportModal({ isOpen, onClose }: AthleteReportModalProps)
                 <button
                   key={f.id}
                   type="button"
+                  aria-pressed={rangeFilter === f.id}
                   onClick={() => setRangeFilter(f.id as DateRangeFilter)}
+                  className="touch-target"
                   style={{
                     padding: '0.35rem 0.65rem',
                     borderRadius: '8px',
-                    border: 'none',
+                    border: rangeFilter === f.id ? '1px solid #6366f1' : '1px solid transparent',
                     background: rangeFilter === f.id ? '#6366f1' : 'transparent',
                     color: rangeFilter === f.id ? '#fff' : 'var(--text-secondary)',
                     fontSize: '0.75rem',
@@ -261,6 +259,7 @@ export function AthleteReportModal({ isOpen, onClose }: AthleteReportModalProps)
             <button
               type="button"
               onClick={handlePrint}
+              className="touch-target"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -276,17 +275,18 @@ export function AthleteReportModal({ isOpen, onClose }: AthleteReportModalProps)
                 boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)'
               }}
             >
-              <Printer size={16} />
+              <Printer size={16} aria-hidden="true" />
               <span>{isRTL ? 'طباعة / حفظ كـ PDF' : 'Print / Export PDF'}</span>
             </button>
 
             <button
               type="button"
-              className="btn-icon btn-ghost"
+              className="btn-icon btn-ghost touch-target"
               onClick={onClose}
-              style={{ color: 'var(--text-muted)', padding: '0.4rem' }}
+              aria-label={isRTL ? 'إغلاق التقرير' : 'Close report'}
+              style={{ color: 'var(--text-muted)' }}
             >
-              <X size={20} />
+              <X size={20} aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -606,13 +606,14 @@ export function AthleteReportModal({ isOpen, onClose }: AthleteReportModalProps)
             marginTop: '1.5rem'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem', color: '#10b981' }}>
-              <ShieldCheck size={18} />
+              <ShieldCheck size={18} aria-hidden="true" />
               <strong style={{ fontSize: '0.9rem' }}>
                 {isRTL ? 'ملاحظات وتوصيات المدرب الشخصي / أخصائي التغذية' : 'Coach & Nutritionist Evaluation / Recommendations'}
               </strong>
             </div>
-            
+
             <textarea
+              aria-label={isRTL ? 'ملاحظات المدرب' : 'Coach notes'}
               value={coachNotes}
               onChange={(e) => setCoachNotes(e.target.value)}
               placeholder={isRTL ? 'اكتب هنا ملاحظاتك، إرشادات الأسابيع القادمة، أو خطة زيادة الأحمال التدريبية والتغذية...' : 'Write athlete progress feedback, progressive overload recommendations, or adjustments for upcoming weeks...'}

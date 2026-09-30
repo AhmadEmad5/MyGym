@@ -36,6 +36,7 @@ import {
 } from 'firebase/auth';
 import { notify } from '../lib/feedback';
 import { Button } from '../components/ui/Button';
+import { useModalA11y } from '../components/AIMealVisionModal';
 import { isUserAdmin } from '../lib/adminAuth';
 
 type LoginProps = {
@@ -271,6 +272,9 @@ export function LoginView({ onLogin }: LoginProps) {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const errorRef = useRef<HTMLDivElement>(null);
+  // Escape, focus containment and focus restore for the reset dialog. The hook
+  // also locks body scroll, which the sheet previously let through.
+  const { panelRef: resetPanelRef } = useModalA11y<HTMLFormElement>(resetOpen, () => setResetOpen(false));
 
   const isRTL = lang === 'ar';
   const copy = useMemo(() => COPY[lang], [lang]);
@@ -545,13 +549,33 @@ export function LoginView({ onLogin }: LoginProps) {
             <p className="forma-panel-subtitle">{mode === 'signin' ? copy.subtitleSignIn : copy.subtitleSignUp}</p>
           </div>
 
-          <div className="forma-mode-switch" role="tablist" aria-label={mode === 'signin' ? copy.eyebrowSignIn : copy.eyebrowSignUp}>
+          <div
+            className="forma-mode-switch"
+            role="tablist"
+            aria-label={mode === 'signin' ? copy.eyebrowSignIn : copy.eyebrowSignUp}
+            onKeyDown={(event) => {
+              // Roving focus, so Tab leaves the switch instead of walking both tabs.
+              const forward = isRTL ? event.key === 'ArrowLeft' : event.key === 'ArrowRight';
+              const back = isRTL ? event.key === 'ArrowRight' : event.key === 'ArrowLeft';
+              if (!forward && !back && event.key !== 'Home' && event.key !== 'End') return;
+              event.preventDefault();
+              const next: Mode =
+                event.key === 'Home' ? 'signin'
+                : event.key === 'End' ? 'signup'
+                : mode === 'signin' ? 'signup' : 'signin';
+              setMode(next);
+              window.requestAnimationFrame(() => {
+                document.getElementById(next === 'signin' ? 'forma-tab-signin' : 'forma-tab-signup')?.focus();
+              });
+            }}
+          >
             <button
               type="button"
               role="tab"
               id="forma-tab-signin"
               aria-selected={mode === 'signin'}
               aria-controls="forma-auth-form"
+              tabIndex={mode === 'signin' ? 0 : -1}
               className={mode === 'signin' ? 'is-active' : ''}
               onClick={() => setMode('signin')}
               disabled={isSubmitting}
@@ -564,6 +588,7 @@ export function LoginView({ onLogin }: LoginProps) {
               id="forma-tab-signup"
               aria-selected={mode === 'signup'}
               aria-controls="forma-auth-form"
+              tabIndex={mode === 'signup' ? 0 : -1}
               className={mode === 'signup' ? 'is-active' : ''}
               onClick={() => setMode('signup')}
               disabled={isSubmitting}
@@ -600,6 +625,8 @@ export function LoginView({ onLogin }: LoginProps) {
             className="forma-form"
             onSubmit={submit}
             noValidate
+            role="tabpanel"
+            aria-labelledby={mode === 'signin' ? 'forma-tab-signin' : 'forma-tab-signup'}
             aria-busy={isSubmitting}
           >
             {mode === 'signup' && (
@@ -784,8 +811,10 @@ export function LoginView({ onLogin }: LoginProps) {
             onClick={() => setResetOpen(false)}
           >
             <motion.form
+              ref={resetPanelRef}
               className="forma-reset-modal"
               onSubmit={sendReset}
+              tabIndex={-1}
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
@@ -794,12 +823,6 @@ export function LoginView({ onLogin }: LoginProps) {
               aria-labelledby="forma-reset-title"
               aria-describedby="forma-reset-desc"
               onClick={(event) => event.stopPropagation()}
-              onKeyDown={(event) => {
-                if (event.key === 'Escape') {
-                  event.stopPropagation();
-                  setResetOpen(false);
-                }
-              }}
             >
               <button className="forma-modal-close" type="button" aria-label={copy.close} onClick={() => setResetOpen(false)}>
                 <X size={18} aria-hidden="true" />

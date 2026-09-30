@@ -6,6 +6,8 @@ import { useData } from '../hooks/useData';
 import { useTranslation } from '../lib/i18n';
 import { subDays, isAfter } from 'date-fns';
 import { ExerciseGuideModal } from './ExerciseGuideModal';
+import { useModalA11y } from './AIMealVisionModal';
+import { useReducedMotion } from './performance/useReducedMotion';
 
 interface InteractiveMuscleMapModalProps {
   isOpen: boolean;
@@ -117,6 +119,7 @@ export function InteractiveMuscleMapModal({ isOpen, onClose, onSelectExercise }:
   const [selectedGuideExercise, setSelectedGuideExercise] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
   const [mobileTab, setMobileTab] = useState<'map' | 'exercises'>('map');
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
     const handleResize = () => {
@@ -126,18 +129,9 @@ export function InteractiveMuscleMapModal({ isOpen, onClose, onSelectExercise }:
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    document.body.classList.add('modal-open');
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.body.classList.remove('modal-open');
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen, onClose]);
+  // Escape, focus containment, focus restore and the scroll lock all come from
+  // the shared hook so this dialog behaves like every other FORMA modal.
+  const { panelRef } = useModalA11y(isOpen, onClose);
 
   // Compute sets performed per muscle group in the past 7 days
   const weeklyMuscleVolume = useMemo(() => {
@@ -205,10 +199,15 @@ export function InteractiveMuscleMapModal({ isOpen, onClose, onSelectExercise }:
         onClick={onClose}
       >
         <motion.div
-          initial={{ opacity: 0, scale: isMobile ? 1 : 0.95, y: isMobile ? '100%' : 15 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: isMobile ? 1 : 0.95, y: isMobile ? '100%' : 15 }}
-          transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+          ref={panelRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label={isRTL ? 'خريطة العضلات التفاعلية' : 'Interactive muscle map'}
+          tabIndex={-1}
+          initial={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: isMobile ? 1 : 0.95, y: isMobile ? '100%' : 15 }}
+          animate={reducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
+          exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: isMobile ? 1 : 0.95, y: isMobile ? '100%' : 15 }}
+          transition={reducedMotion ? { duration: 0.12 } : { duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
           className="modal-card"
           style={{
             width: '100%',
@@ -264,8 +263,8 @@ export function InteractiveMuscleMapModal({ isOpen, onClose, onSelectExercise }:
               </div>
             </div>
 
-            <button className="btn-icon btn-ghost" onClick={onClose} style={{ padding: '0.5rem', minWidth: '40px', minHeight: '40px' }} aria-label="Close modal">
-              <X className="w-5 h-5" />
+            <button className="btn-icon btn-ghost touch-target" onClick={onClose} style={{ color: 'var(--text-muted)' }} aria-label="Close modal">
+              <X className="w-5 h-5" aria-hidden="true" />
             </button>
           </div>
 

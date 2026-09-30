@@ -127,16 +127,16 @@ export function InstallAppPrompt() {
           </div>
 
           <button
+            type="button"
             onClick={handleDismiss}
+            className="touch-target"
             style={{
               background: 'transparent',
               border: 'none',
               color: 'var(--text-muted)',
               cursor: 'pointer',
               padding: '0.35rem',
-              borderRadius: '8px',
-              minWidth: 36,
-              minHeight: 36
+              borderRadius: '8px'
             }}
             aria-label={t('dismissWord')}
           >
@@ -147,9 +147,10 @@ export function InstallAppPrompt() {
         {!isIOS && deferredPrompt && (
           <div style={{ marginTop: '0.85rem', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
             <button
+              type="button"
               onClick={handleDismiss}
+              className="touch-target"
               style={{
-                minHeight: 40,
                 padding: '0.45rem 0.85rem',
                 borderRadius: '9px',
                 background: 'transparent',
@@ -164,9 +165,10 @@ export function InstallAppPrompt() {
             </button>
 
             <button
+              type="button"
               onClick={handleInstallClick}
+              className="touch-target"
               style={{
-                minHeight: 40,
                 padding: '0.45rem 1.15rem',
                 borderRadius: '9px',
                 background: 'linear-gradient(135deg, #43dcff, #3b82f6)',

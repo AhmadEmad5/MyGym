@@ -474,7 +474,7 @@ export function SessionDetailView() {
           title={t('sessionNotFoundTitle')}
           description={t('sessionNotFoundDesc')}
           action={
-            <Button variant="primary" size="md" leftIcon={<ArrowLeft width={16} height={16} style={{ transform: isRTL ? 'scaleX(-1)' : 'none' }} />} onClick={() => navigate('/today')}>
+              <Button variant="primary" size="md" leftIcon={<ArrowLeft width={16} height={16} aria-hidden="true" style={{ transform: isRTL ? 'scaleX(-1)' : 'none' }} />} onClick={() => navigate('/today')}>
               {t('sessionNotFoundAction')}
             </Button>
           }
@@ -521,7 +521,7 @@ export function SessionDetailView() {
               onClick={() => navigate('/today')}
               aria-label={isRTL ? 'العودة إلى اليوم' : 'Back to Today'}
             >
-              <ArrowLeft className="w-5 h-5" style={{ transform: isRTL ? 'scaleX(-1)' : 'none' }} />
+              <ArrowLeft className="w-5 h-5" aria-hidden="true" style={{ transform: isRTL ? 'scaleX(-1)' : 'none' }} />
             </button>
             <div style={{ minWidth: 0 }}>
               <h1 className="font-display-semibold text-display-h3" style={{ margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -732,10 +732,10 @@ export function SessionDetailView() {
                     {isDone ? <Check className="w-4 h-4" /> : realIdx + 1}
                   </span>
                   <span style={{ textAlign: isRTL ? 'right' : 'left', minWidth: 0 }}>
-                    <span style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <span title={tExercise(ex.name)} style={{ display: 'block', fontSize: '0.9rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {tExercise(ex.name)}
                     </span>
-                    <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                    <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                       {tMuscle(ex.targetMuscle)}
                     </span>
                   </span>
@@ -780,7 +780,7 @@ export function SessionDetailView() {
               <div style={{ minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem', flexWrap: 'wrap' }}>
                   <span className="session-muscle-badge" style={{
-                    fontSize: '0.72rem',
+                    fontSize: '0.75rem',
                     fontWeight: 800,
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em',
@@ -791,7 +791,7 @@ export function SessionDetailView() {
                   }}>
                     {tMuscle(currentExercise.targetMuscle)}
                   </span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                     {isRTL ? `تمرين ${activeExerciseIndex + 1} من ${exercises.length}` : `Exercise ${activeExerciseIndex + 1} of ${exercises.length}`}
                   </span>
                 </div>
@@ -1268,18 +1268,23 @@ function RestHudLayer({ reducedMotion, showCelebration, onDismissCelebration, on
               {isFinished ? <Check className="w-5 h-5" /> : <Dumbbell className="w-5 h-5" />}
             </div>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
                 {isFinished ? (isRTL ? 'جاهز' : 'Ready') : (isRTL ? 'وقت الراحة' : t('restTimer'))}
               </div>
               <div
                 className="session-countdown"
+                role="timer"
+                aria-label={`${Math.floor(secondsLeft / 60)} ${isRTL ? 'دقيقة' : 'minutes'} ${secondsLeft % 60} ${isRTL ? 'ثانية' : 'seconds'} ${isRTL ? 'متبقية من الراحة' : 'remaining in rest'}`}
                 style={{ fontSize: '2rem', color: isFinished ? 'var(--success)' : 'var(--accent-primary)' }}
               >
                 {formatTimer(secondsLeft)}
               </div>
-              <span className="forma-sr-only" aria-live="polite" aria-atomic="true">
+              {/* Deliberately not a live region: the readout changes every second and
+                  announcing each tick floods a screen reader. Rest completion is
+                  announced once, by the `role="alert"` celebration below. */}
+              <span className="forma-sr-only">
                 {exerciseName ? `${tExercise(exerciseName)}. ` : ''}
-                {`${Math.floor(secondsLeft / 60)} ${isRTL ? 'دقيقة' : 'minutes'} ${secondsLeft % 60} ${isRTL ? 'ثانية' : 'seconds'} ${isRTL ? 'متبقية من الراحة' : 'remaining in rest'}`}
+                {`${Math.round(fraction * 100)}% ${isRTL ? 'من الراحة' : 'of rest elapsed'}`}
               </span>
             </div>
           </div>
@@ -1326,7 +1331,7 @@ function RestHudLayer({ reducedMotion, showCelebration, onDismissCelebration, on
               <X className="w-5 h-5" aria-hidden="true" />
             </button>
           </div>
-          <span className="forma-sr-only">{`${Math.round(fraction * 100)}% ${isRTL ? 'من الراحة' : 'of rest elapsed'}`}</span>
+            <span className="forma-sr-only">{isFinished ? (isRTL ? 'انتهت الراحة' : 'Rest complete') : `${Math.round(fraction * 100)}% ${isRTL ? 'من الراحة' : 'of rest elapsed'}`}</span>
         </motion.div>
       </div>
 

@@ -233,12 +233,12 @@ export function AIAssistant() {
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                <button 
-                  className="btn-icon btn-ghost" 
+                <button
+                  className="btn-icon btn-ghost touch-target"
                   onClick={handleClearChat}
                   title={isArabic ? 'مسح المحادثة' : 'Clear Chat'}
+                  aria-label={isArabic ? 'مسح المحادثة' : 'Clear chat'}
                   style={{
-                    padding: '0.4rem',
                     borderRadius: '8px',
                     color: 'var(--text-muted)',
                     background: 'rgba(255, 255, 255, 0.04)',
@@ -246,14 +246,14 @@ export function AIAssistant() {
                     cursor: 'pointer'
                   }}
                 >
-                  <RotateCcw className="w-3.5 h-3.5" />
+                  <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
                 </button>
-                <button 
-                  className="btn-icon btn-ghost" 
+                <button
+                  className="btn-icon btn-ghost touch-target"
                   onClick={() => setIsOpen(false)}
                   title={isArabic ? 'إغلاق' : 'Close'}
+                  aria-label={isArabic ? 'إغلاق' : 'Close'}
                   style={{
-                    padding: '0.4rem',
                     borderRadius: '8px',
                     color: 'var(--text-secondary)',
                     background: 'rgba(255, 255, 255, 0.04)',
@@ -261,7 +261,7 @@ export function AIAssistant() {
                     cursor: 'pointer'
                   }}
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-4 h-4" aria-hidden="true" />
                 </button>
               </div>
             </div>
@@ -646,8 +646,7 @@ export function AIAssistant() {
                   borderRadius: '14px',
                   padding: '0.65rem 0.95rem',
                   fontSize: '0.88rem',
-                  color: 'var(--text-primary)',
-                  outline: 'none'
+                  color: 'var(--text-primary)'
                 }}
               />
               <AnimatePresence mode="wait" initial={false}>

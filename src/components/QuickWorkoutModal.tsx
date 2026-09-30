@@ -5,6 +5,8 @@ import { addDays } from 'date-fns';
 import { useTranslation } from '../lib/i18n';
 import type { WorkoutSession, SessionExercise } from '../lib/api';
 import { getExerciseTutorial } from '../lib/exerciseDatabase';
+import { useModalA11y } from './AIMealVisionModal';
+import { useReducedMotion } from './performance/useReducedMotion';
 
 interface QuickWorkoutModalProps {
   isOpen: boolean;
@@ -23,6 +25,11 @@ export function QuickWorkoutModal({
 }: QuickWorkoutModalProps) {
   const { t, isRTL } = useTranslation();
   const isFriday = new Date().getDay() === 5;
+  const reducedMotion = useReducedMotion();
+  // Escape, focus containment and focus restore all come from the shared hook so
+  // this sheet behaves like every other FORMA dialog.
+  const { panelRef } = useModalA11y(isOpen, onClose);
+  const closeLabel = isRTL ? 'إغلاق' : 'Close';
 
   const presets = [
     {
@@ -184,9 +191,14 @@ export function QuickWorkoutModal({
         onClick={onClose}
       >
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          ref={panelRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="quick-workout-title"
+          tabIndex={-1}
+          initial={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95, y: 20 }}
+          animate={reducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
+          exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95, y: 20 }}
           onClick={e => e.stopPropagation()}
           style={{
             background: 'var(--bg-secondary, #131824)',
@@ -210,17 +222,20 @@ export function QuickWorkoutModal({
             justifyContent: 'space-between'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-              <div style={{
-                padding: '0.45rem',
-                borderRadius: '10px',
-                background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(168, 85, 247, 0.2))',
-                color: '#818cf8',
-                display: 'flex'
-              }}>
+              <div
+                aria-hidden="true"
+                style={{
+                  padding: '0.45rem',
+                  borderRadius: '10px',
+                  background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(168, 85, 247, 0.2))',
+                  color: '#818cf8',
+                  display: 'flex'
+                }}
+              >
                 <Zap size={20} />
               </div>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800 }}>
+                <h3 id="quick-workout-title" style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800 }}>
                   {isRTL ? 'بدء تمرين سريع فوري' : 'Start Quick Workout'}
                 </h3>
                 <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
@@ -230,11 +245,12 @@ export function QuickWorkoutModal({
             </div>
             <button
               type="button"
-              className="btn-icon btn-ghost"
+              className="btn-icon btn-ghost touch-target"
               onClick={onClose}
+              aria-label={closeLabel}
               style={{ color: 'var(--text-muted)' }}
             >
-              <X size={20} />
+              <X size={20} aria-hidden="true" />
             </button>
           </div>
 
@@ -250,7 +266,7 @@ export function QuickWorkoutModal({
               alignItems: 'center',
               gap: '0.65rem'
             }}>
-              <span style={{ fontSize: '1.25rem' }}>🔒</span>
+              <span aria-hidden="true" style={{ fontSize: '1.25rem' }}>🔒</span>
               <div>
                 <p style={{ margin: 0, fontWeight: 700, fontSize: '0.86rem', color: '#ef4444' }}>
                   {isRTL ? 'الجمعة عطلة أسبوعية — الجيم مغلق' : 'Friday Off-Day — Gym Closed'}
@@ -302,13 +318,16 @@ export function QuickWorkoutModal({
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                    <div style={{
-                      padding: '0.6rem',
-                      borderRadius: '12px',
-                      background: `${p.color}15`,
-                      color: p.color,
-                      display: 'flex'
-                    }}>
+                    <div
+                      aria-hidden="true"
+                      style={{
+                        padding: '0.6rem',
+                        borderRadius: '12px',
+                        background: `${p.color}15`,
+                        color: p.color,
+                        display: 'flex'
+                      }}
+                    >
                       <Icon size={20} />
                     </div>
                     <div>
@@ -320,7 +339,7 @@ export function QuickWorkoutModal({
                       </div>
                     </div>
                   </div>
-                  <ChevronRight size={18} style={{ color: 'var(--text-muted)', transform: isRTL ? 'scaleX(-1)' : 'none' }} />
+                  <ChevronRight size={18} aria-hidden="true" style={{ color: 'var(--text-muted)', transform: isRTL ? 'scaleX(-1)' : 'none' }} />
                 </button>
               );
             })}
@@ -345,7 +364,7 @@ export function QuickWorkoutModal({
                 marginTop: '0.5rem'
               }}
             >
-              <Plus size={16} />
+              <Plus size={16} aria-hidden="true" />
               <span>{isRTL ? 'إنشاء تمرين حر فارغ' : 'Create Custom Empty Workout'}</span>
             </button>
           </div>

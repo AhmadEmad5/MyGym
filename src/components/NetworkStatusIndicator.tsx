@@ -113,7 +113,7 @@ export function NetworkStatusIndicator() {
               setDismissed(true);
               setBannerState('hidden');
             }}
-            className="-me-1 grid h-7 w-7 flex-shrink-0 place-items-center rounded-full text-current opacity-70 transition-opacity hover:opacity-100"
+            className="-me-1 grid h-11 w-11 flex-shrink-0 place-items-center rounded-full text-current opacity-70 transition-opacity hover:opacity-100"
             aria-label={isRTL ? 'إخفاء' : 'Dismiss'}
           >
             <X size={14} aria-hidden="true" />

@@ -170,6 +170,8 @@ export function ManualMealModal({ isOpen, onClose, onSave, initialMeal }: Manual
           <input
             id="manual-meal-title"
             type="text"
+            required
+            aria-required="true"
             value={title}
             onChange={event => {
               setTitle(event.target.value);
@@ -187,8 +189,7 @@ export function ManualMealModal({ isOpen, onClose, onSave, initialMeal }: Manual
               border: `1px solid ${titleError ? '#f87171' : 'var(--border-color)'}`,
               background: 'var(--bg-input)',
               color: 'var(--text-primary)',
-              padding: '0.7rem 0.85rem',
-              outline: 'none'
+              padding: '0.7rem 0.85rem'
             }}
           />
           {titleError && <FieldError id="manual-meal-title-error" message={titleError} />}

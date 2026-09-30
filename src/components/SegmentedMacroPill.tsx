@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from '../lib/i18n';
 import { gymAudio } from '../lib/audio';
+import { useReducedMotion } from './performance/useReducedMotion';
 
 interface SegmentedMacroPillProps {
   protein: number;
@@ -38,6 +39,7 @@ export function SegmentedMacroPill({
   compact = false
 }: SegmentedMacroPillProps) {
   const { isRTL } = useTranslation();
+  const reducedMotion = useReducedMotion();
   const [selectedMacro, setSelectedMacro] = useState<MacroKey | null>(null);
 
   const rows: { key: MacroKey; value: number; target: number }[] = [
@@ -87,7 +89,7 @@ export function SegmentedMacroPill({
               key={row.key}
               type="button"
               onClick={() => handleSelect(row.key)}
-              whileTap={{ scaleY: 0.9 }}
+              whileTap={reducedMotion ? undefined : { scaleY: 0.9 }}
               aria-label={`${isRTL ? style.labelAr : style.label}: ${Math.round(row.value)} / ${row.target} g`}
               title={`${isRTL ? style.labelAr : style.label}: ${Math.round(row.value)}g / ${row.target}g`}
               style={{
@@ -152,7 +154,7 @@ export function SegmentedMacroPill({
               key={row.key}
               type="button"
               onClick={() => handleSelect(row.key)}
-              whileTap={{ scale: 0.97 }}
+              whileTap={reducedMotion ? undefined : { scale: 0.97 }}
               aria-pressed={isSelected}
               style={{
                 padding: compact ? '0.5rem' : '0.6rem',
@@ -223,7 +225,7 @@ export function SegmentedMacroPill({
                 <motion.span
                   initial={false}
                   animate={{ width: `${Math.min(100, ratio * 100)}%` }}
-                  transition={{ type: 'spring', stiffness: 160, damping: 22 }}
+                  transition={reducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 160, damping: 22 }}
                   style={{
                     display: 'block',
                     height: '100%',

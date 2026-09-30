@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -10,6 +10,7 @@ import { useTranslation } from '../lib/i18n';
 import { ExerciseMuscleHologram } from './ExerciseMuscleHologram';
 import { InAppYouTubePlayer } from './InAppYouTubePlayer';
 import { useReducedMotion } from './performance/useReducedMotion';
+import { useModalA11y } from './AIMealVisionModal';
 
 interface ExerciseGuideModalProps {
   isOpen: boolean;
@@ -39,20 +40,9 @@ export function ExerciseGuideModal({
   const toggleSection = (id: string) =>
     setOpenSections(prev => ({ ...prev, [id]: !prev[id] }));
 
-  useEffect(() => {
-    if (!isOpen) return;
-    document.body.classList.add('modal-open');
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.body.classList.remove('modal-open');
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen, onClose]);
+  // Escape, focus containment, focus restore and the scroll lock all come from
+  // the shared hook so this dialog behaves like every other FORMA modal.
+  const { panelRef } = useModalA11y(isOpen, onClose);
 
   const tutorial = useMemo(() => {
     return getExerciseTutorial(exerciseName, targetMuscle);
@@ -92,10 +82,13 @@ export function ExerciseGuideModal({
         }}
       >
         <motion.div
+          ref={panelRef}
           className="forma-exercise-guide forma-exercise-guide-panel ui-modal-panel"
           data-modal-state="open"
           role="dialog"
           aria-modal="true"
+          aria-label={isRTL ? `دليل التمرين: ${tExercise(exerciseName)}` : `Exercise guide: ${exerciseName}`}
+          tabIndex={-1}
           initial={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95, y: 16 }}
           animate={reducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
           exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95, y: 16 }}

@@ -139,6 +139,17 @@ export function DynamicLiveWorkoutBar() {
               contain: 'layout paint'
             }}
             onClick={handleResume}
+            onKeyDown={(event) => {
+              // The bar is tappable end-to-end, so it needs a keyboard
+              // equivalent. Role stays `complementary` so the nested rest-timer
+              // and Resume controls keep their own semantics.
+              if (event.target !== event.currentTarget) return;
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                handleResume();
+              }
+            }}
+            tabIndex={0}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0 }}>
               {isRestTimerActive ? (
@@ -193,13 +204,13 @@ export function DynamicLiveWorkoutBar() {
                         {isRTL ? 'وقت الراحة' : 'Resting'}
                       </span>
                     </div>
-                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '40vw' }}>
+                    <span title={restSubLabel} style={{ fontSize: '0.68rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '40vw' }}>
                       {restSubLabel}
                     </span>
                   </>
                 ) : (
                   <>
-                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '40vw' }}>
+                    <span title={sessionLabel} style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '40vw' }}>
                       {sessionLabel}
                     </span>
                     <span className="tabular-nums" style={{ fontSize: '0.68rem', color: 'var(--accent-primary)', fontWeight: 600 }}>
@@ -216,9 +227,10 @@ export function DynamicLiveWorkoutBar() {
                   type="button"
                   onClick={(e) => handleAdjustTimer(e, 15)}
                   aria-label={isRTL ? 'إضافة 15 ثانية راحة' : 'Add 15s rest'}
+                  className="touch-target"
                   style={{
-                    minWidth: '40px',
-                    minHeight: '40px',
+                    minWidth: '44px',
+                    minHeight: '44px',
                     padding: '0 0.5rem',
                     fontSize: '0.7rem',
                     fontWeight: 700,
@@ -240,8 +252,9 @@ export function DynamicLiveWorkoutBar() {
 
               <button
                 type="button"
+                className="touch-target"
                 style={{
-                  minHeight: '40px',
+                  minHeight: '44px',
                   padding: '0.35rem 0.8rem',
                   fontSize: '0.75rem',
                   fontWeight: 800,

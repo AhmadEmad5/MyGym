@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { isSameDay, format, parse } from 'date-fns';
 import { useData } from '../hooks/useData';
+import { useReducedMotion } from '../components/performance/useReducedMotion';
 import { MealRecord, MealType, estimateWorkoutCalories, DEFAULT_NUTRITION_GOALS } from '../lib/api';
 import { useTranslation, TranslationKey } from '../lib/i18n';
 import { Button, Badge, Hint, PageSkeleton } from '../components/ui';
@@ -63,6 +64,7 @@ function withTimeFrom(iso: string, time: string) {
 export function NutritionView() {
   const { data, saveMeal, deleteMeal, logWater, resetWater } = useData();
   const { t, isRTL, formatDate } = useTranslation();
+  const reducedMotion = useReducedMotion();
 
   const [isTDEEModalOpen, setIsTDEEModalOpen] = useState(false);
   const [isAIMealVisionOpen, setIsAIMealVisionOpen] = useState(false);
@@ -570,9 +572,9 @@ export function NutritionView() {
                     <motion.li
                       key={meal.id}
                       layout
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.97 }}
+                      initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 10 }}
+                      animate={reducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+                      exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.97 }}
                       className="card"
                       style={{ padding: 0, overflow: 'hidden', position: 'relative' }}
                     >
@@ -624,7 +626,7 @@ export function NutritionView() {
                                 <span style={{ textTransform: 'capitalize' }}>{t(typeObj.labelKey)}</span>
                               </Badge>
                               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                <Clock size={12} /> {timeLabel}
+                                <Clock size={12} aria-hidden="true" /> {timeLabel}
                               </span>
                             </div>
 
@@ -639,7 +641,7 @@ export function NutritionView() {
                                   cursor: 'pointer', width: 44, height: 44, borderRadius: '10px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center'
                                 }}
                               >
-                                <Copy size={15} />
+                                <Copy size={15} aria-hidden="true" />
                               </button>
                               <button
                                 type="button"
@@ -656,7 +658,7 @@ export function NutritionView() {
                                   cursor: 'pointer', width: 44, height: 44, borderRadius: '10px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center'
                                 }}
                               >
-                                <Edit3 size={15} />
+                                <Edit3 size={15} aria-hidden="true" />
                               </button>
                               <button
                                 type="button"
@@ -804,7 +806,7 @@ export function NutritionView() {
                                   onChange={event => { setDraft(prev => ({ ...prev, time: event.target.value })); setDraftErrors(prev => ({ ...prev, time: undefined })); }}
                                   aria-invalid={draftErrors.time ? true : undefined}
                                   aria-describedby={draftErrors.time ? `draft-time-error-${meal.id}` : undefined}
-                                  style={{ width: '100%', boxSizing: 'border-box', fontSize: '1rem', minHeight: 46, padding: '0.55rem 0.7rem', borderRadius: '11px', border: `1px solid ${draftErrors.time ? '#f87171' : 'var(--border-color)'}`, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', outline: 'none' }}
+                                  style={{ width: '100%', boxSizing: 'border-box', fontSize: '1rem', minHeight: 46, padding: '0.55rem 0.7rem', borderRadius: '11px', border: `1px solid ${draftErrors.time ? '#f87171' : 'var(--border-color)'}`, background: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
                                 />
                                 {draftErrors.time && <FieldError id={`draft-time-error-${meal.id}`} message={draftErrors.time} />}
                               </div>
@@ -821,7 +823,7 @@ export function NutritionView() {
                                 onClick={() => { setEditingMeal(meal); setIsManualMealModalOpen(true); }}
                                 style={{ alignSelf: 'flex-start', background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', minHeight: 44 }}
                               >
-                                <Edit3 size={12} />
+                                <Edit3 size={12} aria-hidden="true" />
                                 {isRTL ? 'فتح المحرّر الكامل' : 'Open the full editor'}
                               </button>
                             </div>
@@ -837,7 +839,7 @@ export function NutritionView() {
                         style={{ marginTop: '0.6rem', width: '100%', background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem', minHeight: 44 }}
                       >
                         <span>{isRTL ? (isOpen ? 'إخفاء التعديل السريع' : 'تعديل سريع') : (isOpen ? 'Hide quick edit' : 'Quick edit')}</span>
-                        <ChevronDown size={13} style={{ transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                        <ChevronDown size={13} aria-hidden="true" style={{ transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
                       </button>
                       </motion.div>
                     </motion.li>

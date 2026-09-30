@@ -12,6 +12,7 @@ import { WorkoutSession, SessionExercise, Routine } from '../lib/api';
 import { useTranslation } from '../lib/i18n';
 import ReactMarkdown from 'react-markdown';
 import { useReducedMotion } from './performance/useReducedMotion';
+import { useModalA11y } from './AIMealVisionModal';
 
 interface AIWorkoutGeneratorModalProps {
   isOpen: boolean;
@@ -108,20 +109,9 @@ export function AIWorkoutGeneratorModal({ isOpen, onClose, onRoutineScheduled }:
     return () => clearInterval(timer);
   }, [isGenerating]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    document.body.classList.add('modal-open');
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.body.classList.remove('modal-open');
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen, onClose]);
+  // Escape, focus containment, focus restore and the scroll lock all come from
+  // the shared hook so this dialog behaves like every other FORMA modal.
+  const { panelRef } = useModalA11y(isOpen, onClose);
 
   if (!isOpen) return null;
 
@@ -371,11 +361,13 @@ Output strictly valid JSON with NO markdown code fences, using this schema:
       }}
     >
       <motion.div
+        ref={panelRef}
         initial={reducedMotion ? false : { opacity: 0, scale: 0.95, y: 15 }}
         animate={reducedMotion ? {} : { opacity: 1, scale: 1, y: 0 }}
         role="dialog"
         aria-modal="true"
         aria-label={isRTL ? 'صانع الجداول بالذكاء الاصطناعي' : 'AI Workout Generator'}
+        tabIndex={-1}
         className="card modal-card ai-generator-modal-card"
         style={{
           maxWidth: '750px',
@@ -420,11 +412,12 @@ Output strictly valid JSON with NO markdown code fences, using this schema:
 
           <button
             type="button"
-            className="btn-icon btn-ghost"
+            className="btn-icon btn-ghost touch-target"
             onClick={onClose}
-            style={{ padding: '0.35rem', color: 'var(--text-muted)' }}
+            aria-label={isRTL ? 'إغلاق' : 'Close'}
+            style={{ color: 'var(--text-muted)' }}
           >
-            <X size={20} />
+            <X size={20} aria-hidden="true" />
           </button>
         </div>
 
