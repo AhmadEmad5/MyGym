@@ -264,8 +264,8 @@ export function ExerciseMuscleHologram({ tutorial }: ExerciseMuscleHologramProps
             viewBox="0 0 240 420"
             role="img"
             aria-label={isRTL
-              ? `Ø®Ø±ÙŠØ·Ø© ØªØ´Ø±ÙŠØ­ Ø¹Ø¶Ù„ÙŠ ${activeView === 'front' ? 'Ø£Ù…Ø§Ù…ÙŠØ©' : 'Ø®Ù„ÙÙŠØ©'}. ${viewMuscles.map(id => `${muscleLabel(id)}: ${roleLabel(id)}`).join('ØŒ ')}.`
-              : `${activeView === 'front' ? 'Front' : 'Back'} anatomical muscle map. ${viewMuscles.map(id => `${muscleLabel(id)}: ${roleLabel(id)}`).join(', ')}.`}
+              ? `خريطة عضلية ${activeView === 'front' ? 'أمامية' : 'خلفية'}. استخدم الأزرار أدناه لقراءة تفاصيل كل عضلة.`
+              : `${activeView === 'front' ? 'Front' : 'Back'} anatomical muscle map. Use the buttons below for per-muscle detail.`}
             style={{
               width: '100%',
               height: '100%',
@@ -591,15 +591,21 @@ export function ExerciseMuscleHologram({ tutorial }: ExerciseMuscleHologramProps
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '0.35rem',
-                  minHeight: '40px',
-                  padding: '0.3rem 0.65rem',
+                  minHeight: '44px',
+                  padding: '0.35rem 0.75rem',
                   borderRadius: '999px',
                   border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--premium-line)',
                   background: isSelected ? 'var(--premium-soft)' : 'transparent',
                   color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)',
                   fontSize: '0.74rem',
                   fontWeight: isSelected ? 800 : 600,
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  touchAction: 'manipulation'
+                }}
+                onKeyDown={event => {
+                  if (event.key !== 'Enter' && event.key !== ' ') return;
+                  event.preventDefault();
+                  selectMuscle(id);
                 }}
               >
                 <span

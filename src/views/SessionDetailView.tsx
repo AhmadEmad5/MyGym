@@ -5,7 +5,7 @@ import {
   ArrowLeft, Plus, Check, Play, Pause, Trash2, X,
   CirclePlay, ChevronRight, ChevronLeft, Sparkles, Dumbbell,
   RotateCcw, Info, CheckCircle2, Bell, MoreVertical, Flag, Square,
-  SearchX, ListTodo, CalendarDays, Lightbulb
+  SearchX, ListTodo, CalendarDays, Lightbulb, Repeat
 } from 'lucide-react';
 import { WorkoutSession, SetRecord, SessionExercise } from '../lib/api';
 import { useData } from '../hooks/useData';
@@ -19,6 +19,8 @@ import { notify } from '../lib/feedback';
 import { useWakeLock } from '../hooks/useWakeLock';
 import { selectPreviousPerformance } from '../lib/selectors';
 import { GymFloorSetCard } from '../components/mobile/GymFloorSetCard';
+import { InAppYouTubePlayer } from '../components/InAppYouTubePlayer';
+import { getExerciseTutorial } from '../lib/exerciseDatabase';
 import { GYM_FLOOR_HAPTICS, pulseHaptic } from '../components/mobile/gymFloorHaptics';
 import { workoutTimer } from '../lib/workoutTimer';
 import { useReducedMotion } from '../components/performance/useReducedMotion';
@@ -213,6 +215,42 @@ export function SessionDetailView() {
     handleUpdateSession({ ...session, exercises: updatedExercises });
   }, [session, handleUpdateSession]);
 
+  /**
+   * Applies several field changes to one set in a single write. Calling
+   * `updateSet` once per field does NOT work: every call rebuilds the exercise
+   * list from the same `session` captured in this callback's closure, so each
+   * successive call would discard the previous field change.
+   */
+  const patchSet = useCallback(
+    (exerciseIdx: number, setIdx: number, patch: Partial<SetRecord>) => {
+      if (!session) return;
+      const updatedExercises = session.exercises.map((exercise, eIdx) => {
+        if (eIdx !== exerciseIdx) return exercise;
+        const updatedSets = (exercise.sets || []).map((set, sIdx) =>
+          sIdx === setIdx ? { ...set, ...patch } : set
+        );
+        return { ...exercise, sets: updatedSets };
+      });
+      handleUpdateSession({ ...session, exercises: updatedExercises });
+    },
+    [session, handleUpdateSession]
+  );
+
+  /** Copies the athlete's last logged performance onto the set being edited. */
+  const applyPreviousPerformance = useCallback(
+    (setIdx: number) => {
+      if (!previousRecord) return;
+      patchSet(activeExerciseIndex, setIdx, {
+        weight: previousRecord.weight || 0,
+        repsActual: previousRecord.reps || 0,
+        unit: previousRecord.unit || data?.settings?.weightUnit || 'kg'
+      });
+      gymAudio.triggerSubtleHaptic([20]);
+      notify(isRTL ? 'تم تكرار الأداء السابق!' : 'Previous performance loaded!', 'info');
+    },
+    [previousRecord, patchSet, activeExerciseIndex, data?.settings?.weightUnit, isRTL]
+  );
+
   const handleToggleSetComplete = useCallback((exerciseIdx: number, setIdx: number) => {
     if (!session) return;
     const currentEx = session.exercises[exerciseIdx];
@@ -393,6 +431,22 @@ export function SessionDetailView() {
     setActiveExerciseIndex(session.exercises.length);
   };
 
+  // Phase 1: the canonical key is resolved at RENDER time and the video URL is
+  // deliberately NOT persisted onto the SessionExercise. handleAddExerciseTemplate
+  // (:374-394) never sets `videoUrl`, so gating on `currentExercise.videoUrl`
+  // would mean the tutorial button does not exist for most exercises at all.
+  // Persisting it is a later phase's decision, not this one's.
+  const currentExerciseTutorial = useMemo(
+    () => (currentExercise
+      ? getExerciseTutorial(currentExercise.name, currentExercise.targetMuscle)
+      : null),
+    [currentExercise?.name, currentExercise?.targetMuscle],
+  );
+
+  const currentExerciseVideoUrl = currentExercise
+    ? currentExercise.videoUrl || currentExerciseTutorial?.videoUrl
+    : undefined;
+
   const sessionTotals = useMemo(() => {
     let total = 0;
     let done = 0;
@@ -447,6 +501,7 @@ export function SessionDetailView() {
 
       <div className="session-hud">
         <header
+          className="session-hud-header"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -462,18 +517,17 @@ export function SessionDetailView() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', minWidth: 0 }}>
             <button
               type="button"
-              className="btn-icon btn-ghost session-target session-target-ghost"
+              className="btn-icon btn-ghost session-target session-target-ghost touch-target"
               onClick={() => navigate('/today')}
-              style={{ minWidth: '48px', minHeight: '48px', borderRadius: '14px', padding: 0 }}
               aria-label={isRTL ? 'العودة إلى اليوم' : 'Back to Today'}
             >
               <ArrowLeft className="w-5 h-5" style={{ transform: isRTL ? 'scaleX(-1)' : 'none' }} />
             </button>
             <div style={{ minWidth: 0 }}>
-              <h1 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <h1 className="font-display-semibold text-display-h3" style={{ margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {tTitle(session.title)}
               </h1>
-              <p style={{ margin: 0, fontSize: '0.74rem', color: 'var(--text-secondary)' }}>
+              <p style={{ margin: '0.15rem 0 0', fontSize: '0.74rem', color: 'var(--text-secondary)' }}>
                 {formatDate(new Date(session.date), 'EEEE, d MMMM')}
                 {' · '}
                 {isRTL
@@ -490,8 +544,9 @@ export function SessionDetailView() {
               aria-valuemin={0}
               aria-valuemax={100}
               aria-label={isRTL ? 'تقدم الجلسة' : 'Session progress'}
+              className="session-progress-bar"
               style={{
-                inlineSize: '4.5rem',
+                inlineSize: '8rem',
                 blockSize: '6px',
                 borderRadius: '999px',
                 background: 'var(--bg-tertiary)',
@@ -504,8 +559,7 @@ export function SessionDetailView() {
             <div className="session-overflow-anchor" ref={overflowRef}>
               <button
                 type="button"
-                className="session-target session-target-ghost"
-                style={{ minWidth: '48px', paddingInline: '0.7rem' }}
+                className="session-target session-target-ghost touch-target"
                 aria-haspopup="menu"
                 aria-expanded={isOverflowOpen}
                 aria-label={isRTL ? 'خيارات الجلسة' : 'Session options'}
@@ -558,23 +612,26 @@ export function SessionDetailView() {
           aria-label={isRTL ? 'تصفية المجموعات العضلية' : 'Muscle Group Filter'}
           aria-describedby="session-muscle-filter-hint"
         >
-          <div className="gym-floor-ribbon hide-scrollbar">
+          <div className="gym-floor-ribbon hide-scrollbar" style={{ scrollSnapType: 'x mandatory', gap: '0.5rem' }}>
             <button
               type="button"
               onClick={() => setSelectedMuscleFilter('all')}
               aria-pressed={selectedMuscleFilter === 'all'}
+              className="muscle-filter-pill touch-target-comfortable"
               style={{
-                minHeight: '44px',
-                padding: '0.35rem 0.9rem',
-                borderRadius: '20px',
-                fontSize: '0.8rem',
+                minHeight: '48px',
+                padding: '0.5rem 1rem',
+                borderRadius: '999px',
+                fontSize: '0.85rem',
                 fontWeight: 700,
                 border: selectedMuscleFilter === 'all' ? '1px solid var(--accent-primary)' : '1px solid var(--premium-line)',
                 background: selectedMuscleFilter === 'all' ? 'color-mix(in srgb, var(--accent-primary) 18%, transparent)' : 'transparent',
                 color: selectedMuscleFilter === 'all' ? 'var(--accent-primary)' : 'var(--text-secondary)',
                 whiteSpace: 'nowrap',
                 cursor: 'pointer',
-                flexShrink: 0
+                flexShrink: 0,
+                scrollSnapAlign: 'start',
+                transition: 'all 0.2s ease'
               }}
             >
               {isRTL ? 'جميع العضلات' : 'All Muscles'} ({exercises.length})
@@ -590,18 +647,21 @@ export function SessionDetailView() {
                   const firstIdx = exercises.findIndex(e => e.targetMuscle === group.muscle);
                   if (firstIdx !== -1) setActiveExerciseIndex(firstIdx);
                 }}
+                className="muscle-filter-pill touch-target-comfortable"
                 style={{
-                  minHeight: '44px',
-                  padding: '0.35rem 0.9rem',
-                  borderRadius: '20px',
-                  fontSize: '0.8rem',
+                  minHeight: '48px',
+                  padding: '0.5rem 1rem',
+                  borderRadius: '999px',
+                  fontSize: '0.85rem',
                   fontWeight: 700,
                   border: selectedMuscleFilter === group.muscle ? '1px solid var(--accent-primary)' : '1px solid var(--premium-line)',
                   background: selectedMuscleFilter === group.muscle ? 'color-mix(in srgb, var(--accent-primary) 18%, transparent)' : 'transparent',
                   color: selectedMuscleFilter === group.muscle ? 'var(--accent-primary)' : 'var(--text-secondary)',
                   whiteSpace: 'nowrap',
                   cursor: 'pointer',
-                  flexShrink: 0
+                  flexShrink: 0,
+                  scrollSnapAlign: 'start',
+                  transition: 'all 0.2s ease'
                 }}
               >
                 {tMuscle(group.muscle)} ({group.count})
@@ -612,7 +672,7 @@ export function SessionDetailView() {
         </section>
 
         <nav style={{ marginBottom: '1rem' }} aria-label={isRTL ? 'تنتقل بين التمارين' : 'Exercise Stepper'}>
-          <div className="gym-floor-ribbon hide-scrollbar" style={{ padding: '0.25rem' }}>
+          <div className="gym-floor-ribbon hide-scrollbar" style={{ scrollSnapType: 'x mandatory', padding: '0.25rem', gap: '0.5rem' }}>
             {filteredExercises.map((ex) => {
               const realIdx = exercises.findIndex(e => e.id === ex.id);
               const isSelected = realIdx === activeExerciseIndex;
@@ -623,6 +683,7 @@ export function SessionDetailView() {
                   key={ex.id || realIdx}
                   type="button"
                   aria-current={isSelected ? 'step' : undefined}
+                  className="exercise-stepper-item touch-target-comfortable"
                   onClick={() => {
                     setActiveExerciseIndex(realIdx);
                     gymAudio.triggerSubtleHaptic([15]);
@@ -630,10 +691,10 @@ export function SessionDetailView() {
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '0.5rem',
-                    minHeight: '52px',
-                    padding: '0.5rem 0.85rem',
-                    borderRadius: '14px',
+                    gap: '0.6rem',
+                    minHeight: '56px',
+                    padding: '0.6rem 1rem',
+                    borderRadius: '16px',
                     border: isSelected
                       ? '1.5px solid var(--accent-primary)'
                       : isDone
@@ -647,31 +708,34 @@ export function SessionDetailView() {
                     color: isSelected ? 'var(--text-primary)' : isDone ? 'var(--success)' : 'var(--text-secondary)',
                     cursor: 'pointer',
                     flexShrink: 0,
+                    scrollSnapAlign: 'start',
                     transition: 'all 0.2s ease'
                   }}
                 >
                   <span
                     aria-hidden="true"
+                    className="exercise-stepper-badge"
                     style={{
-                      width: '22px',
-                      height: '22px',
+                      width: '28px',
+                      height: '28px',
                       borderRadius: '50%',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: '0.7rem',
+                      fontSize: '0.75rem',
                       fontWeight: 800,
                       background: isDone ? 'var(--success)' : isSelected ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                      color: '#04121b'
+                      color: '#04121b',
+                      flexShrink: 0
                     }}
                   >
-                    {isDone ? <Check className="w-3 h-3" /> : realIdx + 1}
+                    {isDone ? <Check className="w-4 h-4" /> : realIdx + 1}
                   </span>
-                  <span style={{ textAlign: isRTL ? 'right' : 'left' }}>
-                    <span style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                  <span style={{ textAlign: isRTL ? 'right' : 'left', minWidth: 0 }}>
+                    <span style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {tExercise(ex.name)}
                     </span>
-                    <span style={{ display: 'block', fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                    <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
                       {tMuscle(ex.targetMuscle)}
                     </span>
                   </span>
@@ -683,18 +747,20 @@ export function SessionDetailView() {
               type="button"
               onClick={() => setIsAddExerciseModalOpen(true)}
               aria-label={t('addExercise')}
+              className="exercise-stepper-add touch-target-comfortable"
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                minWidth: '52px',
-                minHeight: '52px',
-                borderRadius: '14px',
+                minWidth: '56px',
+                minHeight: '56px',
+                borderRadius: '16px',
                 border: '1px dashed var(--premium-line)',
                 background: 'transparent',
                 color: 'var(--accent-primary)',
                 cursor: 'pointer',
-                flexShrink: 0
+                flexShrink: 0,
+                scrollSnapAlign: 'start'
               }}
             >
               <Plus className="w-5 h-5" aria-hidden="true" />
@@ -703,7 +769,7 @@ export function SessionDetailView() {
         </nav>
 
         {currentExercise ? (
-          <article style={{
+          <article className="session-exercise-card" style={{
             borderRadius: '20px',
             background: 'var(--premium-surface)',
             border: '1px solid var(--premium-line)',
@@ -713,7 +779,7 @@ export function SessionDetailView() {
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.85rem' }}>
               <div style={{ minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem', flexWrap: 'wrap' }}>
-                  <span style={{
+                  <span className="session-muscle-badge" style={{
                     fontSize: '0.72rem',
                     fontWeight: 800,
                     textTransform: 'uppercase',
@@ -729,7 +795,7 @@ export function SessionDetailView() {
                     {isRTL ? `تمرين ${activeExerciseIndex + 1} من ${exercises.length}` : `Exercise ${activeExerciseIndex + 1} of ${exercises.length}`}
                   </span>
                 </div>
-                <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                <h2 className="font-display-semibold text-display-h2" style={{ margin: 0, color: 'var(--text-primary)' }}>
                   {tExercise(currentExercise.name)}
                 </h2>
               </div>
@@ -738,7 +804,7 @@ export function SessionDetailView() {
                 {currentExercise.notes && (
                   <button
                     type="button"
-                    className="btn-icon btn-ghost"
+                    className="btn-icon btn-ghost touch-target"
                     onClick={() => setShowNotesAccordion(prev => !prev)}
                     aria-expanded={showNotesAccordion}
                     aria-controls="session-form-tips"
@@ -749,16 +815,28 @@ export function SessionDetailView() {
                     <Info className="w-5 h-5" aria-hidden="true" />
                   </button>
                 )}
-                {currentExercise.videoUrl && (
+                {currentExerciseVideoUrl && (
                   <button
                     type="button"
-                    className="btn-icon btn-ghost"
+                    className="btn-icon btn-ghost touch-target"
                     onClick={() => setShowTutorialModal(true)}
                     style={{ color: 'var(--accent-primary)' }}
                     title={isRTL ? 'فيديو الشرح' : 'Video Tutorial'}
                     aria-label={isRTL ? 'فيديو الشرح' : 'Video tutorial'}
                   >
                     <CirclePlay className="w-5 h-5" aria-hidden="true" />
+                  </button>
+                )}
+                {previousRecord && currentExercise.sets && currentExercise.sets.length > 0 && (
+                  <button
+                    type="button"
+                    className="btn-icon btn-ghost touch-target"
+                    onClick={() => applyPreviousPerformance(currentExercise.sets.length - 1)}
+                    title={isRTL ? 'تكرار الأداء السابق' : 'Repeat previous performance'}
+                    aria-label={isRTL ? 'تكرار الأداء السابق' : 'Repeat previous performance'}
+                    style={{ color: 'var(--accent-amber)' }}
+                  >
+                    <Repeat className="w-5 h-5" aria-hidden="true" />
                   </button>
                 )}
               </div>
@@ -805,7 +883,7 @@ export function SessionDetailView() {
                 <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                   <button
                     type="button"
-                    className="session-target session-target-primary"
+                    className="session-target session-target-primary touch-target-comfortable"
                     onClick={() => setCardioRunning(r => !r)}
                     aria-pressed={cardioRunning}
                     aria-describedby="session-cardio-timer-hint"
@@ -815,7 +893,7 @@ export function SessionDetailView() {
                   </button>
                   <button
                     type="button"
-                    className="session-target session-target-ghost"
+                    className="session-target session-target-ghost touch-target-comfortable"
                     onClick={() => { setCardioRunning(false); setCardioSeconds(0); }}
                     aria-label={isRTL ? 'تصفير المؤقت' : 'Reset timer'}
                   >
@@ -840,18 +918,24 @@ export function SessionDetailView() {
                         {isCurrentActive && (
                           <button
                             type="button"
-                            className="session-set-check is-active"
+                            className="session-set-check is-active touch-target-comfortable"
                             aria-pressed={set.isCompleted}
                             onClick={() => { setSelectedSetIndex(sIdx); handleToggleSetComplete(activeExerciseIndex, sIdx); }}
+                            style={{
+                              minHeight: '60px',
+                              borderRadius: '16px',
+                              border: set.isCompleted ? '1.5px solid var(--color-success)' : '1.5px solid var(--accent-primary)',
+                              background: set.isCompleted ? 'color-mix(in srgb, var(--color-success) 12%, transparent)' : 'color-mix(in srgb, var(--accent-primary) 10%, transparent)'
+                            }}
                           >
-                            <span className="session-set-check-mark" aria-hidden="true">
-                              {set.isCompleted ? <Check className="w-6 h-6" /> : <span style={{ fontSize: '0.95rem', fontWeight: 800 }}>{sIdx + 1}</span>}
+                            <span className="session-set-check-mark" aria-hidden="true" style={{ width: '44px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '12px', background: set.isCompleted ? 'var(--color-success)' : 'var(--accent-primary)', color: '#04121b' }}>
+                              {set.isCompleted ? <Check className="w-6 h-6" /> : <span style={{ fontSize: '1.1rem', fontWeight: 800 }}>{sIdx + 1}</span>}
                             </span>
                             <span className="session-set-check-body">
-                              <span className="session-set-check-title">
+                              <span className="session-set-check-title" style={{ fontSize: '1rem', fontWeight: 700 }}>
                                 {isRTL ? `الجولة ${sIdx + 1}` : `Set ${sIdx + 1}`}
                               </span>
-                              <span className="session-set-check-meta">
+                              <span className="session-set-check-meta" style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
                                 {`${set.weight || 0} ${set.unit} × ${set.repsActual || set.repsTarget || 10}`}
                                 {set.isCompleted && ` · ${isRTL ? 'مكتملة' : 'done'}`}
                               </span>
@@ -875,21 +959,36 @@ export function SessionDetailView() {
                           onDeleteSet={currentExercise.sets.length > 1 ? () => deleteSet(activeExerciseIndex, sIdx) : undefined}
                           isCompact={!isCurrentActive}
                           onSelectSet={() => setSelectedSetIndex(sIdx)}
+                          onRepeatPrevious={previousRecord ? () => applyPreviousPerformance(sIdx) : undefined}
                         />
                       </div>
                     );
                   })}
                 </div>
 
-                <button
-                  type="button"
-                  className="session-target session-target-ghost"
-                  onClick={() => addSet(activeExerciseIndex)}
-                  style={{ width: '100%', borderStyle: 'dashed', color: 'var(--accent-primary)' }}
-                >
-                  <Plus className="w-5 h-5" aria-hidden="true" />
-                  <span>{t('addSet')}</span>
-                </button>
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                  <button
+                    type="button"
+                    className="session-target session-target-ghost touch-target-comfortable flex-1"
+                    onClick={() => addSet(activeExerciseIndex)}
+                    style={{ borderStyle: 'dashed', color: 'var(--accent-primary)' }}
+                  >
+                    <Plus className="w-5 h-5" aria-hidden="true" />
+                    <span>{t('addSet')}</span>
+                  </button>
+                  {previousRecord && currentExercise.sets && currentExercise.sets.length > 0 && (
+                    <button
+                      type="button"
+                      className="session-target session-target-ghost touch-target-comfortable"
+                      onClick={() => applyPreviousPerformance(currentExercise.sets.length - 1)}
+                      style={{ color: 'var(--color-pr-hit)', borderColor: 'var(--color-pr-hit)' }}
+                      aria-label={isRTL ? 'تكرار الأداء السابق' : 'Repeat previous performance'}
+                    >
+                      <Repeat className="w-5 h-5" aria-hidden="true" />
+                      <span>{isRTL ? 'تكرار الأداء' : 'Repeat Last'}</span>
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 
@@ -900,21 +999,19 @@ export function SessionDetailView() {
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <button
                   type="button"
-                  className="session-target session-target-ghost"
+                  className="session-target session-target-ghost touch-target-comfortable"
                   disabled={activeExerciseIndex === 0}
                   onClick={() => setActiveExerciseIndex(prev => Math.max(0, prev - 1))}
                   aria-label={isRTL ? 'التمرين السابق' : 'Previous exercise'}
-                  style={{ minWidth: '48px', padding: 0 }}
                 >
                   <ChevronLeft className="w-5 h-5" style={{ transform: isRTL ? 'scaleX(-1)' : 'none' }} aria-hidden="true" />
                 </button>
                 <button
                   type="button"
-                  className="session-target session-target-ghost"
+                  className="session-target session-target-ghost touch-target-comfortable"
                   disabled={activeExerciseIndex === exercises.length - 1}
                   onClick={() => setActiveExerciseIndex(prev => Math.min(exercises.length - 1, prev + 1))}
                   aria-label={isRTL ? 'التمرين التالي' : 'Next exercise'}
-                  style={{ minWidth: '48px', padding: 0 }}
                 >
                   <ChevronRight className="w-5 h-5" style={{ transform: isRTL ? 'scaleX(-1)' : 'none' }} aria-hidden="true" />
                 </button>
@@ -942,11 +1039,12 @@ export function SessionDetailView() {
       </div>
 
       <div className="session-thumb-dock">
-        <div className="session-dock-row session-dock-row-secondary">
+        <div className="session-dock-row session-dock-row-secondary" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.5rem' }}>
           <button
             type="button"
-            className="session-target session-target-ghost"
+            className="session-target session-target-ghost touch-target-comfortable"
             onClick={handleCompleteCurrentExercise}
+            style={{ gridColumn: '1 / -1' }}
           >
             <CheckCircle2 className="w-5 h-5" aria-hidden="true" />
             <span style={{ fontSize: '0.85rem' }}>
@@ -957,7 +1055,7 @@ export function SessionDetailView() {
           </button>
           <button
             type="button"
-            className="session-target session-target-ghost"
+            className="session-target session-target-ghost touch-target-comfortable"
             onClick={handleFinishWorkout}
           >
             <Flag className="w-5 h-5" aria-hidden="true" />
@@ -965,24 +1063,37 @@ export function SessionDetailView() {
           </button>
           <button
             type="button"
-            className="session-target session-target-ghost"
+            className="session-target session-target-ghost touch-target-comfortable"
             onClick={() => setIsAddExerciseModalOpen(true)}
             aria-label={t('addExercise')}
-            style={{ minWidth: '48px', padding: 0 }}
           >
             <Plus className="w-5 h-5" aria-hidden="true" />
           </button>
+          {previousRecord && (
+            <button
+              type="button"
+              className="session-target session-target-ghost touch-target-comfortable"
+              onClick={() => {
+                if (!currentExercise.sets || currentExercise.sets.length === 0) return;
+                applyPreviousPerformance(currentExercise.sets.length - 1);
+              }}
+              aria-label={isRTL ? 'تكرار الأداء السابق' : 'Repeat previous performance'}
+            >
+              <Repeat className="w-5 h-5" aria-hidden="true" />
+              <span>{isRTL ? 'تكرار الأداء' : 'Repeat Last'}</span>
+            </button>
+          )}
         </div>
-        <div className="session-dock-row session-dock-row-primary">
+        <div className="session-dock-row session-dock-row-primary" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.5rem' }}>
           <button
             type="button"
-            className={`session-target ${isCardio || !activeSet ? 'session-target-ghost' : activeSetDone ? 'session-target-success' : 'session-target-primary'}`}
+            className={`session-target ${isCardio || !activeSet ? 'session-target-ghost' : activeSetDone ? 'session-target-success' : 'session-target-primary'} touch-target-comfortable`}
             disabled={isCardio || !activeSet}
             onClick={() => handleToggleSetComplete(activeExerciseIndex, activeSetIndex)}
             aria-label={isRTL
               ? (activeSetDone ? 'إلغاء اكتمال الجولة' : 'تسجيل الجولة كمكتملة')
               : (activeSetDone ? 'Mark set incomplete' : 'Mark set complete')}
-            style={{ gridColumn: '1 / -1' }}
+            style={{ minHeight: '64px', fontSize: '1rem', fontWeight: 700, borderRadius: '16px' }}
           >
             {activeSetDone ? <CheckCircle2 className="w-6 h-6" aria-hidden="true" /> : <Check className="w-6 h-6" aria-hidden="true" />}
             <span>
@@ -1001,21 +1112,36 @@ export function SessionDetailView() {
         onCelebrationShown={() => setShowRestCelebration(true)}
       />
 
-      {currentExercise?.videoUrl && (
+      {currentExerciseVideoUrl && currentExercise && (
         <Modal
           isOpen={showTutorialModal}
           onClose={() => setShowTutorialModal(false)}
           title={`${tExercise(currentExercise.name)} — ${isRTL ? 'فيديو الشرح' : 'Tutorial'}`}
         >
-          <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', borderRadius: '14px' }}>
-            <iframe
-              src={currentExercise.videoUrl.replace('youtube.com/watch?v=', 'youtube.com/embed/')}
-              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              title={currentExercise.name}
-            />
-          </div>
+          <InAppYouTubePlayer
+            exerciseName={currentExercise.name}
+            targetMuscle={currentExercise.targetMuscle || currentExerciseTutorial?.targetMuscle}
+            initialVideoUrl={currentExerciseVideoUrl}
+            isArabic={isRTL}
+          />
+
+          {currentExerciseTutorial && (
+            <section className="forma-tutorial-cues">
+              <h4 className="forma-tutorial-cues-title">
+                {t('tutorialCuesTitle')}
+              </h4>
+              <ol className="forma-tutorial-cues-list">
+                {(isRTL
+                  ? currentExerciseTutorial.stepsAr
+                  : currentExerciseTutorial.steps
+                ).map((step, index) => (
+                  <li key={index} className="forma-tutorial-cues-item">
+                    {step}
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
         </Modal>
       )}
 

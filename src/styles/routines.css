@@ -313,10 +313,11 @@
   .routine-ghost-btn { display: inline-flex; align-items: center; gap: 0.3rem; min-height: 2rem; padding: 0.3rem 0.55rem; border: 1px solid var(--premium-line); border-radius: 0.5rem; background: transparent; color: var(--text-secondary); font: inherit; font-size: 0.7rem; font-weight: 700; cursor: pointer; }
   .routine-ghost-btn:hover:not(:disabled) { border-color: color-mix(in srgb, var(--accent-cyan) 40%, transparent); color: var(--accent-cyan); }
   .routine-ghost-btn:disabled, .routine-icon-btn:disabled { opacity: 0.35; cursor: not-allowed; }
-  .routine-grip { display: inline-flex; align-items: center; justify-content: center; width: 1.75rem; height: 2rem; border: 1px solid transparent; border-radius: 0.45rem; background: transparent; color: var(--text-muted); cursor: grab; touch-action: none; }
-  .routine-grip:hover { border-color: var(--premium-line); color: var(--accent-cyan); }
-  .routine-grip:focus-visible { outline: 2px solid var(--accent-cyan); outline-offset: 2px; }
-  .routine-icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; border: 1px solid var(--premium-line); border-radius: 0.5rem; background: transparent; color: var(--text-secondary); cursor: pointer; }
+        .routine-grip { display: inline-flex; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem; border: 1px solid transparent; border-radius: 0.55rem; background: transparent; color: var(--text-muted); cursor: grab; touch-action: none; }
+        .routine-grip:hover { border-color: var(--premium-line); color: var(--accent-cyan); }
+        .routine-grip:focus-visible { outline: 2px solid var(--accent-cyan); outline-offset: 2px; }
+        .routine-icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem; border: 1px solid var(--premium-line); border-radius: 0.55rem; background: transparent; color: var(--text-secondary); cursor: pointer; touch-action: manipulation; }
+        .routine-icon-btn svg { width: 1rem; height: 1rem; }
   .routine-icon-btn:hover:not(:disabled) { color: var(--accent-cyan); border-color: color-mix(in srgb, var(--accent-cyan) 40%, transparent); }
   .routine-icon-btn.is-danger:hover:not(:disabled) { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
   .routine-add-exercise { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; min-height: 2.6rem; padding: 0.5rem 0.9rem; border: 1px dashed color-mix(in srgb, var(--accent-cyan) 35%, transparent); border-radius: 0.7rem; background: transparent; color: var(--accent-cyan); font: inherit; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
@@ -324,10 +325,10 @@
   .routine-inline-notes { width: 100%; border: 1px solid var(--premium-line); border-radius: 0.6rem; background: var(--bg-primary); color: var(--text-primary); font: inherit; font-size: 0.8rem; padding: 0.55rem 0.65rem; resize: vertical; }
 
   .routine-set-editor { display: flex; flex-direction: column; gap: 0.35rem; }
-  .routine-set-grid { display: grid; grid-template-columns: 1.75rem 1.6rem minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 0.9fr) 4.6rem; gap: 0.4rem; align-items: center; }
+        .routine-set-grid { display: grid; grid-template-columns: 2.75rem 1.6rem minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 0.9fr) 5.75rem; gap: 0.4rem; align-items: center; }
   .routine-set-grid-header { padding: 0 0.25rem; color: var(--text-muted); font-size: 0.6rem; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; }
   .routine-set-list { display: flex; flex-direction: column; gap: 0.3rem; margin: 0; padding: 0; list-style: none; }
-  .routine-set-row { display: grid; grid-template-columns: 1.75rem 1.6rem minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 0.9fr) 4.6rem; gap: 0.4rem; align-items: center; padding: 0.3rem 0.25rem; border: 1px solid var(--premium-line); border-radius: 0.55rem; background: var(--bg-primary); }
+        .routine-set-row { display: grid; grid-template-columns: 2.75rem 1.6rem minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 0.9fr) 5.75rem; gap: 0.4rem; align-items: center; padding: 0.3rem 0.25rem; border: 1px solid var(--premium-line); border-radius: 0.55rem; background: var(--bg-primary); }
   .routine-set-row.is-dragging { opacity: 0.6; border-color: var(--accent-cyan); }
   .routine-set-row.is-drop-target { border-color: var(--accent-cyan); box-shadow: inset 0 2px 0 var(--accent-cyan); }
   .routine-set-index { color: var(--text-muted); font-size: 0.7rem; font-weight: 800; text-align: center; }
@@ -683,4 +684,36 @@
   [dir='rtl'] [data-motion='reduced'] .routine-flip-inner[data-flipped='true'],
   [data-motion='reduced'] .routine-flip:hover .routine-flip-inner,
   [data-motion='reduced'] .routine-flip:focus-within .routine-flip-inner { transform: none; transition: none; }
+}
+
+/* ==========================================================================
+   SetEditor: mobile reflow
+   Six grid columns cannot fit a 375px phone. Below 640px each set becomes a
+   three-line block (identity / numbers / actions) instead of scrolling
+   sideways, so every control keeps a full-size touch target.
+   ========================================================================== */
+@media (max-width: 640px) {
+  .routine-set-grid-header { display: none; }
+
+  .routine-set-row {
+    grid-template-columns: 2.75rem 2.75rem minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      'grip index  type   type'
+      'grip weight weight reps'
+      'grip action action action';
+    row-gap: 0.45rem;
+    padding: 0.5rem 0.45rem;
+  }
+
+  .routine-set-row > .routine-grip { grid-area: grip; align-self: center; }
+  .routine-set-row > .routine-set-index { grid-area: index; }
+  .routine-set-row > .routine-set-cell:nth-of-type(1) { grid-area: type; }
+  .routine-set-row > .routine-set-cell:nth-of-type(2) { grid-area: weight; }
+  .routine-set-row > .routine-set-cell:nth-of-type(3) { grid-area: reps; }
+  .routine-set-row > .routine-set-actions { grid-area: action; justify-content: flex-start; }
+
+  .routine-mini-input,
+  .routine-mini-select { min-height: 2.75rem; touch-action: manipulation; }
+
+  .routine-set-actions { gap: 0.5rem; }
 }

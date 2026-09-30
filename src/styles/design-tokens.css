@@ -60,6 +60,28 @@
   --color-danger-line: rgba(239, 68, 68, 0.32);
   --color-danger-ink: #f87171;
   --color-info: #38bdf8;
+  --color-warning-soft: rgba(245, 158, 11, 0.14);
+  --color-warning-line: rgba(245, 158, 11, 0.32);
+  --color-warning-ink: #fbbf24;
+  --color-info-soft: rgba(56, 189, 248, 0.14);
+  --color-info-line: rgba(56, 189, 248, 0.32);
+  --color-info-ink: #7dd3fc;
+
+  /* Exercise-Specific Semantic Colors */
+  --color-set-completed: #10b981;
+  --color-set-completed-glow: rgba(16, 185, 129, 0.4);
+  --color-set-active: #38bdf8;
+  --color-set-active-ring: rgba(56, 189, 248, 0.5);
+  --color-set-pending: rgba(148, 163, 184, 0.4);
+  --color-rest-timer: #f59e0b;
+  --color-rest-timer-pulse: rgba(245, 158, 11, 0.6);
+  --color-pr-hit: #fbbf24;
+  --color-set-ghost: rgba(148, 163, 184, 0.25);
+
+  /* Touch Target Tokens */
+  --space-touch-min: 44px;
+  --space-touch-comfortable: 48px;
+  --space-touch-gap: 8px;
 
   /* Typography Colors */
   --text-primary: #f8fafc;
@@ -122,6 +144,7 @@
 
   /* Typography Scale */
   --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: "Barlow Condensed", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   --text-2xs: 0.6875rem;
   --text-xs: 0.75rem;
@@ -1191,6 +1214,165 @@
   box-shadow: 0 0 0 var(--focus-ring-width) var(--focus-ring-halo), 0 0 0 1px var(--focus-ring-color);
 }
 
+/* ==========================================================================
+   Typography Utility Classes
+   ========================================================================== */
+
+.font-display {
+  font-family: var(--font-display);
+  font-weight: var(--weight-black);
+  letter-spacing: var(--tracking-tight);
+}
+
+.font-display-semibold {
+  font-family: var(--font-display);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+}
+
+.font-display-medium {
+  font-family: var(--font-display);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+}
+
+.font-body {
+  font-family: var(--font-sans);
+}
+
+.font-body-medium {
+  font-family: var(--font-sans);
+  font-weight: var(--weight-medium);
+}
+
+.font-body-semibold {
+  font-family: var(--font-sans);
+  font-weight: var(--weight-semibold);
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+.font-tabular {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+}
+
+.text-display-hero {
+  font-family: var(--font-display);
+  font-weight: var(--weight-black);
+  font-size: var(--text-4xl);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+}
+
+.text-display-h1 {
+  font-family: var(--font-display);
+  font-weight: var(--weight-black);
+  font-size: var(--text-3xl);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+}
+
+.text-display-h2 {
+  font-family: var(--font-display);
+  font-weight: var(--weight-bold);
+  font-size: var(--text-2xl);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-snug);
+}
+
+.text-display-h3 {
+  font-family: var(--font-display);
+  font-weight: var(--weight-bold);
+  font-size: var(--text-xl);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-snug);
+}
+
+.text-body-lg {
+  font-family: var(--font-sans);
+  font-size: var(--text-lg);
+  line-height: var(--leading-normal);
+}
+
+.text-body {
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+}
+
+.text-body-sm {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+}
+
+.text-caption {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--text-secondary);
+}
+
+.text-caption-muted {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+  color: var(--text-muted);
+}
+
+.text-mono {
+  font-family: var(--font-mono);
+}
+
+.text-tabular {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+}
+
+/* Touch Target Utilities */
+.touch-target {
+  min-height: var(--space-touch-min);
+  min-width: var(--space-touch-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
+}
+
+.touch-target-comfortable {
+  min-height: var(--space-touch-comfortable);
+  min-width: var(--space-touch-comfortable);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
+}
+
+.touch-target-expanded {
+  position: relative;
+}
+.touch-target-expanded::before {
+  content: "";
+  position: absolute;
+  inset: calc(-1 * var(--space-touch-gap));
+  border-radius: inherit;
+}
+
+/* Reduced Motion Guard */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* RTL arrow mirroring for directional affordances */
 
 /* ==========================================================================
@@ -1222,4 +1404,15 @@
 [data-density="compact"] .ui-card {
   padding: 1.1rem;
 }
+}
+
+/* ==========================================================================
+   Muscle hologram: keyboard focus visibility
+   The chips are real buttons but shipped with no visible focus ring, so
+   keyboard users had no way to tell where they were.
+   ========================================================================== */
+.muscle-hologram-card button:focus-visible,
+.muscle-hologram-card [role='group'] button:focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 2px;
 }

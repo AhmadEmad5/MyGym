@@ -157,8 +157,9 @@ export function SetEditor({
                   className="routine-icon-btn"
                   onClick={() => onDuplicate(set.id)}
                   aria-label={isRTL ? `تكرار الجولة ${index + 1}` : `Duplicate set ${index + 1}`}
+                  title={isRTL ? 'تكرار الجولة' : 'Duplicate set'}
                 >
-                  <Copy width={14} height={14} aria-hidden="true" />
+                  <Copy width={16} height={16} aria-hidden="true" />
                 </button>
                 <button
                   type="button"
@@ -166,8 +167,9 @@ export function SetEditor({
                   onClick={() => onRemove(set.id)}
                   disabled={sets.length <= 1}
                   aria-label={isRTL ? `حذف الجولة ${index + 1}` : `Delete set ${index + 1}`}
+                  title={isRTL ? 'حذف الجولة' : 'Delete set'}
                 >
-                  <Trash2 width={14} height={14} aria-hidden="true" />
+                  <Trash2 width={16} height={16} aria-hidden="true" />
                 </button>
               </div>
             </li>
