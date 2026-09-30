@@ -1396,15 +1396,18 @@
     opacity: 0.5;
   }
 
-  /* Backstop straight from the OS setting, covering the first paint before the
+/* Backstop straight from the OS setting, covering the first paint before the
      hook has written the attribute. `!important` because these lose on
-     specificity to the three-class per-layer rules above. */
-  @media (prefers-reduced-motion: reduce) {
-    .today-hydration-surface,
-    .today-hydration-surface *,
-    .today-hydration-bubble {
-      animation: none !important;
-    }
+     specificity to the three-class per-layer rules above.
+
+     `:root:not([data-motion='full'])` so that a deliberate in-app choice of
+     full motion is honoured. Anyone who has not chosen still follows the OS. */
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='full']) .today-hydration-surface,
+  :root:not([data-motion='full']) .today-hydration-surface *,
+  :root:not([data-motion='full']) .today-hydration-bubble {
+    animation: none !important;
+  }
   }
 
   /* A readout chip rather than bare text: `--surface-elevated` over

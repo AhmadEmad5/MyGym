@@ -127,7 +127,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.documentElement.setAttribute('data-font-scale', data?.settings?.fontScale || 'default');
     document.documentElement.toggleAttribute('data-high-contrast', Boolean(data?.settings?.highContrast));
-  }, [data?.settings?.fontScale, data?.settings?.highContrast]);
+    // `data-motion` was read by useFormaReducedMotion but never written by
+    // anything, so the app's own Motion preference was inert - the only thing
+    // that could stop an animation was the OS setting. `auto` means "follow
+    // the OS"; `full` / `reduced` are deliberate user choices.
+    document.documentElement.setAttribute('data-motion', data?.settings?.motion || 'auto');
+  }, [data?.settings?.fontScale, data?.settings?.highContrast, data?.settings?.motion]);
 
   const fetchInitialData = useCallback(async () => {
     // Guards against two loads overlapping (auth listener + manual refresh): the

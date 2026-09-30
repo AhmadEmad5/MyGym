@@ -32,14 +32,22 @@ const prefersReduced = () => {
 
 const motionAttrReduced = () => {
   if (typeof document === 'undefined') return false;
-  return document.documentElement.getAttribute('data-motion') === 'reduced';
+  const attr = document.documentElement.getAttribute('data-motion');
+  // An explicit in-app choice outranks the OS default. The OS setting is a
+  // default, not a lock: someone who gets motion sickness will have it on
+  // system-wide, and a person who deliberately turns motion ON in Settings
+  // should not be overruled by it. `auto`/absent still follows the OS, so
+  // nobody who did not ask for motion gets any.
+  if (attr === 'reduced') return true;
+  if (attr === 'full') return false;
+  return prefersReduced();
 };
 
 export function useFormaReducedMotion() {
-  const [reduced, setReduced] = useState(() => prefersReduced() || motionAttrReduced());
+  const [reduced, setReduced] = useState(() => motionAttrReduced());
 
   useEffect(() => {
-    const sync = () => setReduced(prefersReduced() || motionAttrReduced());
+    const sync = () => setReduced(motionAttrReduced());
     sync();
 
     if (typeof window.matchMedia !== 'function') return;

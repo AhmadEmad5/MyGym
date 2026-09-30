@@ -1406,10 +1406,15 @@
 }
 
 /* Reduced Motion Guard */
+/* Global reduced-motion guard.
+   Scoped with `:root:not([data-motion='full'])` so that someone who
+   deliberately chose full motion in Settings is not overruled by the OS
+   default. `data-motion` is set from settings.motion; when the user has not
+   chosen, it is `auto` and this guard applies exactly as before. */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  :root:not([data-motion='full']) *,
+  :root:not([data-motion='full']) *::before,
+  :root:not([data-motion='full']) *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
