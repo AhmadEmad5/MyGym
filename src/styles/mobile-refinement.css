@@ -1057,3 +1057,26 @@
   .routines-page .routine-ledger-session-list .routine-ledger-overflow { font-size: 0.72rem; }
   .routines-page .routine-ledger-index { font-size: 0.72rem; }
 }
+
+/* ==========================================================================
+   Scroll offset under the fixed top bar
+   --------------------------------------------------------------------------
+   `.content-area` is the only scroller, and it carries
+   `scroll-padding-block-start: var(--shell-scroll-offset)`. That is what a
+   `scrollIntoView()`, an anchor jump, or a focus restore aligns against.
+
+   At <=900px this file set `--shell-scroll-offset: 0px`, which is right for
+   769-900px (`.mobile-top-bar` is `display: none` there) but wrong below
+   768px, where the bar is `position: fixed` and 52px tall. With a zero offset
+   every one of those scrolls landed the target flush against the top of the
+   scroller - directly behind the bar, and invisible.
+
+   Derived from --shell-topbar-inset rather than typed in, so the offset
+   cannot drift from the bar's real height, the same way the has-live-bar
+   rules derive theirs. `+ 0.5rem` keeps a resting gap under the bar.
+   ========================================================================== */
+@media (max-width: 768px) {
+  :root {
+    --shell-scroll-offset: calc(var(--shell-topbar-inset) + 0.5rem);
+  }
+}
