@@ -43,10 +43,13 @@ const waveLayers = [
   },
 ];
 
+// No emoji here: the design contract forbids them as structural icons, and
+// three pictographs stacked in a narrow column were pure noise next to a
+// label that already says the amount.
 const quickCups = [
-  { amount: 250, label: '+250ml', icon: '🥛' },
-  { amount: 500, label: '+500ml', icon: '🧴' },
-  { amount: 1000, label: '+1L', icon: '🫗' },
+  { amount: 250, label: '+250ml' },
+  { amount: 500, label: '+500ml' },
+  { amount: 1000, label: '+1L' },
 ];
 
 export function InteractiveHydrationWaveCard({
@@ -135,6 +138,15 @@ export function InteractiveHydrationWaveCard({
               ? `مستوى الترطيب ${waterPct} بالمئة من ${waterGoal} مل.`
               : `Hydration level ${waterPct} percent of ${waterGoal} millilitres.`
           }
+          style={{
+            // today.css pins this to a fixed 6.75rem, which in a narrow bento
+            // cell left the metrics column roughly 40px and shattered the
+            // amount across four lines. A proportional floor keeps the flask
+            // readable without letting it consume the row.
+            inlineSize: 'clamp(4.25rem, 34%, 6.75rem)',
+            blockSize: 'clamp(7.5rem, 46%, 9.5rem)',
+            flexShrink: 0
+          }}
         >
           <span className="today-hydration-tick" style={{ insetBlockStart: '25%' }} aria-hidden="true" />
           <span className="today-hydration-tick is-major" style={{ insetBlockStart: '50%' }} aria-hidden="true" />
@@ -171,12 +183,27 @@ export function InteractiveHydrationWaveCard({
           </span>
         </div>
 
-        <div className="today-hydration-metrics">
-          <p className="today-hydration-amount tabular-nums" dir="ltr">
-            {todayWater.toLocaleString()}
-            <small> / {waterGoal.toLocaleString()} ml</small>
+        <div className="today-hydration-metrics" style={{ minWidth: 0 }}>
+          {/* Split into a value and a target rather than one run of text.
+              "0 / 2,500 ml" was a single flex row, so in a narrow column the
+              browser broke it mid-number into "0" / "/ 2,50" / "ml". Each part
+              is now its own nowrap box. */}
+          <p
+            className="today-hydration-amount tabular-nums"
+            dir="ltr"
+            style={{ display: 'flex', alignItems: 'baseline', gap: '0.3rem', margin: 0, minWidth: 0, flexWrap: 'wrap' }}
+          >
+            <span style={{ fontWeight: 800, whiteSpace: 'nowrap', lineHeight: 1.1 }}>
+              {todayWater.toLocaleString()}
+            </span>
+            <small style={{ fontSize: '0.78em', fontWeight: 600, whiteSpace: 'nowrap' }}>
+              / {waterGoal.toLocaleString()} ml
+            </small>
           </p>
-          <p className="today-hydration-note">
+          <p
+            className="today-hydration-note"
+            style={{ margin: 0, minWidth: 0, textWrap: 'pretty' }}
+          >
             {isComplete
               ? isRTL ? 'أحسنت! حققت هدف الترطيب اليومي.' : 'Hydration target reached.'
               : isRTL
@@ -184,11 +211,25 @@ export function InteractiveHydrationWaveCard({
                 : `${remaining.toLocaleString()} ml to go today.`}
           </p>
 
-          <div className="today-hydration-cups" role="group" aria-label={isRTL ? 'أكواب سريعة' : 'Quick add'}>
+          {/* Three across rather than stacked: the labels are short and the
+              column is not. minmax(0, 1fr) so the cells can actually shrink. */}
+          <div
+            className="today-hydration-cups"
+            role="group"
+            aria-label={isRTL ? 'أكواب سريعة' : 'Quick add'}
+            style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0.35rem', minWidth: 0 }}
+          >
             {quickCups.map((cup) => (
-              <button key={cup.amount} type="button" className="forma-quick-tile is-cyan" onClick={() => handleAdd(cup.amount)}>
-                <span aria-hidden="true">{cup.icon}</span>
-                <span className="tabular-nums">{cup.label}</span>
+              <button
+                key={cup.amount}
+                type="button"
+                className="forma-quick-tile is-cyan"
+                onClick={() => handleAdd(cup.amount)}
+                style={{ minWidth: 0, padding: '0.4rem 0.25rem' }}
+              >
+                <span className="tabular-nums" style={{ whiteSpace: 'nowrap', fontSize: '0.78rem' }}>
+                  {cup.label}
+                </span>
                 <span className="forma-sr-only">
                   {isRTL ? ` أضف ${cup.amount} مل` : ` Add ${cup.amount} millilitres`}
                 </span>

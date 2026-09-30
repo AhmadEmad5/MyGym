@@ -132,7 +132,12 @@ export function SegmentedMacroPill({
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
+          // minmax(0, 1fr), NOT 1fr. A bare `1fr` is `minmax(auto, 1fr)`, and
+          // an `auto` minimum refuses to shrink below the track's min-content
+          // width. With `nowrap` labels inside, each of the three tracks
+          // demanded its full text width and the cards overflowed into each
+          // other instead of truncating.
+          gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
           gap: compact ? '0.4rem' : '0.5rem'
         }}
       >
@@ -142,10 +147,13 @@ export function SegmentedMacroPill({
           const pct = Math.round(ratio * 100);
           const over = row.target > 0 && row.value > row.target;
           const reached = row.target > 0 && ratio >= 1;
+          const hasTarget = row.target > 0;
           const delta = Math.abs(Math.round(row.value - row.target));
-          const deltaLabel = over
-            ? `${isRTL ? 'تجاوز' : '+'}${delta}g`
-            : `${isRTL ? 'متبقٍ' : 'left'} ${delta}g`;
+          const deltaLabel = !hasTarget
+            ? isRTL ? 'بدون هدف' : 'No target'
+            : over
+              ? `${isRTL ? 'تجاوز' : '+'}${delta}g`
+              : `${isRTL ? 'متبقٍ' : ''} ${delta}g`.trim();
           const isSelected = selectedMacro === row.key;
           const barColor = over ? OVER_COLOR : style.color;
 
@@ -156,7 +164,11 @@ export function SegmentedMacroPill({
               onClick={() => handleSelect(row.key)}
               whileTap={reducedMotion ? undefined : { scale: 0.97 }}
               aria-pressed={isSelected}
+              aria-label={`${isRTL ? style.labelAr : style.label}: ${Math.round(row.value)} of ${Math.round(row.target)} grams, ${pct} percent`}
               style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.3rem',
                 padding: compact ? '0.5rem' : '0.6rem',
                 textAlign: 'start',
                 background: isSelected ? style.tint : 'var(--bg-tertiary)',
@@ -165,57 +177,84 @@ export function SegmentedMacroPill({
                 cursor: 'pointer',
                 color: 'inherit',
                 minWidth: 0,
-                transition: 'all 0.18s ease'
+                overflow: 'hidden',
+                transition: 'background-color 0.18s ease, border-color 0.18s ease'
               }}
             >
+              {/* Row 1 - identity. minWidth 0 on the flex item is what lets the
+                  ellipsis engage instead of the row refusing to shrink. */}
               <span
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'space-between',
                   gap: '0.3rem',
-                  fontSize: compact ? '0.68rem' : '0.72rem',
-                  fontWeight: 800,
-                  color: over ? OVER_COLOR : style.color
+                  minWidth: 0,
+                  fontSize: compact ? '0.66rem' : '0.7rem',
+                  fontWeight: 700,
+                  color: over ? OVER_COLOR : style.color,
+                  lineHeight: 1.2
                 }}
               >
-                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {isRTL ? style.labelAr : style.label}
-                </span>
                 <span
+                  aria-hidden="true"
                   style={{
-                    fontVariantNumeric: 'tabular-nums',
-                    color: over ? OVER_COLOR : 'var(--text-secondary)',
-                    fontSize: compact ? '0.64rem' : '0.68rem'
+                    inlineSize: 6,
+                    blockSize: 6,
+                    borderRadius: '50%',
+                    background: 'currentColor',
+                    flexShrink: 0
                   }}
-                >
-                  {pct}%
+                />
+                <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {isRTL ? style.labelAr : style.label}
                 </span>
               </span>
 
+              {/* Row 2 - the number. This is the datum, so it gets the size and
+                  the full width; the target is a quiet reference beside it. */}
               <span
                 style={{
-                  display: 'block',
-                  marginTop: '0.15rem',
-                  fontSize: compact ? '0.98rem' : '1.12rem',
-                  fontWeight: 900,
-                  color: over ? OVER_COLOR : 'var(--text-primary)',
-                  fontVariantNumeric: 'tabular-nums',
-                  lineHeight: 1.1,
-                  whiteSpace: 'nowrap'
+                  display: 'flex',
+                  alignItems: 'baseline',
+                  gap: '0.2rem',
+                  minWidth: 0,
+                  lineHeight: 1.05
                 }}
               >
-                {Math.round(row.value)}
-                <span style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                <span
+                  className="tabular-nums"
+                  style={{
+                    fontSize: compact ? '1rem' : '1.15rem',
+                    fontWeight: 800,
+                    color: over ? OVER_COLOR : 'var(--text-primary)',
+                    minWidth: 0,
+                    overflow: 'hidden'
+                  }}
+                >
+                  {Math.round(row.value)}
+                  <span style={{ fontSize: '0.62rem', fontWeight: 600, color: 'var(--text-muted)' }}>g</span>
+                </span>
+                <span
+                  className="tabular-nums"
+                  style={{
+                    fontSize: '0.66rem',
+                    fontWeight: 600,
+                    color: 'var(--text-muted)',
+                    whiteSpace: 'nowrap',
+                    marginInlineStart: 'auto',
+                    direction: 'ltr'
+                  }}
+                >
                   /{Math.round(row.target)}g
                 </span>
               </span>
 
+              {/* Row 3 - absolute progress against this macro's own target, so
+                  it cannot be confused with the distribution bar above. */}
               <span
                 style={{
                   display: 'block',
-                  marginTop: '0.3rem',
-                  height: 5,
+                  blockSize: 4,
                   borderRadius: '999px',
                   backgroundColor: 'rgba(255,255,255,0.08)',
                   overflow: 'hidden'
@@ -224,11 +263,11 @@ export function SegmentedMacroPill({
               >
                 <motion.span
                   initial={false}
-                  animate={{ width: `${Math.min(100, ratio * 100)}%` }}
+                  animate={{ inlineSize: `${Math.min(100, ratio * 100)}%` }}
                   transition={reducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 160, damping: 22 }}
                   style={{
                     display: 'block',
-                    height: '100%',
+                    blockSize: '100%',
                     borderRadius: '999px',
                     background: over
                       ? OVER_COLOR
@@ -237,23 +276,41 @@ export function SegmentedMacroPill({
                 />
               </span>
 
+              {/* Row 4 - status. One consistent line: percent, then the gap to
+                  target. Previously this swapped between a percentage and a
+                  role string, so the row meant different things per macro. */}
               <span
                 style={{
-                  display: 'block',
-                  marginTop: '0.28rem',
-                  fontSize: compact ? '0.6rem' : '0.65rem',
+                  display: 'flex',
+                  alignItems: 'baseline',
+                  justifyContent: 'space-between',
+                  gap: '0.25rem',
+                  minWidth: 0,
+                  fontSize: compact ? '0.6rem' : '0.64rem',
                   fontWeight: 700,
-                  color: over ? OVER_COLOR : reached ? style.color : 'var(--text-muted)',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis'
+                  lineHeight: 1.2
                 }}
               >
-                {row.target <= 0
-                  ? isRTL ? 'بدون هدف' : 'No target'
-                  : isSelected || over || reached
-                    ? deltaLabel
-                    : isRTL ? style.roleAr : style.role}
+                <span
+                  className="tabular-nums"
+                  style={{
+                    color: over ? OVER_COLOR : reached ? style.color : 'var(--text-secondary)',
+                    flexShrink: 0
+                  }}
+                >
+                  {hasTarget ? `${pct}%` : '—'}
+                </span>
+                <span
+                  style={{
+                    color: over ? OVER_COLOR : 'var(--text-muted)',
+                    minWidth: 0,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  {deltaLabel}
+                </span>
               </span>
             </motion.button>
           );

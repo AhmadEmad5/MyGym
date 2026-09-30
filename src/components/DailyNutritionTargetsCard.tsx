@@ -71,7 +71,7 @@ export function DailyNutritionTargetsCard({
       aria-label={isRTL ? 'ميزانية السعرات والماكروز اليوم' : 'Today’s calorie and macro budget'}
     >
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem' }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0, flex: '1 1 auto' }}>
           <span
             style={{
               width: 34,
@@ -86,9 +86,19 @@ export function DailyNutritionTargetsCard({
               flexShrink: 0
             }}
           >
-            <Flame size={17} />
+            <Flame size={17} aria-hidden="true" />
           </span>
-          <span style={{ fontSize: compact ? '0.82rem' : '0.9rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+          <span
+            style={{
+              fontSize: compact ? '0.82rem' : '0.9rem',
+              fontWeight: 800,
+              color: 'var(--text-primary)',
+              minWidth: 0,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}
+          >
             {isRTL ? 'ميزانية اليوم' : 'Today’s Budget'}
           </span>
         </span>
@@ -105,20 +115,24 @@ export function DailyNutritionTargetsCard({
               border: '1px solid rgba(56, 189, 248, 0.3)',
               color: '#38bdf8',
               fontSize: '0.75rem',
-              fontWeight: 750,
+              fontWeight: 700,
               cursor: 'pointer',
               padding: '0.35rem 0.7rem',
               borderRadius: '999px',
-              minHeight: 32
+              minHeight: 32,
+              // Never let the title squeeze this out of the row: the title
+              // truncates first.
+              flexShrink: 0,
+              whiteSpace: 'nowrap'
             }}
           >
-            <Calculator size={13} />
+            <Calculator size={13} aria-hidden="true" />
             <span>{isRTL ? 'تعديل الأهداف' : 'Targets'}</span>
           </button>
         )}
       </header>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'stretch', gap: '0.9rem', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1, flex: '1 1 150px', minWidth: 0 }}>
           <span
             style={{
@@ -127,29 +141,32 @@ export function DailyNutritionTargetsCard({
               textTransform: 'uppercase',
               letterSpacing: '0.08em',
               color: heroPalette.accent,
-              marginBottom: '0.3rem'
+              marginBottom: '0.35rem'
             }}
           >
             {isRTL ? 'السعرات المتبقية' : 'Calories left'}
           </span>
-          <span style={{ display: 'flex', alignItems: 'baseline', gap: '0.3rem' }}>
+          <span style={{ display: 'flex', alignItems: 'baseline', gap: '0.35rem', minWidth: 0 }}>
             <motion.span
               key={`${heroState}-${heroValue}`}
               initial={{ scale: 0.94, opacity: 0.6 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: 'spring', stiffness: 240, damping: 20 }}
               style={{
-                fontSize: compact ? 'clamp(2.4rem, 11vw, 3.1rem)' : 'clamp(2.9rem, 13vw, 3.9rem)',
-                fontWeight: 950,
-                letterSpacing: '-0.04em',
+                fontSize: compact ? 'clamp(2.3rem, 10vw, 3rem)' : 'clamp(2.7rem, 12vw, 3.7rem)',
+                // 800, not 950: Inter is loaded at 400-800, so anything higher
+                // is synthesised by the browser as a fake bolder face.
+                fontWeight: 800,
+                letterSpacing: '-0.03em',
                 color: heroPalette.accent,
                 fontVariantNumeric: 'tabular-nums',
-                textShadow: `0 0 26px ${heroPalette.glow}`
+                textShadow: `0 0 26px ${heroPalette.glow}`,
+                minWidth: 0
               }}
             >
               {heroValue.toLocaleString()}
             </motion.span>
-            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-muted)' }}>kcal</span>
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>kcal</span>
           </span>
           <span
             style={{
@@ -183,10 +200,23 @@ export function DailyNutritionTargetsCard({
             gap: '0.35rem'
           }}
         >
-          <span style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-            <span style={{ fontWeight: 700 }}>{isRTL ? 'المتناول' : 'Eaten'}</span>
-            <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 800, color: 'var(--text-primary)' }}>
-              {Math.round(todayCalories).toLocaleString()} / {safeTarget.toLocaleString()}
+          <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '0.4rem', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+            <span style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{isRTL ? 'المتناول' : 'Eaten'}</span>
+            <span
+              className="tabular-nums"
+              style={{ fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap', minWidth: 0, textAlign: 'end' }}
+            >
+              {Math.round(todayCalories).toLocaleString()}
+              <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}> / {safeTarget.toLocaleString()}</span>
+              <span
+                style={{
+                  marginInlineStart: '0.35rem',
+                  color: isOver ? '#f43f5e' : 'var(--text-muted)',
+                  fontWeight: 700
+                }}
+              >
+                {eatenPercent}%
+              </span>
             </span>
           </span>
           <span
@@ -226,10 +256,17 @@ export function DailyNutritionTargetsCard({
               />
             )}
           </span>
-          <span style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-            <span>{isOver ? isRTL ? 'تجاوزت الحد المسموح' : 'past your limit' : `${eatenPercent}%`}</span>
-            <span>
-              {isRTL ? 'محرق' : 'burned'} {Math.round(todayBurnedCalories).toLocaleString()}
+          <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '0.5rem', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+            <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {isOver
+                ? isRTL ? 'تجاوزت الحد المسموح' : 'Past your limit'
+                : isRTL ? `من هدفك` : `of your ${safeTarget.toLocaleString()} target`}
+            </span>
+            <span style={{ whiteSpace: 'nowrap', flexShrink: 0 }}>
+              {isRTL ? 'محرق' : 'Burned'}{' '}
+              <strong style={{ color: 'var(--text-secondary)', fontWeight: 700 }} className="tabular-nums">
+                {Math.round(todayBurnedCalories).toLocaleString()}
+              </strong>
             </span>
           </span>
         </div>
@@ -252,14 +289,21 @@ export function DailyNutritionTargetsCard({
           justifyContent: 'space-between',
           gap: '0.6rem',
           flexWrap: 'wrap',
-          paddingTop: '0.75rem',
+          paddingTop: '0.85rem',
           borderTop: '1px solid rgba(255, 255, 255, 0.08)',
           fontSize: '0.78rem',
           color: 'var(--text-secondary)'
         }}
       >
-        <span>
-          {isRTL ? 'صافي الطاقة' : 'Net'} <strong style={{ color: netBalance <= 0 ? '#10b981' : '#f59e0b' }}>{netBalance > 0 ? `+${Math.round(netBalance)}` : Math.round(netBalance)}</strong> kcal
+        <span style={{ display: 'flex', alignItems: 'baseline', gap: '0.3rem', whiteSpace: 'nowrap' }}>
+          {isRTL ? 'صافي الطاقة' : 'Net'}{' '}
+          <strong
+            className="tabular-nums"
+            style={{ color: netBalance <= 0 ? '#10b981' : '#f59e0b', fontWeight: 800 }}
+          >
+            {netBalance > 0 ? `+${Math.round(netBalance).toLocaleString()}` : Math.round(netBalance).toLocaleString()}
+          </strong>{' '}
+          <span style={{ color: 'var(--text-muted)' }}>kcal</span>
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
           {onLogMeal && (
@@ -267,21 +311,34 @@ export function DailyNutritionTargetsCard({
               type="button"
               onClick={onLogMeal}
               style={{
+                display: 'inline-flex',
+                alignItems: 'center',
                 background: 'linear-gradient(135deg, #10b981, #06b6d4)',
                 color: '#041316',
                 border: 'none',
                 borderRadius: '999px',
-                padding: '0.4rem 0.9rem',
+                padding: '0.45rem 1rem',
                 fontSize: '0.78rem',
-                fontWeight: 850,
+                fontWeight: 800,
                 cursor: 'pointer',
-                minHeight: 34
+                minHeight: 36,
+                whiteSpace: 'nowrap'
               }}
             >
               {isRTL ? '+ سجّل وجبة' : '+ Log meal'}
             </button>
           )}
-          <span>
+          <span
+            style={{
+              padding: '0.2rem 0.55rem',
+              borderRadius: '999px',
+              background: netBalance <= 0 ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)',
+              border: `1px solid ${netBalance <= 0 ? 'rgba(16,185,129,0.3)' : 'rgba(245,158,11,0.3)'}`,
+              color: netBalance <= 0 ? '#34d399' : '#fbbf24',
+              fontWeight: 700,
+              whiteSpace: 'nowrap'
+            }}
+          >
             {netBalance <= 0
               ? isRTL ? 'عجز سعرات (cut)' : 'Deficit · cut'
               : isRTL ? 'فائض سعرات (bulk)' : 'Surplus · bulk'}
