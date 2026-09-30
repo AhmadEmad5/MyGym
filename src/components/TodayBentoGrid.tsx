@@ -122,6 +122,47 @@ export interface WidgetFrameProps {
   style?: React.CSSProperties;
 }
 
+export interface WidgetHeaderProps {
+  title: ReactNode;
+  icon?: ReactNode;
+  iconColor?: string;
+  trailing?: ReactNode;
+  /** The bento cards sit flush inside their card body and need no padding. */
+  flush?: boolean;
+  /**
+   * `WidgetFrame` has always used `<header>`; the four bento cards this
+   * replaced used `<div>`. Same class, same layout, different element - so
+   * the element is a parameter rather than being silently normalised. Worth
+   * reconciling deliberately: a `<header>` inside an `<article>` is a
+   * sectioning-content header and announces as one, which is arguably
+   * better, but that is a decision to make on purpose.
+   */
+  as?: 'header' | 'div';
+}
+
+/**
+ * The `icon + title + trailing` row shared by every widget on this screen.
+ *
+ * `WidgetFrame` already rendered this shape, but the four bento cards inside
+ * this same file each open-coded it rather than using it, so the title markup
+ * had five copies. Extracted so the header is stated once.
+ */
+export function WidgetHeader({ title, icon, iconColor, trailing, flush = false, as: Tag = 'header' }: WidgetHeaderProps) {
+  return (
+    <Tag className="forma-widget-header" style={flush ? { padding: 0 } : undefined}>
+      <h3 className="forma-widget-title">
+        {icon && (
+          <span className="forma-widget-icon" style={iconColor ? { color: iconColor } : undefined}>
+            {icon}
+          </span>
+        )}
+        <span>{title}</span>
+      </h3>
+      {trailing}
+    </Tag>
+  );
+}
+
 export function WidgetFrame({
   title,
   icon,
@@ -134,13 +175,7 @@ export function WidgetFrame({
 }: WidgetFrameProps) {
   return (
     <section id={id} className={`forma-widget is-${tone} ${className}`.trim()} style={style}>
-      <header className="forma-widget-header">
-        <h3 className="forma-widget-title">
-          {icon && <span className="forma-widget-icon">{icon}</span>}
-          <span>{title}</span>
-        </h3>
-        {trailing}
-      </header>
+      <WidgetHeader title={title} icon={icon} trailing={trailing} />
       <div className="forma-widget-body">{children}</div>
     </section>
   );
@@ -252,7 +287,7 @@ const ringMetrics = (burned: number, calorieGoal: number, minutes: number, minut
 
 const ringSummary = (isRTL: boolean, move: number, exercise: number, water: number) =>
   isRTL
-    ? `حلقات النشاط: الحرق ${Math.round(move * 100)}%، وقت التمرين ${Math.round(exercise * 100)}%، الترطيب ${Math.round(water * 100)}%.`
+    ? `Ø­Ù„Ù‚Ø§Øª Ø§Ù„Ù†Ø´Ø§Ø·: Ø§Ù„Ø­Ø±Ù‚ ${Math.round(move * 100)}%ØŒ ÙˆÙ‚Øª Ø§Ù„ØªÙ…Ø±ÙŠÙ† ${Math.round(exercise * 100)}%ØŒ Ø§Ù„ØªØ±Ø·ÙŠØ¨ ${Math.round(water * 100)}%.`
     : `Activity rings: ${Math.round(move * 100)}% move, ${Math.round(exercise * 100)}% exercise, ${Math.round(water * 100)}% hydration.`;
 
 export function TodayBentoGrid({
@@ -294,21 +329,21 @@ export function TodayBentoGrid({
   const focusMuscle = useMemo<FocusMuscle>(() => {
     if (isFriday) {
       return {
-        nameAr: 'استشفاء كامل (عطلة الجمعة)',
+        nameAr: 'Ø§Ø³ØªØ´ÙØ§Ø¡ ÙƒØ§Ù…Ù„ (Ø¹Ø·Ù„Ø© Ø§Ù„Ø¬Ù…Ø¹Ø©)',
         nameEn: 'Full Recovery (Friday Off-Day)',
-        badge: isRTL ? 'راحة ونمو' : 'Rest & Grow',
-        statusTextAr: 'الجيم مغلق — ركز على التغذية وإعادة بناء الألياف العضلية',
-        statusTextEn: 'Gym is closed — prioritize nutrition & tissue regeneration',
+        badge: isRTL ? 'Ø±Ø§Ø­Ø© ÙˆÙ†Ù…Ùˆ' : 'Rest & Grow',
+        statusTextAr: 'Ø§Ù„Ø¬ÙŠÙ… Ù…ØºÙ„Ù‚ â€” Ø±ÙƒØ² Ø¹Ù„Ù‰ Ø§Ù„ØªØºØ°ÙŠØ© ÙˆØ¥Ø¹Ø§Ø¯Ø© Ø¨Ù†Ø§Ø¡ Ø§Ù„Ø£Ù„ÙŠØ§Ù Ø§Ù„Ø¹Ø¶Ù„ÙŠØ©',
+        statusTextEn: 'Gym is closed â€” prioritize nutrition & tissue regeneration',
       };
     }
 
     if (!activeSession) {
       return {
-        nameAr: 'يوم استشفاء نشط',
+        nameAr: 'ÙŠÙˆÙ… Ø§Ø³ØªØ´ÙØ§Ø¡ Ù†Ø´Ø·',
         nameEn: 'Active Recovery Day',
-        badge: isRTL ? 'إطالة وراحة' : 'Mobility & Rest',
-        statusTextAr: 'لا توجد جلسة مجدولة لليوم — جاهزية الجسم ممتازة',
-        statusTextEn: 'No session planned today — physical readiness is high',
+        badge: isRTL ? 'Ø¥Ø·Ø§Ù„Ø© ÙˆØ±Ø§Ø­Ø©' : 'Mobility & Rest',
+        statusTextAr: 'Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¬Ù„Ø³Ø© Ù…Ø¬Ø¯ÙˆÙ„Ø© Ù„Ù„ÙŠÙˆÙ… â€” Ø¬Ø§Ù‡Ø²ÙŠØ© Ø§Ù„Ø¬Ø³Ù… Ù…Ù…ØªØ§Ø²Ø©',
+        statusTextEn: 'No session planned today â€” physical readiness is high',
       };
     }
 
@@ -318,37 +353,37 @@ export function TodayBentoGrid({
 
     if (title.includes('chest') || title.includes('push') || exerciseText.includes('bench') || exerciseText.includes('press')) {
       return {
-        nameAr: 'عضلات الصدر والدفع',
+        nameAr: 'Ø¹Ø¶Ù„Ø§Øª Ø§Ù„ØµØ¯Ø± ÙˆØ§Ù„Ø¯ÙØ¹',
         nameEn: 'Chest & Push Muscles',
-        badge: isRTL ? 'صدر / ترايسبس' : 'Pectorals / Triceps',
-        statusTextAr: `مستهدف اليوم عبر ${count} تمارين متخصصة`,
+        badge: isRTL ? 'ØµØ¯Ø± / ØªØ±Ø§ÙŠØ³Ø¨Ø³' : 'Pectorals / Triceps',
+        statusTextAr: `Ù…Ø³ØªÙ‡Ø¯Ù Ø§Ù„ÙŠÙˆÙ… Ø¹Ø¨Ø± ${count} ØªÙ…Ø§Ø±ÙŠÙ† Ù…ØªØ®ØµØµØ©`,
         statusTextEn: `Targeted today across ${count} dedicated exercises`,
       };
     }
     if (title.includes('back') || title.includes('pull') || exerciseText.includes('row') || exerciseText.includes('pull')) {
       return {
-        nameAr: 'عضلات الظهر والسحب',
+        nameAr: 'Ø¹Ø¶Ù„Ø§Øª Ø§Ù„Ø¸Ù‡Ø± ÙˆØ§Ù„Ø³Ø­Ø¨',
         nameEn: 'Back & Pull Muscles',
-        badge: isRTL ? 'عضلات الجناح' : 'Lats / Rhomboids',
-        statusTextAr: `مستهدف اليوم عبر ${count} تمارين متخصصة`,
+        badge: isRTL ? 'Ø¹Ø¶Ù„Ø§Øª Ø§Ù„Ø¬Ù†Ø§Ø­' : 'Lats / Rhomboids',
+        statusTextAr: `Ù…Ø³ØªÙ‡Ø¯Ù Ø§Ù„ÙŠÙˆÙ… Ø¹Ø¨Ø± ${count} ØªÙ…Ø§Ø±ÙŠÙ† Ù…ØªØ®ØµØµØ©`,
         statusTextEn: `Targeted today across ${count} dedicated exercises`,
       };
     }
     if (title.includes('leg') || exerciseText.includes('squat') || exerciseText.includes('leg')) {
       return {
-        nameAr: 'عضلات الأرجل والقوة',
+        nameAr: 'Ø¹Ø¶Ù„Ø§Øª Ø§Ù„Ø£Ø±Ø¬Ù„ ÙˆØ§Ù„Ù‚ÙˆØ©',
         nameEn: 'Legs & Lower Body',
-        badge: isRTL ? 'فخذ / راحة' : 'Quads / Hamstrings',
-        statusTextAr: `مستهدف اليوم عبر ${count} تمارين متخصصة`,
+        badge: isRTL ? 'ÙØ®Ø° / Ø±Ø§Ø­Ø©' : 'Quads / Hamstrings',
+        statusTextAr: `Ù…Ø³ØªÙ‡Ø¯Ù Ø§Ù„ÙŠÙˆÙ… Ø¹Ø¨Ø± ${count} ØªÙ…Ø§Ø±ÙŠÙ† Ù…ØªØ®ØµØµØ©`,
         statusTextEn: `Targeted today across ${count} dedicated exercises`,
       };
     }
     if (title.includes('shoulder') || exerciseText.includes('delt')) {
       return {
-        nameAr: 'الأكتاف والمثلثات',
+        nameAr: 'Ø§Ù„Ø£ÙƒØªØ§Ù ÙˆØ§Ù„Ù…Ø«Ù„Ø«Ø§Øª',
         nameEn: 'Shoulders & Deltoids',
-        badge: isRTL ? 'مثلثات' : 'Deltoids',
-        statusTextAr: `مستهدف اليوم عبر ${count} تمارين متخصصة`,
+        badge: isRTL ? 'Ù…Ø«Ù„Ø«Ø§Øª' : 'Deltoids',
+        statusTextAr: `Ù…Ø³ØªÙ‡Ø¯Ù Ø§Ù„ÙŠÙˆÙ… Ø¹Ø¨Ø± ${count} ØªÙ…Ø§Ø±ÙŠÙ† Ù…ØªØ®ØµØµØ©`,
         statusTextEn: `Targeted today across ${count} dedicated exercises`,
       };
     }
@@ -357,7 +392,7 @@ export function TodayBentoGrid({
       nameAr: activeSession.title,
       nameEn: activeSession.title,
       badge: `${activeSession.type}`,
-      statusTextAr: `${count} تمارين مخطط لها اليوم`,
+      statusTextAr: `${count} ØªÙ…Ø§Ø±ÙŠÙ† Ù…Ø®Ø·Ø· Ù„Ù‡Ø§ Ø§Ù„ÙŠÙˆÙ…`,
       statusTextEn: `${count} exercises planned today`,
     };
   }, [activeSession, isFriday, isRTL]);
@@ -387,9 +422,9 @@ export function TodayBentoGrid({
 
   const ringRows = useMemo(
     () => [
-      { id: 'move' as const, tone: 'rose', labelAr: 'حرق السعرات', labelEn: 'Move (kcal)', value: todayBurnedCalories, target: `${calorieBurnTarget} kcal`, progress: progress.move },
-      { id: 'exercise' as const, tone: 'lime', labelAr: 'التمارين', labelEn: 'Exercise (min)', value: workoutMinutes, target: `${workoutMinutesTarget} min`, progress: progress.exercise },
-      { id: 'water' as const, tone: 'cyan', labelAr: 'الترطيب', labelEn: 'Hydration (ml)', value: todayWater, target: `${waterGoal} ml`, progress: progress.water },
+      { id: 'move' as const, tone: 'rose', labelAr: 'Ø­Ø±Ù‚ Ø§Ù„Ø³Ø¹Ø±Ø§Øª', labelEn: 'Move (kcal)', value: todayBurnedCalories, target: `${calorieBurnTarget} kcal`, progress: progress.move },
+      { id: 'exercise' as const, tone: 'lime', labelAr: 'Ø§Ù„ØªÙ…Ø§Ø±ÙŠÙ†', labelEn: 'Exercise (min)', value: workoutMinutes, target: `${workoutMinutesTarget} min`, progress: progress.exercise },
+      { id: 'water' as const, tone: 'cyan', labelAr: 'Ø§Ù„ØªØ±Ø·ÙŠØ¨', labelEn: 'Hydration (ml)', value: todayWater, target: `${waterGoal} ml`, progress: progress.water },
     ],
     [calorieBurnTarget, dailyCaloriesTarget, progress, todayBurnedCalories, todayWater, workoutMinutes, workoutMinutesTarget, waterGoal],
   );
@@ -397,7 +432,7 @@ export function TodayBentoGrid({
   const weekSummary = useMemo(() => {
     const done = weekDays.filter((day) => day.hasWorkout).length;
     return isRTL
-      ? `${done} أيام تدريب من أصل 7 في الأسبوع الحالي.`
+      ? `${done} Ø£ÙŠØ§Ù… ØªØ¯Ø±ÙŠØ¨ Ù…Ù† Ø£ØµÙ„ 7 ÙÙŠ Ø§Ù„Ø£Ø³Ø¨ÙˆØ¹ Ø§Ù„Ø­Ø§Ù„ÙŠ.`
       : `${done} of 7 training days completed this week.`;
   }, [weekDays, isRTL]);
 
@@ -408,12 +443,12 @@ export function TodayBentoGrid({
         <WidgetState
           tone="error"
           role="alert"
-          title={isRTL ? 'تعذّر تحميل البيانات' : 'Could not load data'}
-          description={errorMessage || (isRTL ? 'أعد المحاولة أو تحقق من الاتصال.' : 'Retry, or check your connection.')}
+          title={isRTL ? 'ØªØ¹Ø°Ù‘Ø± ØªØ­Ù…ÙŠÙ„ Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª' : 'Could not load data'}
+          description={errorMessage || (isRTL ? 'Ø£Ø¹Ø¯ Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø© Ø£Ùˆ ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„Ø§ØªØµØ§Ù„.' : 'Retry, or check your connection.')}
           action={
             onRetry && (
               <Button variant="secondary" size="sm" onClick={onRetry}>
-                {isRTL ? 'إعادة المحاولة' : 'Retry'}
+                {isRTL ? 'Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø©' : 'Retry'}
               </Button>
             )
           }
@@ -428,35 +463,36 @@ export function TodayBentoGrid({
 
   return (
     <div className="forma-bento-section">
-      <div className="forma-bento-grid is-layered" role="group" aria-label={isRTL ? 'ملخص اليوم' : 'Today at a glance'}>
+      <div className="forma-bento-grid is-layered" role="group" aria-label={isRTL ? 'Ù…Ù„Ø®Øµ Ø§Ù„ÙŠÙˆÙ…' : 'Today at a glance'}>
         <article className="forma-bento-card" data-tier="secondary" data-span="2">
           <div className="forma-bento-card-body">
-            <div className="forma-widget-header" style={{ padding: 0 }}>
-              <h3 className="forma-widget-title">
-                <span className="forma-widget-icon" style={{ color: 'var(--accent-rose)' }}>
-                  <Activity size={15} aria-hidden="true" />
-                </span>
-                <span>{isRTL ? 'حلقات النشاط اليومي' : 'Daily Activity Rings'}</span>
-              </h3>
-              {allRingsClosed ? (
-                <span className="forma-badge" style={{ color: 'var(--accent-amber)', background: 'rgba(245,158,11,0.14)', borderColor: 'rgba(245,158,11,0.32)' }}>
-                  <Trophy size={12} aria-hidden="true" />
-                  {isRTL ? 'مكتملة 100%' : '100% Closed'}
-                </span>
-              ) : (
-                <span className="today-surface-date">{format(new Date(), 'EEEE')}</span>
-              )}
-            </div>
+            <WidgetHeader
+              as="div"
+              flush
+              icon={<Activity size={15} aria-hidden="true" />}
+              iconColor="var(--accent-rose)"
+              title={isRTL ? 'Ø­Ù„Ù‚Ø§Øª Ø§Ù„Ù†Ø´Ø§Ø· Ø§Ù„ÙŠÙˆÙ…ÙŠ' : 'Daily Activity Rings'}
+              trailing={
+                allRingsClosed ? (
+                  <span className="forma-badge" style={{ color: 'var(--accent-amber)', background: 'rgba(245,158,11,0.14)', borderColor: 'rgba(245,158,11,0.32)' }}>
+                    <Trophy size={12} aria-hidden="true" />
+                    {isRTL ? 'Ù…ÙƒØªÙ…Ù„Ø© 100%' : '100% Closed'}
+                  </span>
+                ) : (
+                  <span className="today-surface-date">{format(new Date(), 'EEEE')}</span>
+                )
+              }
+            />
 
             {status !== 'ready' ? (
-              renderCardStates(isRTL ? 'جارٍ تحميل حلقات النشاط' : 'Loading activity rings')
+              renderCardStates(isRTL ? 'Ø¬Ø§Ø±Ù ØªØ­Ù…ÙŠÙ„ Ø­Ù„Ù‚Ø§Øª Ø§Ù„Ù†Ø´Ø§Ø·' : 'Loading activity rings')
             ) : cardState === 'empty' ? (
               <WidgetState
-                title={isRTL ? 'لا توجد بيانات اليوم بعد' : 'Nothing logged today yet'}
-                description={isRTL ? 'ابدأ تمرينك أو سجّل الماء لتظهر الحلقات مباشرة.' : 'Start a workout or log water to fill the rings.'}
+                title={isRTL ? 'Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„ÙŠÙˆÙ… Ø¨Ø¹Ø¯' : 'Nothing logged today yet'}
+                description={isRTL ? 'Ø§Ø¨Ø¯Ø£ ØªÙ…Ø±ÙŠÙ†Ùƒ Ø£Ùˆ Ø³Ø¬Ù‘Ù„ Ø§Ù„Ù…Ø§Ø¡ Ù„ØªØ¸Ù‡Ø± Ø§Ù„Ø­Ù„Ù‚Ø§Øª Ù…Ø¨Ø§Ø´Ø±Ø©.' : 'Start a workout or log water to fill the rings.'}
                 action={
                   <Button variant="secondary" size="sm" onClick={onOpenQuickWorkout} leftIcon={<Zap size={14} />}>
-                    {isRTL ? 'تمرين سريع' : 'Quick workout'}
+                    {isRTL ? 'ØªÙ…Ø±ÙŠÙ† Ø³Ø±ÙŠØ¹' : 'Quick workout'}
                   </Button>
                 }
               />
@@ -548,13 +584,13 @@ export function TodayBentoGrid({
                 </ul>
 
                 <table className="forma-sr-only">
-                  <caption>{isRTL ? 'تفاصيل حلقات النشاط' : 'Activity ring breakdown'}</caption>
+                  <caption>{isRTL ? 'ØªÙØ§ØµÙŠÙ„ Ø­Ù„Ù‚Ø§Øª Ø§Ù„Ù†Ø´Ø§Ø·' : 'Activity ring breakdown'}</caption>
                   <thead>
                     <tr>
-                      <th scope="col">{isRTL ? 'المؤشر' : 'Metric'}</th>
-                      <th scope="col">{isRTL ? 'القيمة' : 'Value'}</th>
-                      <th scope="col">{isRTL ? 'الهدف' : 'Goal'}</th>
-                      <th scope="col">{isRTL ? 'النسبة' : 'Progress'}</th>
+                      <th scope="col">{isRTL ? 'Ø§Ù„Ù…Ø¤Ø´Ø±' : 'Metric'}</th>
+                      <th scope="col">{isRTL ? 'Ø§Ù„Ù‚ÙŠÙ…Ø©' : 'Value'}</th>
+                      <th scope="col">{isRTL ? 'Ø§Ù„Ù‡Ø¯Ù' : 'Goal'}</th>
+                      <th scope="col">{isRTL ? 'Ø§Ù„Ù†Ø³Ø¨Ø©' : 'Progress'}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -575,53 +611,54 @@ export function TodayBentoGrid({
 
         <article className="forma-bento-card" data-tier="secondary" data-span="2">
           <div className="forma-bento-card-body">
-            <div className="forma-widget-header" style={{ padding: 0 }}>
-              <h3 className="forma-widget-title">
-                <span className="forma-widget-icon" style={{ color: 'var(--accent-emerald)' }}>
-                  <Zap size={15} aria-hidden="true" />
+            <WidgetHeader
+              as="div"
+              flush
+              icon={<Zap size={15} aria-hidden="true" />}
+              iconColor="var(--accent-emerald)"
+              title={isRTL ? 'ØªÙˆØ§Ø²Ù† Ø§Ù„Ø·Ø§Ù‚Ø© ÙˆØ§Ù„Ø¨Ø±ÙˆØªÙŠÙ†' : 'Energy & Protein Balance'}
+              trailing={
+                <span
+                  className="forma-badge"
+                  style={
+                    netCalories <= dailyCaloriesTarget
+                      ? { color: 'var(--color-success)', background: 'rgba(16,185,129,0.14)', borderColor: 'rgba(16,185,129,0.32)' }
+                      : { color: 'var(--color-warning)', background: 'rgba(245,158,11,0.14)', borderColor: 'rgba(245,158,11,0.32)' }
+                  }
+                >
+                  {netCalories <= dailyCaloriesTarget ? (isRTL ? 'ÙÙŠ Ù†Ø·Ø§Ù‚ Ø§Ù„Ù‡Ø¯Ù' : 'On track') : (isRTL ? 'ÙØ§Ø¦Ø¶ Ø³Ø¹Ø±Ø§Øª' : 'Surplus')}
                 </span>
-                <span>{isRTL ? 'توازن الطاقة والبروتين' : 'Energy & Protein Balance'}</span>
-              </h3>
-              <span
-                className="forma-badge"
-                style={
-                  netCalories <= dailyCaloriesTarget
-                    ? { color: 'var(--color-success)', background: 'rgba(16,185,129,0.14)', borderColor: 'rgba(16,185,129,0.32)' }
-                    : { color: 'var(--color-warning)', background: 'rgba(245,158,11,0.14)', borderColor: 'rgba(245,158,11,0.32)' }
-                }
-              >
-                {netCalories <= dailyCaloriesTarget ? (isRTL ? 'في نطاق الهدف' : 'On track') : (isRTL ? 'فائض سعرات' : 'Surplus')}
-              </span>
-            </div>
+              }
+            />
 
             {status !== 'ready' ? (
-              renderCardStates(isRTL ? 'جارٍ تحميل توازن الطاقة' : 'Loading energy balance')
+              renderCardStates(isRTL ? 'Ø¬Ø§Ø±Ù ØªØ­Ù…ÙŠÙ„ ØªÙˆØ§Ø²Ù† Ø§Ù„Ø·Ø§Ù‚Ø©' : 'Loading energy balance')
             ) : (
               <>
                 <div className="today-bento-fuel-grid">
                   <div className="today-bento-metric">
-                    <span className="today-bento-metric-label">{isRTL ? 'السعرات' : 'Calories'}</span>
+                    <span className="today-bento-metric-label">{isRTL ? 'Ø§Ù„Ø³Ø¹Ø±Ø§Øª' : 'Calories'}</span>
                     <strong className="today-bento-metric-value tabular-nums" dir="ltr">
                       {todayCalories}
                       <small> / {dailyCaloriesTarget}</small>
                     </strong>
-                    <div className="today-progress-track" role="img" aria-label={`${isRTL ? 'السعرات' : 'Calories'}: ${caloriePct}%`}>
+                    <div className="today-progress-track" role="img" aria-label={`${isRTL ? 'Ø§Ù„Ø³Ø¹Ø±Ø§Øª' : 'Calories'}: ${caloriePct}%`}>
                       <span style={{ width: `${caloriePct}%`, background: 'linear-gradient(90deg, var(--accent-emerald), var(--accent-cyan))' }} />
                     </div>
                   </div>
                   <div className="today-bento-metric">
-                    <span className="today-bento-metric-label">{isRTL ? 'البروتين' : 'Protein'}</span>
+                    <span className="today-bento-metric-label">{isRTL ? 'Ø§Ù„Ø¨Ø±ÙˆØªÙŠÙ†' : 'Protein'}</span>
                     <strong className="today-bento-metric-value tabular-nums" dir="ltr">
                       {todayProtein}
                       <small> / {dailyProteinTarget} g</small>
                     </strong>
-                    <div className="today-progress-track" role="img" aria-label={`${isRTL ? 'البروتين' : 'Protein'}: ${proteinPct}%`}>
+                    <div className="today-progress-track" role="img" aria-label={`${isRTL ? 'Ø§Ù„Ø¨Ø±ÙˆØªÙŠÙ†' : 'Protein'}: ${proteinPct}%`}>
                       <span style={{ width: `${proteinPct}%`, background: 'linear-gradient(90deg, var(--accent-emerald), #059669)' }} />
                     </div>
                   </div>
                 </div>
 
-                <div className="today-bento-quick-actions" role="group" aria-label={isRTL ? 'إجراءات سريعة' : 'Quick actions'}>
+                <div className="today-bento-quick-actions" role="group" aria-label={isRTL ? 'Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª Ø³Ø±ÙŠØ¹Ø©' : 'Quick actions'}>
                   <button
                     type="button"
                     className="forma-quick-tile is-cyan"
@@ -631,15 +668,15 @@ export function TodayBentoGrid({
                     }}
                   >
                     <Droplet size={15} aria-hidden="true" />
-                    <span>{isRTL ? 'ماء +250 مل' : '+250 ml water'}</span>
+                    <span>{isRTL ? 'Ù…Ø§Ø¡ +250 Ù…Ù„' : '+250 ml water'}</span>
                   </button>
                   <button type="button" className="forma-quick-tile is-emerald" onClick={onNavigateNutrition}>
                     <Camera size={15} aria-hidden="true" />
-                    <span>{isRTL ? 'مسح وجبة' : 'Scan meal'}</span>
+                    <span>{isRTL ? 'Ù…Ø³Ø­ ÙˆØ¬Ø¨Ø©' : 'Scan meal'}</span>
                   </button>
                   <button type="button" className="forma-quick-tile is-lime" onClick={onOpenQuickWorkout}>
                     <Zap size={15} aria-hidden="true" />
-                    <span>{isRTL ? 'تمرين حر' : 'Quick workout'}</span>
+                    <span>{isRTL ? 'ØªÙ…Ø±ÙŠÙ† Ø­Ø±' : 'Quick workout'}</span>
                   </button>
                 </div>
               </>
@@ -649,24 +686,25 @@ export function TodayBentoGrid({
 
         <article className="forma-bento-card" data-tier="tertiary">
           <div className="forma-bento-card-body">
-            <div className="forma-widget-header" style={{ padding: 0 }}>
-              <h3 className="forma-widget-title">
-                <span className="forma-widget-icon" style={{ color: 'var(--accent-lime)' }}>
-                  <Dumbbell size={15} aria-hidden="true" />
+            <WidgetHeader
+              as="div"
+              flush
+              icon={<Dumbbell size={15} aria-hidden="true" />}
+              iconColor="var(--accent-lime)"
+              title={isRTL ? 'Ø§Ù„Ø¹Ø¶Ù„Ø© Ø§Ù„Ù…Ø³ØªÙ‡Ø¯ÙØ©' : 'Target focus'}
+              trailing={
+                <span
+                  className="forma-badge"
+                  style={{ color: 'var(--accent-cyan)', background: 'rgba(56,189,248,0.14)', borderColor: 'rgba(56,189,248,0.32)' }}
+                >
+                  <ShieldCheck size={12} aria-hidden="true" />
+                  <span className="tabular-nums">{isRTL ? `Ø¬Ø§Ù‡Ø²ÙŠØ© ${recoveryScore}%` : `${recoveryScore}% ready`}</span>
                 </span>
-                <span>{isRTL ? 'العضلة المستهدفة' : 'Target focus'}</span>
-              </h3>
-              <span
-                className="forma-badge"
-                style={{ color: 'var(--accent-cyan)', background: 'rgba(56,189,248,0.14)', borderColor: 'rgba(56,189,248,0.32)' }}
-              >
-                <ShieldCheck size={12} aria-hidden="true" />
-                <span className="tabular-nums">{isRTL ? `جاهزية ${recoveryScore}%` : `${recoveryScore}% ready`}</span>
-              </span>
-            </div>
+              }
+            />
 
             {status !== 'ready' ? (
-              renderCardStates(isRTL ? 'جارٍ تحميل العضلة المستهدفة' : 'Loading focus muscle')
+              renderCardStates(isRTL ? 'Ø¬Ø§Ø±Ù ØªØ­Ù…ÙŠÙ„ Ø§Ù„Ø¹Ø¶Ù„Ø© Ø§Ù„Ù…Ø³ØªÙ‡Ø¯ÙØ©' : 'Loading focus muscle')
             ) : (
               <>
                 <p className="today-bento-focus-name">{isRTL ? focusMuscle.nameAr : focusMuscle.nameEn}</p>
@@ -681,7 +719,7 @@ export function TodayBentoGrid({
                       onScrollToHologram();
                     }}
                   >
-                    <span>{isRTL ? 'خريطة العضلات' : 'Muscle map'}</span>
+                    <span>{isRTL ? 'Ø®Ø±ÙŠØ·Ø© Ø§Ù„Ø¹Ø¶Ù„Ø§Øª' : 'Muscle map'}</span>
                     <ArrowUpRight size={14} style={{ transform: isRTL ? 'scaleX(-1)' : 'none' }} aria-hidden="true" />
                   </button>
                 </div>
@@ -692,34 +730,35 @@ export function TodayBentoGrid({
 
         <article className="forma-bento-card" data-tier="tertiary">
           <div className="forma-bento-card-body">
-            <div className="forma-widget-header" style={{ padding: 0 }}>
-              <h3 className="forma-widget-title">
-                <span className="forma-widget-icon" style={{ color: 'var(--accent-amber)' }}>
-                  <Flame size={15} aria-hidden="true" />
+            <WidgetHeader
+              as="div"
+              flush
+              icon={<Flame size={15} aria-hidden="true" />}
+              iconColor="var(--accent-amber)"
+              title={isRTL ? 'Ø§Ù„Ø§Ù„ØªØ²Ø§Ù… Ø§Ù„Ø£Ø³Ø¨ÙˆØ¹ÙŠ' : 'Weekly consistency'}
+              trailing={
+                <span className="forma-badge is-amber">
+                  <Flame size={12} aria-hidden="true" />
+                  <span className="tabular-nums">{streakDays}</span>
+                  <span>{isRTL ? 'ÙŠÙˆÙ…' : 'd'}</span>
                 </span>
-                <span>{isRTL ? 'الالتزام الأسبوعي' : 'Weekly consistency'}</span>
-              </h3>
-              <span className="forma-badge is-amber">
-                <Flame size={12} aria-hidden="true" />
-                <span className="tabular-nums">{streakDays}</span>
-                <span>{isRTL ? 'يوم' : 'd'}</span>
-              </span>
-            </div>
+              }
+            />
 
             {status !== 'ready' ? (
-              renderCardStates(isRTL ? 'جارٍ تحميل سجل الالتزام' : 'Loading streak')
+              renderCardStates(isRTL ? 'Ø¬Ø§Ø±Ù ØªØ­Ù…ÙŠÙ„ Ø³Ø¬Ù„ Ø§Ù„Ø§Ù„ØªØ²Ø§Ù…' : 'Loading streak')
             ) : (
               <>
                 <p className="today-bento-focus-body">
                   {streakDays > 0
                     ? isRTL
-                      ? 'أداء رائع! حافظ على الزخم وسلسلة التمارين.'
+                      ? 'Ø£Ø¯Ø§Ø¡ Ø±Ø§Ø¦Ø¹! Ø­Ø§ÙØ¸ Ø¹Ù„Ù‰ Ø§Ù„Ø²Ø®Ù… ÙˆØ³Ù„Ø³Ù„Ø© Ø§Ù„ØªÙ…Ø§Ø±ÙŠÙ†.'
                       : 'Crushing it. Keep the training momentum going.'
                     : isRTL
-                      ? 'ابدأ جلستك التدريبية اليوم لبدء سلسلتك الجديدة.'
-                      : 'Start today’s session to ignite a new streak.'}
+                      ? 'Ø§Ø¨Ø¯Ø£ Ø¬Ù„Ø³ØªÙƒ Ø§Ù„ØªØ¯Ø±ÙŠØ¨ÙŠØ© Ø§Ù„ÙŠÙˆÙ… Ù„Ø¨Ø¯Ø¡ Ø³Ù„Ø³Ù„ØªÙƒ Ø§Ù„Ø¬Ø¯ÙŠØ¯Ø©.'
+                      : 'Start todayâ€™s session to ignite a new streak.'}
                 </p>
-                <ol className="today-week-strip" aria-label={isRTL ? 'أيام الأسبوع' : 'Days of the week'}>
+                <ol className="today-week-strip" aria-label={isRTL ? 'Ø£ÙŠØ§Ù… Ø§Ù„Ø£Ø³Ø¨ÙˆØ¹' : 'Days of the week'}>
                   {weekDays.map((day) => (
                     <li key={day.key} className="today-week-day" data-state={day.hasWorkout ? 'done' : day.dayIsFriday ? 'rest' : day.isCurrentDay ? 'today' : 'idle'}>
                       <span className="today-week-day-name">{day.dayName}</span>
@@ -734,19 +773,19 @@ export function TodayBentoGrid({
                       </span>
                       <span className="forma-sr-only">
                         {day.hasWorkout
-                          ? isRTL ? ' تم التدريب' : ' completed'
+                          ? isRTL ? ' ØªÙ… Ø§Ù„ØªØ¯Ø±ÙŠØ¨' : ' completed'
                           : day.dayIsFriday
-                            ? isRTL ? ' عطلة' : ' rest day'
-                            : isRTL ? ' لم يتم التدريب' : ' not trained'}
+                            ? isRTL ? ' Ø¹Ø·Ù„Ø©' : ' rest day'
+                            : isRTL ? ' Ù„Ù… ÙŠØªÙ… Ø§Ù„ØªØ¯Ø±ÙŠØ¨' : ' not trained'}
                       </span>
                     </li>
                   ))}
                 </ol>
                 <p className="forma-sr-only">{weekSummary}</p>
                 <div className="forma-bento-card-footer">
-                  <span className="today-bento-footnote">{isRTL ? 'الجمعة عطلة استشفاء' : 'Friday is a recovery day'}</span>
+                  <span className="today-bento-footnote">{isRTL ? 'Ø§Ù„Ø¬Ù…Ø¹Ø© Ø¹Ø·Ù„Ø© Ø§Ø³ØªØ´ÙØ§Ø¡' : 'Friday is a recovery day'}</span>
                   <button type="button" className="forma-quiet-button" onClick={onNavigatePlan}>
-                    <span>{isRTL ? 'الجدول الكامل' : 'Full schedule'}</span>
+                    <span>{isRTL ? 'Ø§Ù„Ø¬Ø¯ÙˆÙ„ Ø§Ù„ÙƒØ§Ù…Ù„' : 'Full schedule'}</span>
                     <ArrowUpRight size={14} style={{ transform: isRTL ? 'scaleX(-1)' : 'none' }} aria-hidden="true" />
                   </button>
                 </div>

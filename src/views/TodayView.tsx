@@ -23,7 +23,7 @@ import { useData } from '../hooks/useData';
 import { useTranslation } from '../lib/i18n';
 import { gymAudio } from '../lib/audio';
 import { computeMuscleRecovery } from '../lib/recovery';
-import { deriveSessionStatus, selectDailySummary, selectWorkoutStreak } from '../lib/selectors';
+import { deriveSessionStatus, resolveDailyTargets, selectDailySummary, selectWorkoutStreak } from '../lib/selectors';
 import { formatDuration } from '../lib/formatters';
 import { notify } from '../lib/feedback';
 import type { WorkoutSession } from '../lib/api';
@@ -34,6 +34,7 @@ import { MetricPair } from '../components/primitives/MetricPair';
 import { QuickWorkoutModal } from '../components/QuickWorkoutModal';
 import { DailyNutritionTargetsCard } from '../components/DailyNutritionTargetsCard';
 import { TodayBentoGrid, WidgetSkeleton, useFormaReducedMotion } from '../components/TodayBentoGrid';
+import { TodayTier } from '../components/TodayTier';
 import { RecoveryCard } from '../components/RecoveryCard';
 import { MuscleRecoveryHeatmapWidget } from '../components/MuscleRecoveryHeatmapWidget';
 import { InteractiveHydrationWaveCard } from '../components/InteractiveHydrationWaveCard';
@@ -113,6 +114,20 @@ export function TodayView() {
   const plannedMinutes = useMemo(
     () => todaySessions.reduce((sum, session) => sum + (session.duration || 0), 0),
     [todaySessions],
+  );
+
+  // The bento grid and the nutrition card were each handed the same four
+  // targets, with the same four magic-number fallbacks, at two call sites.
+  const targets = useMemo(() => resolveDailyTargets(daily?.nutritionGoals), [daily]);
+
+  const scrollToId = useCallback(
+    (id: string, block: ScrollLogicalPosition = 'start') => {
+      document.getElementById(id)?.scrollIntoView({
+        behavior: reduceMotion ? 'auto' : 'smooth',
+        block,
+      });
+    },
+    [reduceMotion],
   );
 
   const openQuickWorkout = useCallback(() => {
@@ -596,11 +611,11 @@ export function TodayView() {
           </div>
         </section>
 
-        <section className="today-tier today-tier-targets" aria-labelledby="today-targets-title">
-          <p className="today-tier-kicker" id="today-targets-title">
-            <span className="today-tier-kicker-line" aria-hidden="true" />
-            {isRTL ? 'مستهدف اليوم' : 'Today’s targets'}
-          </p>
+        <TodayTier
+          name="targets"
+          titleId="today-targets-title"
+          label={isRTL ? 'مستهدف اليوم' : 'Today’s targets'}
+        >
           <TodayBentoGrid
             status={loading ? 'loading' : dashboardError ? 'error' : 'ready'}
             errorMessage={dashboardError || undefined}
@@ -616,9 +631,9 @@ export function TodayView() {
             todayWater={daily.waterMl}
             waterGoal={daily.waterTargetMl}
             todayCalories={todayCalories}
-            dailyCaloriesTarget={daily.nutritionGoals?.dailyCalories || 2154}
+            dailyCaloriesTarget={targets.calories}
             todayProtein={todayProtein}
-            dailyProteinTarget={daily.nutritionGoals?.dailyProtein || 162}
+            dailyProteinTarget={targets.protein}
             activeSession={activeSession}
             recoveryScore={recoveryOverview.overallScore}
             streakDays={streakDays}
@@ -629,32 +644,23 @@ export function TodayView() {
             onOpenQuickWorkout={openQuickWorkout}
             onNavigatePlan={() => navigate('/plan')}
             onNavigateNutrition={() => navigate('/nutrition?action=scan-meal')}
-            onScrollToHologram={() => {
-              document.getElementById('today-recovery')?.scrollIntoView({
-                behavior: reduceMotion ? 'auto' : 'smooth',
-                block: 'start',
-              });
-            }}
+            onScrollToHologram={() => scrollToId('today-recovery')}
           />
-        </section>
+        </TodayTier>
 
-        <section className="today-tier today-tier-recovery" id="today-recovery" aria-labelledby="today-recovery-title">
-          <p className="today-tier-kicker is-lime" id="today-recovery-title">
-            <span className="today-tier-kicker-line" aria-hidden="true" />
-            {isRTL ? 'الجاهزية واستشفاء العضلات' : 'Recovery & readiness'}
-          </p>
-
+        <TodayTier
+          name="recovery"
+          id="today-recovery"
+          tone="is-lime"
+          titleId="today-recovery-title"
+          label={isRTL ? 'الجاهزية واستشفاء العضلات' : 'Recovery & readiness'}
+        >
           <div className={`today-recovery-stack ${completedTrainingRecords > 0 ? '' : 'is-stacked'}`.trim()}>
             {completedTrainingRecords > 0 ? (
               <>
                 <RecoveryCard
                   recovery={recoveryOverview}
-                  onExploreMuscles={() => {
-                    document.getElementById('today-muscle-hologram-section')?.scrollIntoView({
-                      behavior: reduceMotion ? 'auto' : 'smooth',
-                      block: 'center',
-                    });
-                  }}
+                  onExploreMuscles={() => scrollToId('today-muscle-hologram-section', 'center')}
                 />
                 <MuscleRecoveryHeatmapWidget />
               </>
@@ -675,26 +681,26 @@ export function TodayView() {
               </div>
             )}
           </div>
-        </section>
+        </TodayTier>
 
-        <section className="today-tier today-tier-fuel" aria-labelledby="today-fuel-title">
-          <p className="today-tier-kicker is-emerald" id="today-fuel-title">
-            <span className="today-tier-kicker-line" aria-hidden="true" />
-            {isRTL ? 'الوقود اليومي' : 'Daily fuel'}
-          </p>
-
+        <TodayTier
+          name="fuel"
+          tone="is-emerald"
+          titleId="today-fuel-title"
+          label={isRTL ? 'الوقود اليومي' : 'Daily fuel'}
+        >
           <div className="today-fuel-grid">
             <div className="today-fuel-column">
               <DailyNutritionTargetsCard
                 todayCalories={todayCalories}
                 todayBurnedCalories={todayBurnedCalories}
-                dailyCaloriesTarget={daily.nutritionGoals?.dailyCalories || 2154}
+                dailyCaloriesTarget={targets.calories}
                 todayProtein={todayProtein}
-                dailyProteinTarget={daily.nutritionGoals?.dailyProtein || 162}
+                dailyProteinTarget={targets.protein}
                 todayCarbs={todayCarbs}
-                dailyCarbsTarget={daily.nutritionGoals?.dailyCarbs || 242}
+                dailyCarbsTarget={targets.carbs}
                 todayFats={todayFats}
-                dailyFatsTarget={daily.nutritionGoals?.dailyFats || 60}
+                dailyFatsTarget={targets.fats}
                 onEdit={() => navigate('/nutrition')}
               />
             </div>
@@ -714,7 +720,7 @@ export function TodayView() {
               />
             </div>
           </div>
-        </section>
+        </TodayTier>
       </div>
 
       <QuickWorkoutModal

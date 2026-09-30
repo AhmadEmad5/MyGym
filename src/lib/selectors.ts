@@ -126,6 +126,50 @@ export function selectPerformanceDatasets(data: AppData, range = 'all'): Perform
   ];
 }
 
+export interface DailyTargets {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fats: number;
+}
+
+/**
+ * The fallback applied when a stored target is missing or zero.
+ *
+ * These are NOT the same numbers as the default block inside
+ * `selectDailySummary` (2200/150/220/65), and `NutritionView` carries a third
+ * set (2200/160/250/70). Three sets of nutrition defaults in one app is a
+ * real inconsistency, but reconciling them changes what an athlete sees on
+ * screen, so this preserves the values the Today screen has always rendered
+ * and names the problem rather than silently picking a winner.
+ */
+const TODAY_TARGET_FALLBACKS: DailyTargets = {
+  calories: 2154,
+  protein: 162,
+  carbs: 242,
+  fats: 60,
+};
+
+/**
+ * Resolves the four macro targets a dashboard card needs.
+ *
+ * The Today screen passed these to both the bento grid and the nutrition card,
+ * duplicating the same four `|| <number>` expressions at each call site. The
+ * `||` is load-bearing for the zero case: a goal explicitly stored as `0`
+ * should fall back rather than render "0 kcal" as a target.
+ */
+export function resolveDailyTargets(
+  goals: Partial<DailyTargets & { dailyCalories: number; dailyProtein: number; dailyCarbs: number; dailyFats: number }> | null | undefined
+): DailyTargets {
+  const source = goals || {};
+  return {
+    calories: source.dailyCalories || TODAY_TARGET_FALLBACKS.calories,
+    protein: source.dailyProtein || TODAY_TARGET_FALLBACKS.protein,
+    carbs: source.dailyCarbs || TODAY_TARGET_FALLBACKS.carbs,
+    fats: source.dailyFats || TODAY_TARGET_FALLBACKS.fats,
+  };
+}
+
 export function selectWorkoutStreak(data: AppData): number {
   if (!data?.history || data.history.length === 0) return 0;
   
