@@ -816,6 +816,28 @@ export const TRANSLATIONS = {
     calendarActionBarToday: 'Back to today',
     routinesAiHintLabel: 'About AI-generated programs',
     routinesAiHintBody: 'The generator drafts a whole split from your goal. You confirm the days before anything is written to your plan.',
+
+    // Add Session workflow
+    sessionTitleHint: 'Shown on your calendar and in your history.',
+    sessionTitleRequired: 'Give this session a title so you can find it again.',
+    sessionDateHint: 'Pick the day and time you plan to train.',
+    sessionDateRequired: 'Choose a date and time for this session.',
+    sessionDateFridayBlock: 'Friday is the weekly off-day and the gym is closed. Pick another day to save.',
+    sessionDurationHint: 'Total session length in minutes — 1 minute or more.',
+    sessionDurationRequired: 'Enter how many minutes this session runs.',
+    sessionDurationMin: 'Duration must be at least 1 minute.',
+    sessionTypeHint: 'Sets how the session is grouped and marked in your week.',
+    sessionNotesHint: 'Optional. Focus cues, tempo, or the number you want to beat.',
+    sessionFormFixErrors: 'Fix these before saving',
+    quickTemplatesHint: 'A template fills the title, the type and the exercise list. Anything you type yourself is left alone.',
+    quickTemplateApplied: 'Template applied — check the title, type and exercises below.',
+    quickTemplateCleared: 'Template undone. Your own text was left alone.',
+    quickTemplateClear: 'Undo template',
+    quickTemplateSelected: 'Applied',
+    savingSession: 'Saving your session…',
+    sessionSaved: 'Session saved.',
+    sessionSaveFailed: 'Not saved. The session was rejected before it could be stored. Check the name, date and duration. Your changes are still here.',
+    saveBlockedFriday: 'Saving is blocked on Fridays. Change the date to enable it.',
   },
   ar: {
     // Navigation
@@ -1628,6 +1650,28 @@ export const TRANSLATIONS = {
     calendarActionBarToday: 'عودة إلى اليوم',
     routinesAiHintLabel: 'عن البرامج المولد بالذكاء الاصطناعي',
     routinesAiHintBody: 'يصمّ المولّد برنامجًا كاملًا من هدفك. تؤكّد الأيام قبل أن يُحفظ شيء في خطتك.',
+
+    // Add Session workflow
+    sessionTitleHint: 'يظهر في تقويمك وفي سجلّك.',
+    sessionTitleRequired: 'أعطِ هذه الجلسة عنواناً لتجدها لاحقاً.',
+    sessionDateHint: 'اختر اليوم والوقت الذي ستتدرب فيه.',
+    sessionDateRequired: 'اختر تاريخاً ووقتاً لهذه الجلسة.',
+    sessionDateFridayBlock: 'الجمعة يوم عطلة أسبوعي والجيم مغلق. اختر يوماً آخر للحفظ.',
+    sessionDurationHint: 'إجمالي مدة الجلسة بالدقائق — دقيقة واحدة أو أكثر.',
+    sessionDurationRequired: 'أدخل عدد دقائق هذه الجلسة.',
+    sessionDurationMin: 'يجب ألا تقل المدة عن دقيقة واحدة.',
+    sessionTypeHint: 'يحدد طريقة تجميع الجلسة وتمييزها في أسبوعك.',
+    sessionNotesHint: 'اختياري. تركيز على الأداء أو الإيقاع أو الرقم الذي تريد تحطيمه.',
+    sessionFormFixErrors: 'صحّح هذه قبل الحفظ',
+    quickTemplatesHint: 'القالب يملأ العنوان والنوع وقائمة التمارين، ويترك ما كتبته أنت دون تغيير.',
+    quickTemplateApplied: 'تم تطبيق القالب — راجع العنوان والنوع والتمارين بالأسفل.',
+    quickTemplateCleared: 'تم التراجع عن القالب، ونصّك المكتوب لم يتغيّر.',
+    quickTemplateClear: 'تراجع عن القالب',
+    quickTemplateSelected: 'مُطبَّق',
+    savingSession: 'جارٍ حفظ جلستك…',
+    sessionSaved: 'تم حفظ الجلسة.',
+    sessionSaveFailed: 'لم يتم الحفظ. تم رفض الجلسة قبل تخزينها. تحقق من الاسم والتاريخ والمدة. تغييراتك ما زالت هنا.',
+    saveBlockedFriday: 'الحفظ متوقف أيام الجمعة. غيّر التاريخ لتفعيله.',
   }
 };
 

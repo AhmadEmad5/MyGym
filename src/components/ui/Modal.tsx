@@ -93,6 +93,37 @@ export function Modal({
     };
   }, [isOpen, handleKeyDown, initialFocusRef]);
 
+  /* Presentation only: publishes the visible viewport to CSS as
+     `--modal-vv-h` / `--modal-vv-bottom`. `100dvh` does not shrink for the
+     iOS software keyboard, so without these the bottom of the sheet - where
+     every call site puts its action row - sits underneath the keyboard. The
+     focus trap, focus restore, Escape handling, ARIA and body scroll lock are
+     all in the effect above and are untouched. */
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const viewport = window.visualViewport;
+    const panel = panelRef.current;
+    if (!viewport || !panel) return;
+
+    const syncViewport = () => {
+      const bottomInset = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
+      panel.style.setProperty('--modal-vv-h', `${viewport.height}px`);
+      panel.style.setProperty('--modal-vv-bottom', `${bottomInset}px`);
+    };
+
+    syncViewport();
+    viewport.addEventListener('resize', syncViewport);
+    viewport.addEventListener('scroll', syncViewport);
+
+    return () => {
+      viewport.removeEventListener('resize', syncViewport);
+      viewport.removeEventListener('scroll', syncViewport);
+      panel.style.removeProperty('--modal-vv-h');
+      panel.style.removeProperty('--modal-vv-bottom');
+    };
+  }, [isOpen]);
+
   if (typeof document === 'undefined') return null;
 
   return createPortal(
@@ -118,7 +149,7 @@ export function Modal({
             transition={reducedMotion ? { duration: 0.15 } : { type: 'spring', damping: 28, stiffness: 350 }}
             style={{ willChange: 'transform, opacity', transform: 'translateZ(0)' }}
             className={cn(
-              'relative w-full max-h-[90vh] sm:max-h-[85vh] flex flex-col overflow-hidden z-10',
+              'ui-modal-panel relative w-full max-h-[90vh] sm:max-h-[85vh] flex flex-col overflow-hidden z-10',
               sizeClasses[size],
               'bg-[var(--surface-card)] border border-[var(--border-card)] rounded-t-2xl sm:rounded-2xl shadow-[var(--shadow-modal)]',
               'pb-[env(safe-area-inset-bottom,0px)] sm:pb-0 outline-none',
@@ -130,7 +161,7 @@ export function Modal({
             aria-describedby={description ? descriptionId : undefined}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sm:hidden flex justify-center pt-2.5 pb-1" aria-hidden="true">
+            <div className="ui-modal-grip sm:hidden flex justify-center pt-2.5 pb-1" aria-hidden="true">
               <div className="w-10 h-1 rounded-full bg-current opacity-20" />
             </div>
 
@@ -162,7 +193,7 @@ export function Modal({
               </div>
             )}
 
-            <div className="overflow-y-auto p-5 overscroll-contain flex-1">{children}</div>
+            <div className="ui-modal-body min-h-0 overflow-y-auto p-5 overscroll-contain flex-1">{children}</div>
           </motion.div>
         </div>
       )}

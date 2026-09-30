@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { addDays, endOfMonth, endOfWeek, format, isSameDay, isSameWeek, startOfMonth, startOfWeek } from 'date-fns';
 import { motion } from 'framer-motion';
@@ -55,6 +55,9 @@ export function CalendarView() {
   const [isClearOpen, setIsClearOpen] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
+  const [isSavingSession, setIsSavingSession] = useState(false);
+  const [sessionSaveFailed, setSessionSaveFailed] = useState(false);
+  const addSessionTriggerRef = useRef<HTMLButtonElement>(null);
 
   const tabParam = searchParams.get('tab');
   const [dayTab, setDayTab] = useState<DayTab>(
@@ -237,8 +240,19 @@ export function CalendarView() {
       duration: 60,
       notes: ''
     });
+    setSessionSaveFailed(false);
     setIsEditorOpen(true);
   }, [today]);
+
+  const handleEditorClose = useCallback(() => {
+    setSessionSaveFailed(false);
+    setIsEditorOpen(false);
+    window.setTimeout(() => {
+      const active = document.activeElement;
+      if (active && active !== document.body) return;
+      addSessionTriggerRef.current?.focus();
+    }, 0);
+  }, []);
 
   const handleComplete = useCallback(
     async (session: WorkoutSession) => {
@@ -296,7 +310,7 @@ export function CalendarView() {
   const handleSaveSession = useCallback(
     async (event: FormEvent) => {
       event.preventDefault();
-      if (!sessionDraft) return;
+      if (!sessionDraft || isSavingSession) return;
       if (sessionDraft.date && new Date(sessionDraft.date).getDay() === REST_DAY) {
         notify(t('restDayAlert'), 'warning');
         return;
@@ -311,10 +325,20 @@ export function CalendarView() {
         isCompleted: sessionDraft.isCompleted || false,
         exercises: sessionDraft.exercises || []
       };
-      await saveSession(next);
-      setIsEditorOpen(false);
+      setIsSavingSession(true);
+      setSessionSaveFailed(false);
+      try {
+        await saveSession(next);
+        notify(t('sessionSaved'), 'success');
+        setIsEditorOpen(false);
+      } catch (error) {
+        console.error('CalendarView: session save rejected before it was persisted', error);
+        setSessionSaveFailed(true);
+      } finally {
+        setIsSavingSession(false);
+      }
     },
-    [saveSession, sessionDraft, t]
+    [saveSession, sessionDraft, t, isSavingSession]
   );
 
   const applyTemplate = useCallback((name: string) => {
@@ -361,6 +385,7 @@ export function CalendarView() {
         }))
       }))
     });
+    setSessionSaveFailed(false);
     setIsEditorOpen(true);
   }, [selectedDay]);
 
@@ -547,6 +572,7 @@ export function CalendarView() {
             {t('calendarActionBarToday')}
           </Button>
           <Button
+            ref={addSessionTriggerRef}
             variant="primary"
             size="lg"
             onClick={() => openEditor(selectedDay)}
@@ -570,7 +596,9 @@ export function CalendarView() {
         onApplyTemplate={applyTemplate}
         onSubmit={handleSaveSession}
         onDelete={id => void handleDelete(id)}
-        onClose={() => setIsEditorOpen(false)}
+        onClose={handleEditorClose}
+        isSubmitting={isSavingSession}
+        submitFailed={sessionSaveFailed}
       />
 
       <ClearPlannedModal

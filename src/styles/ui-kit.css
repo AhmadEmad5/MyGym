@@ -289,6 +289,61 @@
 }
 
 /* --------------------------------------------------------------------------
+   Modal — the shared dialog (5 JSX call sites in 4 files).
+
+   Measured, not assumed: the body was never the failure. It carries
+   `overflow-y: auto`, which zeroes a flex item's automatic minimum size, so
+   `flex-1` already shrank it and it already scrolled (clientHeight 519 vs
+   scrollHeight 838 at 375x667). The crop was the panel being sized against
+   the LAYOUT viewport: neither `vh` nor `dvh` shrinks for the iOS software
+   keyboard, and both overstate the visible area while the Safari toolbar is
+   expanded. The sheet's block-end - where every call site puts its action row
+   - therefore landed in the occluded band: measured 203px below the keyboard
+   on a 667px phone, 172px on a 568px one, unreachable at any scroll offset.
+
+   So the sheet is now capped to the *visible* viewport and lifted by the
+   occluded band. `--modal-vv-h` / `--modal-vv-bottom` are written by
+   src/components/ui/Modal.tsx from window.visualViewport; without
+   window.visualViewport they fall back to 100dvh and 0, which is the previous
+   behaviour. Desktop keeps its existing 85vh cap untouched, and the
+   no-keyboard geometry is unchanged at every width measured.
+
+   `min-block-size: 0` on the panel, grip and body is an explicit guard, not
+   the fix: measured, it is a no-op in the current cascade (the body's
+   `overflow-y: auto` already wins). It is here so the flex contract survives a
+   stylesheet that ever sets the body's overflow back to visible.
+
+   Nothing here animates: `margin-block-end` and `max-block-size` only change
+   when the keyboard opens or closes, and the panel's own transform/opacity
+   animation in Modal.tsx already honours both motion gates.
+   -------------------------------------------------------------------------- */
+
+.ui-modal-panel {
+  min-block-size: 0;
+}
+
+.ui-modal-grip {
+  flex-shrink: 0;
+}
+
+.ui-modal-body {
+  min-block-size: 0;
+  -webkit-overflow-scrolling: touch;
+  scroll-padding-block: 0.75rem;
+}
+
+@media (max-width: 639px) {
+  .ui-modal-panel {
+    max-block-size: min(90dvh, calc(var(--modal-vv-h, 100dvh) - 1rem));
+    margin-block-end: var(--modal-vv-bottom, 0px);
+    padding-block-end: var(--shell-safe-bottom, env(safe-area-inset-bottom, 0px));
+    padding-inline:
+      max(0px, var(--shell-safe-inline-start, 0px))
+      max(0px, var(--shell-safe-inline-end, 0px));
+  }
+}
+
+/* --------------------------------------------------------------------------
    Reduced motion. Both gates, because the app also exposes its own switch via
    `html[data-motion="reduced"]`.
    -------------------------------------------------------------------------- */

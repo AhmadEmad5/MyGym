@@ -6,6 +6,19 @@
     --mobile-page-gutter: clamp(0.875rem, 4vw, 1.25rem);
     --mobile-touch-size: 44px;
     --shell-scroll-offset: 0px;
+
+    /* Thumb-zone action bar band. Every offset is derived, never typed in:
+       --shell-dock-inset is itself 74px + max(0.75rem, --shell-safe-bottom),
+       so the bar tracks the dock's real block size and the home indicator
+       together. --page-actionbar-block is fixed rather than measured, because
+       the bar declares block-size from it, so the band that the FAB and the
+       scroller clear is exactly the band the bar occupies. */
+    --page-actionbar-gap: 0.625rem;
+    --page-actionbar-block: 4.375rem;
+    --page-actionbar-inset: calc(
+      max(var(--shell-dock-inset, 86px), var(--hud-bottom-offset, 84px)) + var(--page-actionbar-gap)
+    );
+    --page-actionbar-band: calc(var(--page-actionbar-inset) + var(--page-actionbar-block));
   }
 
   .app-layout { min-height: 100dvh; }
@@ -629,8 +642,17 @@
    2. Thumb-zone action bar (Nutrition, Calendar)
 
    `display: none` by default so it never reaches a tablet or desktop. Below
-   900px it becomes a fixed bar sitting directly on top of the dock, which
-   keeps its own z-index of 1050 above the bar's 1040.
+   900px it becomes a fixed bar parked `--page-actionbar-gap` above the dock,
+   which keeps its own z-index of 1050 above the bar's 1040.
+
+   The two surfaces used to share an edge. The bar's block-end sat on
+   `--shell-dock-inset`, which is the dock's *reserved* band, not its real
+   block-start: measured 0px of clearance with a 34px home indicator (the case
+   that produced the screenshot) and 4px without one. The only edge the bar
+   carried was on its block-start, and its shadow was cast upward into the
+   content, so bar and dock read as one two-row block. A derived gap, a hairline
+   on the block-end edge and a downward cast now separate them; measured 14px of
+   clearance at 360, 375 and 414px wide.
    -------------------------------------------------------------------------- */
 .mobile-page-actionbar { display: none; }
 
@@ -639,38 +661,47 @@
     position: fixed;
     z-index: 1040;
     inset-inline: 0;
-    inset-block-end: max(var(--shell-dock-inset), var(--hud-bottom-offset));
+    inset-block-end: var(--page-actionbar-inset);
     display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    align-items: stretch;
+    justify-content: center;
+    gap: 0.625rem;
+    block-size: var(--page-actionbar-block);
     padding-block: 0.5rem;
     padding-inline:
       max(0.75rem, var(--shell-safe-inline-start))
       max(0.75rem, var(--shell-safe-inline-end));
-    border-block-start: 1px solid var(--border-highlight);
+    border-block: 1px solid var(--border-subtle);
+    border-block-end-color: var(--border-highlight);
     background: color-mix(in srgb, var(--bg-primary) 93%, transparent);
     backdrop-filter: blur(18px) saturate(170%);
     -webkit-backdrop-filter: blur(18px) saturate(170%);
-    box-shadow: 0 -12px 28px color-mix(in srgb, var(--bg-primary) 40%, transparent);
+    box-shadow: var(--shadow-card);
   }
 
   .mobile-page-actionbar > * {
     flex: 1 1 0;
     min-width: 0;
-    min-height: 52px;
+    min-block-size: 48px;
   }
 
   .mobile-page-actionbar .ui-button {
     gap: 0.45rem;
+    min-block-size: 48px;
     font-size: 0.95rem;
     font-weight: 800;
   }
 
-  /* Reserve the bar's own height so the last row can scroll clear of it. The
-     scroller already reserves --shell-dock-inset; the bar sits inside that
-     band, so only the bar's height is added here. */
+  /* Reserve the bar so the last row can scroll clear of it. The scroller
+     already reserves the dock band, so only the gap and the bar's own block
+     size are added here - both token-derived, so this cannot drift from the
+     bar's real geometry. */
   .nutrition-page,
-  .calendar-page { padding-block-end: 7.5rem; }
+  .calendar-page {
+    padding-block-end: calc(
+      var(--page-actionbar-gap) + var(--page-actionbar-block) + 0.5rem
+    );
+  }
 }
 
 /* --------------------------------------------------------------------------
@@ -931,6 +962,24 @@
   @media (max-width: 640px) {
     :root[data-floor-input='true'] .app-layout .content-area {
       padding-bottom: 0.75rem !important;
+    }
+  }
+
+  /* The AI FAB is sized against the dock alone (index.css, layered and
+     !important), so on the two screens that own a fixed action bar it would
+     land inside that bar. The bar is portalled to <body>, so no page-scoped
+     ancestor can reach it - gate on the bar's own presence instead and lift the
+     FAB clear of the whole band.
+
+     :has() cannot read computed `display`, and the bar is display:none in the
+     short-landscape block at the top of this file (unlayered !important, so it
+     outranks the display: flex below). Lifting the FAB there pushed the primary
+     AI control 72px out of the thumb zone for a bar that is not on screen. Both
+     views render the bar unconditionally, so that media query is the only
+     signal available and this one must stay its exact complement. */
+  @media (max-width: 900px) and (not ((orientation: landscape) and (max-height: 540px))) {
+    body:has(> .mobile-page-actionbar) .ai-fab {
+      bottom: calc(var(--page-actionbar-band) + 0.75rem) !important;
     }
   }
 }
