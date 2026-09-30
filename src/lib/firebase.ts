@@ -134,9 +134,12 @@ export const getFirebaseServices = (): {
   return { app: appInstance, auth: authInstance, db: dbInstance, functions: functionsInstance };
 };
 
-// Backward compatibility exports (with null checks)
-export const app = getFirebaseServices().app;
-export const auth = getFirebaseServices().auth;
-export const db = getFirebaseServices().db;
-export const functions = getFirebaseServices().functions;
+// Backward compatibility exports (with null checks).
+// Resolved once: calling the getter per export re-ran the config validation and
+// re-logged the same failure four times at module load.
+const services = getFirebaseServices();
+export const app = services.app;
+export const auth = services.auth;
+export const db = services.db;
+export const functions = services.functions;
 

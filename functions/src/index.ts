@@ -313,6 +313,20 @@ export const generateGeminiContent = onCall<GenerateAIRequest, Promise<GenerateA
     if (!prompt && (!contents || !Array.isArray(contents) || contents.length === 0)) {
       throw new HttpsError('invalid-argument', 'A valid prompt string or contents array is required.');
     }
+    // A truthy non-string would skip every length check below and still reach
+    // the paid Gemini call, so the type has to be settled first.
+    if (prompt !== undefined && typeof prompt !== 'string') {
+      throw new HttpsError('invalid-argument', 'prompt must be a string.');
+    }
+    if (imageBase64 !== undefined && imageBase64 !== null && typeof imageBase64 !== 'string') {
+      throw new HttpsError('invalid-argument', 'imageBase64 must be a base64 string.');
+    }
+    if (mimeType !== undefined && mimeType !== null && typeof mimeType !== 'string') {
+      throw new HttpsError('invalid-argument', 'mimeType must be a string.');
+    }
+    if (systemInstruction !== undefined && systemInstruction !== null && typeof systemInstruction !== 'string') {
+      throw new HttpsError('invalid-argument', 'systemInstruction must be a string.');
+    }
     if (typeof prompt === 'string') {
       assertPromptWithinLimits(prompt);
     }
@@ -421,11 +435,13 @@ export const generateGeminiContent = onCall<GenerateAIRequest, Promise<GenerateA
     }
 
     if (!generatedText && (!functionCalls || functionCalls.length === 0)) {
-      const msg = lastError?.message || 'تعذر الحصول على استجابة من نموذج الذكاء الاصطناعي.';
+      // Upstream SDK errors routinely embed the request URL, and the Gemini URL
+      // carries the API key in its query string. Log the detail, never forward it.
+      console.error('Gemini generation failed for every model:', lastError?.message || lastError);
       // Give the reserved unit back so a transient Gemini outage does not
       // permanently consume the user's daily quota. Best effort, never throws.
       await refundQuotaReservation({ usageRef, today, burstBucket });
-      throw new HttpsError('internal', msg);
+      throw new HttpsError('internal', 'تعذر الحصول على استجابة من نموذج الذكاء الاصطناعي.');
     }
 
     // 6. Success. The reservation already counted this request, so no further

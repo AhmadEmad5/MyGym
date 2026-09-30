@@ -47,6 +47,13 @@ const MESSAGES = {
   generic: 'تعذر الاتصال بالذكاء الاصطناعي. يرجى المحاولة مرة أخرى.'
 };
 
+/**
+ * Re-entering the callable cannot fix one of these: they are thrown locally,
+ * before any network call, so retrying only adds dead waiting and repeats the
+ * same failing invocation.
+ */
+const LOCAL_ERROR_MESSAGES = new Set<string>(Object.values(MESSAGES));
+
 export interface GenerateGeminiOptions {
   prompt: string;
   systemInstruction?: string;
@@ -96,6 +103,7 @@ function requireFunctions() {
 
 function isRetryable(error: any): boolean {
   if (!error) return false;
+  if (error instanceof Error && LOCAL_ERROR_MESSAGES.has(error.message)) return false;
   const code = typeof error.code === 'string' ? error.code : '';
   if (code === 'functions/resource-exhausted' || code === 'resource-exhausted') {
     return false;
@@ -165,12 +173,23 @@ async function waitForAuthenticatedUser(timeoutMs: number): Promise<boolean> {
   });
 }
 
+function safeStringifyLength(value: unknown): number {
+  if (value === undefined || value === null) return 0;
+  try {
+    return JSON.stringify(value)?.length || 0;
+  } catch {
+    // Circular or non-serialisable input: fall back to a character estimate so
+    // validation still runs instead of throwing a raw TypeError at the caller.
+    return String(value).length;
+  }
+}
+
 function estimatePayloadChars(options: GenerateGeminiOptions): number {
   const promptChars = options.prompt?.length || 0;
   const systemChars = options.systemInstruction?.length || 0;
   const imageChars = options.imageBase64?.length || 0;
-  const toolChars = options.tools ? JSON.stringify(options.tools ?? []).length : 0;
-  const contentsChars = options.contents ? JSON.stringify(options.contents ?? []).length : 0;
+  const toolChars = safeStringifyLength(options.tools);
+  const contentsChars = safeStringifyLength(options.contents);
   return promptChars + systemChars + imageChars + toolChars + contentsChars;
 }
 
@@ -318,7 +337,11 @@ export async function generateGeminiJson<T = any>(options: GenerateGeminiOptions
   } catch (parseErr) {
     const jsonMatch = cleaned.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
     if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]) as T;
+      try {
+        return JSON.parse(jsonMatch[0]) as T;
+      } catch {
+        throw new Error('Failed to parse AI response as JSON.');
+      }
     }
     throw new Error('Failed to parse AI response as JSON.');
   }

@@ -38,11 +38,15 @@ export function validateClientFile(file: File, options: FileValidationOptions): 
 
   // MIME type check
   const isAllowed = options.allowedMimeTypes.some((pattern) => {
-    if (pattern.endsWith('/*')) {
-      const typePrefix = pattern.split('/')[0];
-      return file.type.startsWith(`${typePrefix}/`);
+    const normalized = pattern.trim().toLowerCase();
+    if (normalized === '*/*') {
+      return true;
     }
-    return file.type.toLowerCase() === pattern.toLowerCase();
+    if (normalized.endsWith('/*')) {
+      const typePrefix = normalized.split('/')[0];
+      return file.type.toLowerCase().startsWith(`${typePrefix}/`);
+    }
+    return file.type.toLowerCase() === normalized;
   });
 
   if (!isAllowed && file.type) {

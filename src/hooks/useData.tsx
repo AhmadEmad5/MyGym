@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react';
 import { format } from 'date-fns';
 import { api, AppData, WorkoutSession, Routine, HistoryRecord, UserSettings, MealRecord, BodyMetricEntry, NutritionGoals, PerformanceInsights, estimateWorkoutCalories } from '../lib/api';
 import { auth } from '../lib/firebase';
@@ -103,6 +103,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return 'dark';
   });
 
+  // Identifies the newest in-flight load so a slow, older response cannot
+  // overwrite fresher state.
+  const loadRequestRef = useRef(0);
+  // Always the latest committed data. Reading it inside a state updater (instead
+  // of closing over `data`) is what keeps derived values correct when several
+  // mutations land before React re-renders.
+  const dataRef = useRef<AppData | null>(data);
+  dataRef.current = data;
+
   useEffect(() => {
     applyThemeToDom(theme);
   }, [theme]);
@@ -121,10 +130,28 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, [data?.settings?.fontScale, data?.settings?.highContrast]);
 
   const fetchInitialData = useCallback(async () => {
-    if (!localStorage.getItem('gym_data')) {
+    // Guards against two loads overlapping (auth listener + manual refresh): the
+    // slower one must not overwrite the state the newer one already published.
+    const requestId = ++loadRequestRef.current;
+    try {
+      if (!localStorage.getItem('gym_data')) {
+        setLoading(true);
+      }
+    } catch (e) {
       setLoading(true);
     }
-    const result = await api.getData();
+
+    let result: AppData;
+    try {
+      result = await api.getData();
+    } catch (err) {
+      // Never leave the app spinning on a failed read.
+      console.warn('Could not load training data:', err);
+      if (requestId === loadRequestRef.current) setLoading(false);
+      return;
+    }
+    if (requestId !== loadRequestRef.current) return;
+
     const localTheme = localStorage.getItem('forma_theme') || localStorage.getItem('kinetic_theme') || localStorage.getItem('mygym_theme');
     if (localTheme && result.settings) {
       result.settings.theme = localTheme;
@@ -142,16 +169,35 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if (auth) {
       unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
         if (firebaseUser) {
-          if (!localStorage.getItem('gym_data')) {
+          const requestId = ++loadRequestRef.current;
+          try {
+            if (!localStorage.getItem('gym_data')) {
+              setLoading(true);
+            }
+          } catch (e) {
             setLoading(true);
           }
-          const result = await api.getData();
-          
+          let result: AppData;
+          try {
+            result = await api.getData();
+          } catch (err) {
+            console.warn('Could not load training data for the signed-in athlete:', err);
+            if (requestId === loadRequestRef.current) setLoading(false);
+            return;
+          }
+          if (requestId !== loadRequestRef.current) return;
+
           if (!result.user || result.user.email !== firebaseUser.email) {
             const name = firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User';
             const userObj = { email: firebaseUser.email || '', name: name.charAt(0).toUpperCase() + name.slice(1) };
             result.user = userObj;
-            await api.updateRootSettings(result.settings, userObj);
+            try {
+              await api.updateRootSettings(result.settings, userObj);
+            } catch (err) {
+              // The athlete profile is a convenience: a failed write must not
+              // block the whole sign-in.
+              console.warn('Could not sync the athlete profile to Firestore:', err);
+            }
           }
           const localTheme = localStorage.getItem('forma_theme') || localStorage.getItem('kinetic_theme') || localStorage.getItem('mygym_theme');
           if (localTheme && result.settings) {
@@ -489,21 +535,26 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const logWater = useCallback(async (amountDelta: number, dateStr?: string) => {
     const key = dateStr || format(new Date(), 'yyyy-MM-dd');
-    let calculatedTotal = 0;
     let snapshot: AppData | null = null;
+
+    // The new total must be computed here, not inside the setData updater:
+    // React runs updaters during the next render, so a value captured in the
+    // updater is still 0 by the time api.logWater below is called - which
+    // zeroed the local mirror and the cloud copy on every single tap.
+    const current = dataRef.current?.waterLogs?.[key] || 0;
+    const nextTotal = Math.max(0, current + amountDelta);
+    if (dataRef.current) {
+      dataRef.current = { ...dataRef.current, waterLogs: { ...(dataRef.current.waterLogs || {}), [key]: nextTotal } };
+    }
 
     setData(prev => {
       if (!prev) return prev;
       snapshot = prev;
-      const currentWater = { ...(prev.waterLogs || {}) };
-      const currentAmount = currentWater[key] || 0;
-      calculatedTotal = Math.max(0, currentAmount + amountDelta);
-      currentWater[key] = calculatedTotal;
-      return { ...prev, waterLogs: currentWater };
+      return { ...prev, waterLogs: { ...(prev.waterLogs || {}), [key]: nextTotal } };
     });
 
     try {
-      await api.logWater(key, calculatedTotal);
+      await api.logWater(key, nextTotal);
     } catch (err) {
       console.warn("Could not sync water log to cloud, rolling back:", err);
       if (snapshot) setData(snapshot);
@@ -514,13 +565,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const resetWater = useCallback(async (dateStr?: string) => {
     const key = dateStr || format(new Date(), 'yyyy-MM-dd');
     let snapshot: AppData | null = null;
+    if (dataRef.current) {
+      dataRef.current = { ...dataRef.current, waterLogs: { ...(dataRef.current.waterLogs || {}), [key]: 0 } };
+    }
 
     setData(prev => {
       if (!prev) return prev;
       snapshot = prev;
-      const currentWater = { ...(prev.waterLogs || {}) };
-      currentWater[key] = 0;
-      return { ...prev, waterLogs: currentWater };
+      return { ...prev, waterLogs: { ...(prev.waterLogs || {}), [key]: 0 } };
     });
 
     try {
@@ -533,45 +585,43 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const saveInsights = useCallback(async (insights: PerformanceInsights) => {
-    if (!data) return;
-    const previous = { ...data };
-    setData({ ...data, insights });
+    const previousInsights = dataRef.current?.insights;
+    if (!dataRef.current) return;
+    setData(prev => (prev ? { ...prev, insights } : prev));
     try {
       await api.saveInsights(insights);
     } catch (err) {
       console.error('Failed to save performance insights, rolling back:', err);
-      setData(previous);
+      if (previousInsights) setData(prev => (prev ? { ...prev, insights: previousInsights } : prev));
       throw err;
     }
-  }, [data]);
+  }, []);
 
   const setTheme = useCallback(async (newTheme: string) => {
     const resolved = applyThemeToDom(newTheme);
     setThemeState(resolved);
 
-    if (data) {
-      const newSettings: UserSettings = { ...data.settings, theme: resolved };
-      setData({ ...data, settings: newSettings });
-
+    if (dataRef.current) {
+      const newSettings: UserSettings = { ...dataRef.current.settings, theme: resolved };
+      setData(prev => (prev ? { ...prev, settings: { ...prev.settings, theme: resolved } } : prev));
       try {
-        await api.updateRootSettings(newSettings, data.user);
+        await api.updateRootSettings(newSettings, dataRef.current.user);
       } catch (err) {
         console.warn("Could not sync theme to cloud, kept local preference:", err);
       }
     }
-  }, [data]);
+  }, []);
 
   const updateSettings = useCallback(async (settings: UserSettings, user?: AppData['user']) => {
-    if (!data) return;
+    if (!dataRef.current) return;
     if (settings.theme) {
       const resolved = applyThemeToDom(settings.theme);
       setThemeState(resolved);
       settings.theme = resolved;
     }
-    const previous = { ...data };
-    const targetUser = user !== undefined ? user : data.user;
-    const newData = { ...data, settings, user: targetUser };
-    setData(newData);
+    const previous = dataRef.current;
+    const targetUser = user !== undefined ? user : previous.user;
+    setData(prev => (prev ? { ...prev, settings, user: targetUser } : prev));
 
     try {
       await api.updateRootSettings(settings, targetUser);
@@ -579,10 +629,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
       console.error("Failed to update settings, rolling back UI state:", err);
       const currentActiveTheme = localStorage.getItem('forma_theme') || localStorage.getItem('kinetic_theme') || localStorage.getItem('mygym_theme') || theme;
       const preservedSettings = { ...previous.settings, theme: currentActiveTheme };
-      setData({ ...previous, settings: preservedSettings });
+      setData(prev => (prev ? { ...prev, settings: preservedSettings, user: previous.user } : prev));
       throw err;
     }
-  }, [data, theme]);
+  }, [theme]);
 
   const updateData = useCallback(async (newData: AppData) => {
     setData(newData);
@@ -643,7 +693,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      // Revoking in the same tick cancels the download in some browsers.
+      setTimeout(() => URL.revokeObjectURL(url), 0);
     } catch (err) {
       console.error('Failed to export backup:', err);
     }
@@ -653,6 +704,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     try {
       const parsed = JSON.parse(backupJson);
       const updated = await api.importAllData(parsed);
+      dataRef.current = updated;
       setData(updated);
       if (updated.settings?.theme) {
         setThemeState(updated.settings.theme);
@@ -665,15 +717,24 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Stable identity unless the data itself changes, so consumers of the context
+  // are not forced to re-render on every provider render.
+  const contextValue = useMemo<DataContextType>(() => ({
+    data, loading, theme, setTheme, forceRefresh: fetchInitialData,
+    saveSession, saveSessions, deleteSession, deleteSessions, finishWorkoutSession, saveRoutine, deleteRoutine, saveHistory, deleteHistory, saveMeal, deleteMeal,
+    saveBodyMetric, deleteBodyMetric, updateNutritionGoals, logWater, resetWater,
+    saveInsights,
+    updateSettings, updateData, signOutUser,
+    exportBackup, importBackup
+  }), [
+    data, loading, theme, setTheme, fetchInitialData,
+    saveSession, saveSessions, deleteSession, deleteSessions, finishWorkoutSession, saveRoutine, deleteRoutine, saveHistory, deleteHistory, saveMeal, deleteMeal,
+    saveBodyMetric, deleteBodyMetric, updateNutritionGoals, logWater, resetWater,
+    saveInsights, updateSettings, updateData, signOutUser, exportBackup, importBackup
+  ]);
+
   return (
-    <DataContext.Provider value={{ 
-      data, loading, theme, setTheme, forceRefresh: fetchInitialData,
-      saveSession, saveSessions, deleteSession, deleteSessions, finishWorkoutSession, saveRoutine, deleteRoutine, saveHistory, deleteHistory, saveMeal, deleteMeal,
-      saveBodyMetric, deleteBodyMetric, updateNutritionGoals, logWater, resetWater,
-      saveInsights,
-      updateSettings, updateData, signOutUser,
-      exportBackup, importBackup
-    }}>
+    <DataContext.Provider value={contextValue}>
       {children}
     </DataContext.Provider>
   );

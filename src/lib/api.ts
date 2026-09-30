@@ -258,16 +258,30 @@ export const DEFAULT_NUTRITION_GOALS: NutritionGoals = {
   dailyWaterMl: 2500
 };
 
-// CRITICAL: Maximum text length for input validation
-const MAX_TEXT_LENGTH = 500;
+// CRITICAL: Maximum text length for input validation.
+// These caps mirror the Firestore rules in `firestore.rules` on purpose. A value
+// that the rules reject can never be synced, so allowing it here only produces a
+// session that appears to save and then silently disappears from the cloud.
+const MAX_TEXT_LENGTH = 150;
+const MAX_NOTES_LENGTH = 3000;
+const MAX_DESCRIPTION_LENGTH = 2000;
+const MAX_SESSION_TYPE_LENGTH = 50;
+const MAX_SESSION_EXERCISES = 60;
+// Firestore document IDs are path segments: a "/" would build a different path
+// (or throw) and a value over 1500 characters is rejected by the backend.
+const MAX_ID_LENGTH = 150;
+const MAX_MEAL_TYPE = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
 
 // ============================================================================
 // VALIDATION FUNCTIONS
 // ============================================================================
 
 function assertId(value: unknown, entity: string): asserts value is string {
-  if (typeof value !== 'string' || !value.trim() || value.length > 160) {
+  if (typeof value !== 'string' || !value.trim() || value.length > MAX_ID_LENGTH) {
     throw new Error(`${entity} must have a valid identifier.`);
+  }
+  if (value.includes('/')) {
+    throw new Error(`${entity} identifier must not contain "/".`);
   }
 }
 
@@ -279,21 +293,55 @@ function assertFiniteNonNegative(value: unknown, field: string, maximum = 1_000_
 
 function assertValidSession(session: WorkoutSession) {
   assertId(session?.id, 'Workout session');
-  if (!session.title?.trim() || session.title.length > MAX_TEXT_LENGTH) throw new Error('Workout title is required and must be under 500 characters.');
+  if (!session.title?.trim() || session.title.length > MAX_TEXT_LENGTH) throw new Error('Workout title is required and must be under 150 characters.');
   if (!session.date || Number.isNaN(Date.parse(session.date))) throw new Error('Workout date is invalid.');
   assertFiniteNonNegative(session.duration, 'Workout duration', 1_440);
+  if (typeof session.type !== 'string' || session.type.length > MAX_SESSION_TYPE_LENGTH) throw new Error('Workout type is invalid.');
+  if (session.isCompleted !== undefined && typeof session.isCompleted !== 'boolean') throw new Error('Workout completion flag is invalid.');
+  if (session.notes != null && (typeof session.notes !== 'string' || session.notes.length > MAX_NOTES_LENGTH)) {
+    throw new Error('Workout notes must be text under 3000 characters.');
+  }
   if (!Array.isArray(session.exercises)) throw new Error('Workout exercises must be a list.');
+  if (session.exercises.length > MAX_SESSION_EXERCISES) throw new Error(`A workout cannot hold more than ${MAX_SESSION_EXERCISES} exercises.`);
+  if (session.exercises.some(ex => ex.sets !== undefined && !Array.isArray(ex.sets))) {
+    throw new Error('Every exercise must hold a list of sets.');
+  }
 }
 
 function assertValidMeal(meal: MealRecord) {
   assertId(meal?.id, 'Meal');
-  if (!meal.title?.trim() || meal.title.length > MAX_TEXT_LENGTH) throw new Error('Meal title is required and must be under 500 characters.');
+  if (!meal.title?.trim() || meal.title.length > MAX_TEXT_LENGTH) throw new Error('Meal title is required and must be under 150 characters.');
   if (!meal.date || Number.isNaN(Date.parse(meal.date))) throw new Error('Meal date is invalid.');
-  (['calories', 'protein', 'carbs', 'fats'] as const).forEach(key => assertFiniteNonNegative(meal[key], `Meal ${key}`));
+  if (!MAX_MEAL_TYPE.includes(meal.mealType)) throw new Error('Meal type is invalid.');
+  assertFiniteNonNegative(meal.calories, 'Meal calories', 25_000);
+  assertFiniteNonNegative(meal.protein, 'Meal protein', 1_000);
+  assertFiniteNonNegative(meal.carbs, 'Meal carbs', 2_000);
+  assertFiniteNonNegative(meal.fats, 'Meal fats', 1_000);
 }
 
 function assertValidGoals(goals: NutritionGoals) {
   (Object.keys(DEFAULT_NUTRITION_GOALS) as Array<keyof NutritionGoals>).forEach(key => assertFiniteNonNegative(goals?.[key], `Nutrition goal: ${key}`, 100_000));
+}
+
+function assertValidHistory(record: HistoryRecord) {
+  assertId(record?.id, 'History record');
+  if (typeof record?.sessionId !== 'string' || !record.sessionId.trim() || record.sessionId.length > 100) {
+    throw new Error('History session must have a valid identifier.');
+  }
+  if (!record.date || Number.isNaN(Date.parse(record.date))) throw new Error('History date is invalid.');
+  if (typeof record.title !== 'string' || !record.title.trim() || record.title.length > MAX_TEXT_LENGTH) {
+    throw new Error('History title is required and must be under 150 characters.');
+  }
+  if (record.snapshot !== undefined && (record.snapshot === null || typeof record.snapshot !== 'object')) {
+    throw new Error('History snapshot must be an object.');
+  }
+}
+
+function assertValidBodyMetric(entry: BodyMetricEntry) {
+  assertId(entry?.id, 'Body metric');
+  assertFiniteNonNegative(entry?.weight, 'Body weight', 1_000);
+  if (!entry?.date || Number.isNaN(Date.parse(entry.date))) throw new Error('Body metric date is invalid.');
+  if (entry.unit !== 'lb' && entry.unit !== 'kg') throw new Error('Body metric unit must be lb or kg.');
 }
 
 // ============================================================================
@@ -427,6 +475,11 @@ export function findPreviousPerformanceWithDetails(
 export function computeAllPersonalRecords(history: HistoryRecord[], sessions: WorkoutSession[] = []): Record<string, PersonalRecord> {
   const records: Record<string, PersonalRecord> = {};
 
+  // A record keeps the weight in the unit it was lifted in, but records written
+  // before/after a unit switch must still be comparable, so the ranking is done
+  // in kilograms. Comparing raw numbers would let a 100 kg set lose to 100 lb.
+  const toKg = (value: number, unit?: string) => (unit === 'lb' ? value * 0.453592 : value);
+
   const checkExerciseSets = (exercise: SessionExercise, dateStr: string) => {
     const name = (exercise.name || '').trim();
     if (!name) return;
@@ -439,10 +492,16 @@ export function computeAllPersonalRecords(history: HistoryRecord[], sessions: Wo
       if (weight <= 0 || reps <= 0) return;
 
       const est1RM = calculate1RM(weight, reps);
-      const existing = records[lower];
+      const est1RMKg = calculate1RM(toKg(weight, s.unit), reps);
+      // `records` is keyed by an athlete-supplied exercise name, so only an own
+      // property counts; `records['constructor']` would otherwise resolve to the
+      // inherited Object constructor and permanently block the record.
+      const existing = Object.prototype.hasOwnProperty.call(records, lower) ? records[lower] : undefined;
+      const existingEst1RMKg = existing ? calculate1RM(toKg(existing.maxWeight, existing.unit), existing.reps) : 0;
+      const existingWeightKg = existing ? toKg(existing.maxWeight, existing.unit) : 0;
 
-      if (!existing || est1RM > existing.estimated1RM || (est1RM === existing.estimated1RM && weight > existing.maxWeight)) {
-        records[lower] = {
+      if (!existing || est1RMKg > existingEst1RMKg || (est1RMKg === existingEst1RMKg && toKg(weight, s.unit) > existingWeightKg)) {
+        const record: PersonalRecord = {
           exerciseName: name,
           maxWeight: weight,
           unit: s.unit || 'kg',
@@ -450,6 +509,14 @@ export function computeAllPersonalRecords(history: HistoryRecord[], sessions: Wo
           estimated1RM: est1RM,
           date: dateStr
         };
+        // defineProperty for the reserved names: a plain assignment to
+        // "__proto__" hits Object.prototype's setter and would replace the
+        // prototype of `records` instead of storing the record.
+        if (lower === '__proto__' || lower === 'constructor' || lower === 'prototype') {
+          Object.defineProperty(records, lower, { value: record, enumerable: true, writable: true, configurable: true });
+        } else {
+          records[lower] = record;
+        }
       }
     });
   };
@@ -516,6 +583,7 @@ export function estimateWorkoutCalories(session: WorkoutSession): number {
 
 import { auth, db } from './firebase';
 import { doc, getDoc, getDocs, setDoc, deleteDoc, collection, writeBatch } from 'firebase/firestore';
+import { notify } from './feedback';
 
 const getDefaultLanguage = (): 'en' | 'ar' => {
   if (typeof window !== 'undefined') {
@@ -602,21 +670,28 @@ async function migrateLegacyDataIfNeeded(uid: string) {
   }
 }
 
-function sanitizeForFirestore<T>(data: T): T {
+// Deeply nested payloads come from imported backup files. Recursing without a
+// bound would let a hand-crafted file blow the stack and abort the import.
+const MAX_SANITIZE_DEPTH = 32;
+
+function sanitizeForFirestore<T>(data: T, depth = 0): T {
   if (data === null || data === undefined) {
     return null as any;
   }
   if (Array.isArray(data)) {
-    return data.map(item => sanitizeForFirestore(item)) as any;
+    return data.map(item => sanitizeForFirestore(item, depth + 1)) as any;
   }
   if (typeof data === 'object') {
+    if (depth >= MAX_SANITIZE_DEPTH) {
+      return null as any;
+    }
     const cleaned: Record<string, any> = {};
     for (const [key, value] of Object.entries(data as Record<string, any>)) {
       if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
         continue;
       }
       if (value !== undefined) {
-        cleaned[key] = sanitizeForFirestore(value);
+        cleaned[key] = sanitizeForFirestore(value, depth + 1);
       }
     }
     return cleaned as T;
@@ -624,7 +699,26 @@ function sanitizeForFirestore<T>(data: T): T {
   return data;
 }
 
-function mirrorLocalData(updater: (data: AppData) => void) {
+/**
+ * Applies `updater` to the local mirror and writes it back. Returns the object
+ * that was persisted so callers can reuse it instead of re-parsing the whole
+ * mirror (which may hold megabytes of base64 photos). The body is synchronous
+ * on purpose: read-modify-write can never interleave with another mutation.
+ */
+function mirrorLocalData(updater: (data: AppData) => void): AppData | null {
+  const emptyData = (): AppData => ({
+    sessions: [],
+    routines: [],
+    exercises: [],
+    history: [],
+    meals: [],
+    settings: DEFAULT_SETTINGS,
+    bodyMetrics: [],
+    nutritionGoals: DEFAULT_NUTRITION_GOALS,
+    waterLogs: {},
+    insights: { ...DEFAULT_PERFORMANCE_INSIGHTS }
+  });
+
   try {
     const raw = localStorage.getItem('gym_data');
     let data: AppData;
@@ -632,38 +726,32 @@ function mirrorLocalData(updater: (data: AppData) => void) {
       try {
         data = JSON.parse(raw);
       } catch {
-        data = {
-          sessions: [],
-          routines: [],
-          exercises: [],
-          history: [],
-          meals: [],
-          settings: DEFAULT_SETTINGS,
-          bodyMetrics: [],
-          nutritionGoals: DEFAULT_NUTRITION_GOALS,
-          waterLogs: {},
-          insights: { ...DEFAULT_PERFORMANCE_INSIGHTS }
-        };
+        data = emptyData();
       }
     } else {
-      data = {
-        sessions: [],
-        routines: [],
-        exercises: [],
-        history: [],
-        meals: [],
-        settings: DEFAULT_SETTINGS,
-        bodyMetrics: [],
-        nutritionGoals: DEFAULT_NUTRITION_GOALS,
-        waterLogs: {},
-        insights: { ...DEFAULT_PERFORMANCE_INSIGHTS }
-      };
+      data = emptyData();
     }
     updater(data);
     localStorage.setItem('gym_data', JSON.stringify(data));
+    return data;
   } catch (e) {
+    // A full localStorage quota (the mirror holds base64 photos) silently breaks
+    // every later write, so surface it instead of only warning in the console.
     console.warn("Failed to update local mirror cache:", e);
+    notify('Local storage is full. Recent changes are not being saved on this device.', 'error');
+    return null;
   }
+}
+
+/**
+ * Firestore errors that can never succeed on retry (rules rejection, revoked
+ * token, bad payload). Those must not be swallowed: the local mirror would keep
+ * the change forever while the cloud copy never arrives, and the athlete has no
+ * way to know. Transient network/quota errors stay tolerated.
+ */
+function isPermanentFirestoreError(err: unknown): boolean {
+  const code = typeof (err as { code?: unknown })?.code === 'string' ? (err as { code: string }).code : '';
+  return code === 'permission-denied' || code === 'unauthenticated' || code === 'invalid-argument' || code === 'failed-precondition';
 }
 
 // Data Access Repository
@@ -686,9 +774,9 @@ export const api = {
         const settings = normalizeSettings(rootData.settings);
         const user = rootData.user;
         let bodyMetrics = Array.isArray(rootData.bodyMetrics) ? rootData.bodyMetrics : [];
-        const nutritionGoals = rootData.nutritionGoals || DEFAULT_NUTRITION_GOALS;
-        const waterLogs = rootData.waterLogs || {};
-        const insights = { ...DEFAULT_PERFORMANCE_INSIGHTS, ...(rootData.insights || {}) };
+        let nutritionGoals = rootData.nutritionGoals || DEFAULT_NUTRITION_GOALS;
+        let waterLogs: Record<string, number> = { ...(rootData.waterLogs || {}) };
+        let insights = { ...DEFAULT_PERFORMANCE_INSIGHTS, ...(rootData.insights || {}) };
         
         let sessions = sessionsSnap.docs.map(d => d.data() as WorkoutSession);
         let routines = routinesSnap.docs.map(d => d.data() as Routine);
@@ -743,11 +831,27 @@ export const api = {
                 meals = [...meals, ...missingMeals];
               }
             }
-            if (bodyMetrics.length === 0 && Array.isArray(local.bodyMetrics) && local.bodyMetrics.length > 0) {
-              bodyMetrics = local.bodyMetrics;
+            // Union by id (like the collections above) so a body metric that
+            // never reached the cloud is not lost, while a remote edit still wins.
+            if (Array.isArray(local.bodyMetrics) && local.bodyMetrics.length > 0) {
+              const remoteMetricIds = new Set(bodyMetrics.map((m: BodyMetricEntry) => m.id));
+              const missingMetrics = local.bodyMetrics.filter((m: BodyMetricEntry) => m && !remoteMetricIds.has(m.id));
+              if (missingMetrics.length > 0) {
+                bodyMetrics = [...bodyMetrics, ...missingMetrics];
+              }
             }
-            if (local.waterLogs && Object.keys(local.waterLogs).length > 0) {
-              Object.assign(waterLogs, local.waterLogs);
+            // Spread, not Object.assign: a crafted local key such as "__proto__"
+            // would otherwise hit Object.prototype's setter and retarget the map.
+            if (local.waterLogs && typeof local.waterLogs === 'object' && Object.keys(local.waterLogs).length > 0) {
+              waterLogs = { ...waterLogs, ...local.waterLogs };
+            }
+            // Root-level values are only kept locally while the cloud copy is
+            // still missing, so a device that has them never loses an unsynced edit.
+            if (!rootData.nutritionGoals && local.nutritionGoals) {
+              nutritionGoals = local.nutritionGoals;
+            }
+            if (!rootData.insights && local.insights) {
+              insights = { ...DEFAULT_PERFORMANCE_INSIGHTS, ...local.insights };
             }
           } catch (e) {
             console.warn("Could not merge local cached data:", e);
@@ -808,6 +912,7 @@ export const api = {
         await setDoc(doc(db, 'users', auth.currentUser.uid), payload, { merge: true });
       } catch (err) {
         console.warn("Could not sync root settings to Firestore (retained in local cache):", err);
+        if (isPermanentFirestoreError(err)) throw err;
       }
     }
   },
@@ -826,6 +931,7 @@ export const api = {
         await setDoc(doc(db, 'users', auth.currentUser.uid, 'sessions', session.id), sanitizeForFirestore(session));
       } catch (err) {
         console.warn("Could not sync session to Firestore (retained in local cache):", err);
+        if (isPermanentFirestoreError(err)) throw err;
       }
     }
   },
@@ -858,6 +964,7 @@ export const api = {
         }
       } catch (err) {
         console.warn("Could not sync sessions to Firestore (retained in local cache):", err);
+        if (isPermanentFirestoreError(err)) throw err;
       }
     }
   },
@@ -873,6 +980,7 @@ export const api = {
         await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'sessions', id));
       } catch (err) {
         console.warn("Could not delete session from Firestore (removed from local cache):", err);
+        if (isPermanentFirestoreError(err)) throw err;
       }
     }
   },
@@ -899,6 +1007,7 @@ export const api = {
         }
       } catch (err) {
         console.warn("Could not delete sessions from Firestore:", err);
+        if (isPermanentFirestoreError(err)) throw err;
       }
     }
   },
@@ -907,6 +1016,9 @@ export const api = {
     assertId(routine?.id, 'Routine');
     if (!routine.name?.trim() || routine.name.length > MAX_TEXT_LENGTH || !Array.isArray(routine.exercises)) throw new Error('Routine requires a valid name and exercise list.');
     if (routine.sessions !== undefined && !Array.isArray(routine.sessions)) throw new Error('Routine sessions must be a list.');
+    if (routine.description != null && (typeof routine.description !== 'string' || routine.description.length > MAX_DESCRIPTION_LENGTH)) {
+      throw new Error('Routine description must be text under 2000 characters.');
+    }
     if (routine.daysRequired !== undefined) assertFiniteNonNegative(routine.daysRequired, 'Routine days required', 7);
     mirrorLocalData(local => {
       if (!local.routines) local.routines = [];
@@ -920,6 +1032,7 @@ export const api = {
         await setDoc(doc(db, 'users', auth.currentUser.uid, 'routines', routine.id), sanitizeForFirestore(routine));
       } catch (err) {
         console.warn("Could not sync routine to Firestore (retained in local cache):", err);
+        if (isPermanentFirestoreError(err)) throw err;
       }
     }
   },
@@ -934,14 +1047,13 @@ export const api = {
         await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'routines', id));
       } catch (err) {
         console.warn("Could not delete routine from Firestore:", err);
+        if (isPermanentFirestoreError(err)) throw err;
       }
     }
   },
   
   async saveHistory(record: HistoryRecord) {
-    assertId(record?.id, 'History record');
-    assertId(record?.sessionId, 'History session');
-    if (!record.snapshot || !record.date || Number.isNaN(Date.parse(record.date))) throw new Error('History record is incomplete.');
+    assertValidHistory(record);
     mirrorLocalData(local => {
       if (!local.history) local.history = [];
       const idx = local.history.findIndex(h => h.id === record.id);
@@ -954,6 +1066,7 @@ export const api = {
         await setDoc(doc(db, 'users', auth.currentUser.uid, 'history', record.id), sanitizeForFirestore(record));
       } catch (err) {
         console.warn("Could not sync history to Firestore (retained in local cache):", err);
+        if (isPermanentFirestoreError(err)) throw err;
       }
     }
   },
@@ -968,6 +1081,7 @@ export const api = {
         await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'history', id));
       } catch (err) {
         console.warn("Could not delete history from Firestore:", err);
+        if (isPermanentFirestoreError(err)) throw err;
       }
     }
   },
@@ -986,6 +1100,7 @@ export const api = {
         await setDoc(doc(db, 'users', auth.currentUser.uid, 'meals', meal.id), sanitizeForFirestore(meal));
       } catch (err) {
         console.warn("Could not sync meal to Firestore (retained in local cache):", err);
+        if (isPermanentFirestoreError(err)) throw err;
       }
     }
   },
@@ -1000,37 +1115,23 @@ export const api = {
         await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'meals', id));
       } catch (err) {
         console.warn("Could not delete meal from Firestore:", err);
+        if (isPermanentFirestoreError(err)) throw err;
       }
     }
   },
 
   async saveBodyMetric(entry: BodyMetricEntry) {
-    assertId(entry?.id, 'Body metric');
-    assertFiniteNonNegative(entry.weight, 'Body weight', 1_000);
-    if (!entry.date || Number.isNaN(Date.parse(entry.date))) throw new Error('Body metric date is invalid.');
-    
-    mirrorLocalData(local => {
+    assertValidBodyMetric(entry);
+
+    // bodyMetrics lives on the root document, so the whole list has to be sent.
+    // Reuse the object the mirror just persisted instead of parsing it again.
+    const mirrored = mirrorLocalData(local => {
       if (!local.bodyMetrics) local.bodyMetrics = [];
       const idx = local.bodyMetrics.findIndex(m => m.id === entry.id);
       if (idx >= 0) local.bodyMetrics[idx] = entry;
       else local.bodyMetrics.unshift(entry);
     });
-
-    let currentMetrics: BodyMetricEntry[] = [];
-    try {
-      const stored = localStorage.getItem('gym_data');
-      if (stored) {
-        const local = JSON.parse(stored);
-        if (!local.bodyMetrics) local.bodyMetrics = [];
-        const idx = local.bodyMetrics.findIndex((m: BodyMetricEntry) => m.id === entry.id);
-        if (idx >= 0) local.bodyMetrics[idx] = entry;
-        else local.bodyMetrics.unshift(entry);
-        localStorage.setItem('gym_data', JSON.stringify(local));
-        currentMetrics = local.bodyMetrics;
-      }
-    } catch (e) {
-      console.warn("Failed to persist body metric to localStorage:", e);
-    }
+    const currentMetrics: BodyMetricEntry[] = Array.isArray(mirrored?.bodyMetrics) ? mirrored.bodyMetrics : [];
 
     if (auth?.currentUser && db) {
       try {
@@ -1039,28 +1140,17 @@ export const api = {
         }, { merge: true });
       } catch (err) {
         console.warn("Could not sync body metric to Firestore (retained in local cache):", err);
+        if (isPermanentFirestoreError(err)) throw err;
       }
     }
   },
 
   async deleteBodyMetric(id: string) {
-    mirrorLocalData(local => {
+    const mirrored = mirrorLocalData(local => {
       if (!local.bodyMetrics) local.bodyMetrics = [];
       local.bodyMetrics = local.bodyMetrics.filter(m => m.id !== id);
     });
-
-    let currentMetrics: BodyMetricEntry[] = [];
-    try {
-      const stored = localStorage.getItem('gym_data');
-      if (stored) {
-        const local = JSON.parse(stored);
-        if (local.bodyMetrics) {
-          local.bodyMetrics = local.bodyMetrics.filter((m: BodyMetricEntry) => m.id !== id);
-          localStorage.setItem('gym_data', JSON.stringify(local));
-          currentMetrics = local.bodyMetrics;
-        }
-      }
-    } catch (e) {}
+    const currentMetrics: BodyMetricEntry[] = Array.isArray(mirrored?.bodyMetrics) ? mirrored.bodyMetrics : [];
 
     if (auth?.currentUser && db) {
       try {
@@ -1069,6 +1159,7 @@ export const api = {
         }, { merge: true });
       } catch (err) {
         console.warn("Could not sync body metric deletion to Firestore (retained in local cache):", err);
+        if (isPermanentFirestoreError(err)) throw err;
       }
     }
   },
@@ -1079,15 +1170,6 @@ export const api = {
       local.nutritionGoals = goals;
     });
 
-    try {
-      const stored = localStorage.getItem('gym_data');
-      if (stored) {
-        const local = JSON.parse(stored);
-        local.nutritionGoals = goals;
-        localStorage.setItem('gym_data', JSON.stringify(local));
-      }
-    } catch (e) {}
-
     if (auth?.currentUser && db) {
       try {
         await setDoc(doc(db, 'users', auth.currentUser.uid), {
@@ -1095,6 +1177,7 @@ export const api = {
         }, { merge: true });
       } catch (err) {
         console.warn("Could not sync nutrition goals to Firestore (retained in local cache):", err);
+        if (isPermanentFirestoreError(err)) throw err;
       }
     }
   },
@@ -1109,19 +1192,13 @@ export const api = {
       local.waterLogs[dateKey] = Math.max(0, totalMl);
     });
 
-    let updatedLogs: Record<string, number> = { [dateKey]: Math.max(0, totalMl) };
-    try {
-      const stored = localStorage.getItem('gym_data');
-      if (stored) {
-        const local = JSON.parse(stored);
-        if (!local.waterLogs) local.waterLogs = {};
-        local.waterLogs[dateKey] = Math.max(0, totalMl);
-        localStorage.setItem('gym_data', JSON.stringify(local));
-        updatedLogs = local.waterLogs;
-      }
-    } catch (e) {
-      console.warn("Direct localStorage write failed:", e);
-    }
+    // The mirror is the source of truth for the full water map, so reuse the
+    // object it just persisted rather than re-parsing the whole dataset.
+    const mirrored = mirrorLocalData(local => {
+      if (!local.waterLogs) local.waterLogs = {};
+      local.waterLogs[dateKey] = Math.max(0, totalMl);
+    });
+    const updatedLogs: Record<string, number> = (mirrored?.waterLogs as Record<string, number>) || { [dateKey]: Math.max(0, totalMl) };
 
     // 2. Safely sync to Firestore without blocking or crashing local updates
     if (auth?.currentUser && db) {
@@ -1131,18 +1208,21 @@ export const api = {
         }, { merge: true });
       } catch (firestoreErr) {
         console.warn("Could not sync waterLogs to Firestore (retained safely in local storage):", firestoreErr);
+        if (isPermanentFirestoreError(firestoreErr)) throw firestoreErr;
       }
     }
   },
 
   async saveInsights(insights: PerformanceInsights) {
     const cleanInsights = sanitizeForFirestore({ ...DEFAULT_PERFORMANCE_INSIGHTS, ...insights });
+    // Mirror first, like every other mutation: an offline saveInsights used to
+    // throw before touching localStorage, so the change was lost on reload.
+    mirrorLocalData(local => {
+      local.insights = cleanInsights;
+    });
     if (auth?.currentUser && db) {
       await setDoc(doc(db, 'users', auth.currentUser.uid), { insights: cleanInsights }, { merge: true });
     }
-    const local = await this.getData();
-    local.insights = cleanInsights;
-    localStorage.setItem('gym_data', JSON.stringify(local));
   },
 
   async importAllData(imported: AppData): Promise<AppData> {
@@ -1153,16 +1233,34 @@ export const api = {
     const validSessions = Array.isArray(imported.sessions) ? imported.sessions.filter(item => {
       try { assertValidSession(item); return true; } catch { return false; }
     }) : [];
-    const validRoutines = Array.isArray(imported.routines) ? imported.routines : [];
-    const validExercises = Array.isArray(imported.exercises) ? imported.exercises : [];
-    const validHistory = Array.isArray(imported.history) ? imported.history : [];
+    const validRoutines = Array.isArray(imported.routines) ? imported.routines.filter(item => {
+      try { assertId(item?.id, 'Routine'); return !!item?.name?.trim(); } catch { return false; }
+    }) : [];
+    const validExercises = Array.isArray(imported.exercises) ? imported.exercises.filter(item => !!item && typeof item === 'object') : [];
+    // History is filtered like sessions/meals: an entry without a usable id
+    // makes doc() throw and aborts the import half way through the batches.
+    const validHistory = Array.isArray(imported.history) ? imported.history.filter(item => {
+      try {
+        assertValidHistory(item);
+        return true;
+      } catch { return false; }
+    }) : [];
     const validMeals = Array.isArray(imported.meals) ? imported.meals.filter(item => {
       try { assertValidMeal(item); return true; } catch { return false; }
     }) : [];
-    const validMetrics = Array.isArray(imported.bodyMetrics) ? imported.bodyMetrics : [];
+    const validMetrics = Array.isArray(imported.bodyMetrics) ? imported.bodyMetrics.filter(item => {
+      try { assertValidBodyMetric(item); return true; } catch { return false; }
+    }) : [];
     const validGoals = imported.nutritionGoals ? { ...DEFAULT_NUTRITION_GOALS, ...imported.nutritionGoals } : DEFAULT_NUTRITION_GOALS;
     assertValidGoals(validGoals);
-    const validWater = imported.waterLogs && typeof imported.waterLogs === 'object' ? imported.waterLogs : {};
+    const validWater: Record<string, number> = {};
+    if (imported.waterLogs && typeof imported.waterLogs === 'object' && !Array.isArray(imported.waterLogs)) {
+      for (const [key, value] of Object.entries(imported.waterLogs as Record<string, unknown>)) {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(key) && typeof value === 'number' && Number.isFinite(value) && value >= 0) {
+          validWater[key] = value;
+        }
+      }
+    }
     const validSettings = normalizeSettings(imported.settings);
 
     const fullData: AppData = {
@@ -1215,7 +1313,14 @@ export const api = {
       }
     }
 
-    localStorage.setItem('gym_data', JSON.stringify(fullData));
+    try {
+      localStorage.setItem('gym_data', JSON.stringify(fullData));
+    } catch (e) {
+      // The cloud copy is already written at this point; losing the device
+      // mirror is worth a warning but must not report the import as failed.
+      console.warn('Imported data could not be cached in local storage:', e);
+      notify('Backup imported to the cloud, but not cached on this device (storage full).', 'warning');
+    }
     return fullData;
   }
 };
