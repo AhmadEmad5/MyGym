@@ -76,7 +76,7 @@ export function RecordsPanel({
                     </td>
                     <td className="admin-col-action">
                       {athlete ? (
-                        <button type="button" className="admin-row-action" onClick={() => onSelectAthlete(athlete)}>
+                        <button type="button" className="admin-row-action touch-target" onClick={() => onSelectAthlete(athlete)}>
                           {adminCopy.openDossier(locale)}
                         </button>
                       ) : (

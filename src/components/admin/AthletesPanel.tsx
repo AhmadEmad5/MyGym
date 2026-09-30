@@ -67,7 +67,7 @@ export function AthletesPanel({
         subtitle={adminCopy.rosterSubtitle(locale, slice.length, totalCount)}
         icon={<Users size={13} aria-hidden="true" />}
         action={
-          <button type="button" className="admin-action-btn" onClick={onExport}>
+          <button type="button" className="admin-action-btn touch-target" onClick={onExport}>
             <Download size={14} aria-hidden="true" />
             {adminCopy.exportCsv(locale)}
           </button>
@@ -90,7 +90,11 @@ export function AthletesPanel({
         <div className="admin-toolbar-end">
           <label className="admin-size-select">
             <span>{adminCopy.pageSize(locale)}</span>
-            <select value={pageSize} onChange={(event) => setPageSize(Number(event.target.value))}>
+            <select
+              value={pageSize}
+              onChange={(event) => setPageSize(Number(event.target.value))}
+              style={{ minHeight: 44 }}
+            >
               <option value={8}>8</option>
               <option value={10}>10</option>
               <option value={25}>25</option>
@@ -111,7 +115,7 @@ export function AthletesPanel({
             description={adminCopy.emptyRosterBody(locale)}
             action={
               searchQuery ? (
-                <button type="button" className="admin-action-btn" onClick={onClearSearch}>
+                <button type="button" className="admin-action-btn touch-target" onClick={onClearSearch}>
                   {adminCopy.clearSearch(locale)}
                 </button>
               ) : undefined
@@ -137,7 +141,7 @@ export function AthletesPanel({
               {slice.map((athlete) => (
                 <tr key={athlete.uid}>
                   <th scope="row" className="admin-cell-user">
-                    <button type="button" className="admin-user-btn" onClick={() => onSelectAthlete(athlete)}>
+                    <button type="button" className="admin-user-btn touch-target" onClick={() => onSelectAthlete(athlete)}>
                       <span className="admin-avatar" aria-hidden="true">
                         {athlete.pfp ? <img src={athlete.pfp} alt="" /> : initialsOf(athlete.name)}
                       </span>
@@ -167,7 +171,7 @@ export function AthletesPanel({
                     <ActivityStatus days={daysSince(athlete.lastActive)} isRTL={isRTL} neverLabel={adminCopy.never(locale)} />
                   </td>
                   <td className="admin-col-action">
-                    <button type="button" className="admin-row-action" onClick={() => onSelectAthlete(athlete)}>
+                    <button type="button" className="admin-row-action touch-target" onClick={() => onSelectAthlete(athlete)}>
                       {adminCopy.openDossier(locale)}
                     </button>
                   </td>

@@ -188,7 +188,7 @@ export function AdminErrorState({ onRetry, locale }: PanelProps & { onRetry: () 
       </span>
       <h4>{adminCopy.errorTitle(locale)}</h4>
       <p>{adminCopy.errorBody(locale)}</p>
-      <button type="button" className="admin-action-btn" onClick={onRetry}>
+      <button type="button" className="admin-action-btn touch-target" onClick={onRetry}>
         <RefreshCw size={14} aria-hidden="true" />
         {adminCopy.retry(locale)}
       </button>
@@ -230,7 +230,7 @@ export function SortableHeader<K extends string>({
     <th scope="col" aria-sort={isActive ? 'descending' : 'none'}>
       <button
         type="button"
-        className={`admin-sort-btn ${isActive ? 'is-active' : ''}`}
+        className={`admin-sort-btn touch-target ${isActive ? 'is-active' : ''}`}
         onClick={() => onSort(column)}
         aria-label={`${label} — ${adminCopy.sortBy(locale)}`}
       >
@@ -258,7 +258,7 @@ export function FilterPills<T extends string>({
         <button
           key={option.value}
           type="button"
-          className={`admin-pill ${value === option.value ? 'is-active' : ''}`}
+          className={`admin-pill touch-target ${value === option.value ? 'is-active' : ''}`}
           aria-pressed={value === option.value}
           onClick={() => onChange(option.value)}
         >
@@ -288,7 +288,7 @@ export function Pagination({
       <div className="admin-pagination-controls">
         <button
           type="button"
-          className="admin-page-btn"
+          className="admin-page-btn touch-target"
           onClick={() => onChange(page - 1)}
           disabled={page <= 1}
           aria-label={adminCopy.prevPage(locale)}
@@ -298,7 +298,7 @@ export function Pagination({
         <span className="admin-page-label">{adminCopy.page(locale, page, pageCount)}</span>
         <button
           type="button"
-          className="admin-page-btn"
+          className="admin-page-btn touch-target"
           onClick={() => onChange(page + 1)}
           disabled={page >= pageCount}
           aria-label={adminCopy.nextPage(locale)}

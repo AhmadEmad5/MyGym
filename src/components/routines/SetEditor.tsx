@@ -116,11 +116,12 @@ export function SetEditor({
                   value={set.weight}
                   onChange={event => onPatch(set.id, { weight: Number(event.target.value) || 0 })}
                 />
-                <span className="routine-unit-toggle" aria-hidden="true">
+                <span className="routine-unit-toggle">
                   <button
                     type="button"
                     className={set.unit === 'kg' ? 'is-active' : ''}
                     onClick={() => onPatch(set.id, { unit: 'kg' })}
+                    aria-pressed={set.unit === 'kg'}
                     tabIndex={-1}
                   >
                     kg
@@ -129,6 +130,7 @@ export function SetEditor({
                     type="button"
                     className={set.unit === 'lb' ? 'is-active' : ''}
                     onClick={() => onPatch(set.id, { unit: 'lb' })}
+                    aria-pressed={set.unit === 'lb'}
                     tabIndex={-1}
                   >
                     lb

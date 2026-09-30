@@ -26,7 +26,6 @@ const inputStyle: React.CSSProperties = {
   border: 'none',
   textAlign: 'center',
   color: 'var(--text-primary)',
-  outline: 'none',
   fontVariantNumeric: 'tabular-nums',
 };
 

@@ -109,23 +109,49 @@ export function ThemePalettePopover({
                 </span>
                 <button
                   type="button"
-                  className="theme-popover-close-btn"
+                  className="theme-popover-close-btn touch-target"
                   onClick={requestClose}
                   aria-label={isRTL ? 'إغلاق' : 'Close'}
                 >
-                  <X size={15} />
+                  <X size={15} aria-hidden="true" />
                 </button>
               </div>
-              <div className="theme-popover-grid" role="radiogroup" aria-labelledby={`${titleId}-label`}>
+              <div
+                className="theme-popover-grid"
+                role="radiogroup"
+                aria-labelledby={`${titleId}-label`}
+                onKeyDown={event => {
+                  // Roving focus, so Tab leaves the radiogroup instead of walking all
+                  // eight themes. Direction-aware: ArrowRight moves forward in LTR,
+                  // backward in RTL.
+                  const forward = isRTL ? event.key === 'ArrowLeft' : event.key === 'ArrowRight';
+                  const back = isRTL ? event.key === 'ArrowRight' : event.key === 'ArrowLeft';
+                  if (!forward && !back && event.key !== 'Home' && event.key !== 'End') return;
+                  event.preventDefault();
+                  const total = THEME_CATALOG.length;
+                  const from = THEME_CATALOG.findIndex(theme => theme.id === activeTheme);
+                  const next =
+                    event.key === 'Home' ? 0
+                    : event.key === 'End' ? total - 1
+                    : ((from < 0 ? 0 : from) + (forward ? 1 : -1) + total) % total;
+                  const target = THEME_CATALOG[next];
+                  onSelect(target.id);
+                  window.requestAnimationFrame(() => {
+                    document.getElementById(`${titleId}-${target.id}`)?.focus();
+                  });
+                }}
+              >
                 {THEME_CATALOG.map(theme => {
                   const isSelected = activeTheme === theme.id;
                   return (
                     <button
                       key={theme.id}
+                      id={`${titleId}-${theme.id}`}
                       type="button"
                       role="radio"
                       aria-checked={isSelected}
-                      className={`theme-popover-item${isSelected ? ' is-selected' : ''}`}
+                      tabIndex={isSelected ? 0 : -1}
+                      className={`theme-popover-item touch-target${isSelected ? ' is-selected' : ''}`}
                       onClick={() => onSelect(theme.id)}
                     >
                       <span className="theme-preview-dot" style={{ backgroundColor: theme.color }} aria-hidden="true" />

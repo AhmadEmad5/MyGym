@@ -58,7 +58,7 @@ export function GovernancePanel({
           title={adminCopy.dbTelemetry(locale)}
           icon={<Database size={16} aria-hidden="true" />}
           action={
-            <button type="button" className="admin-action-btn" onClick={onRefresh}>
+            <button type="button" className="admin-action-btn touch-target" onClick={onRefresh}>
               <RefreshCw size={14} aria-hidden="true" />
               {adminCopy.resync(locale)}
             </button>
@@ -93,7 +93,7 @@ export function GovernancePanel({
             <strong>{adminCopy.downloadBackup(locale)}</strong>
             <p>{adminCopy.backupBody(locale)}</p>
           </div>
-          <button type="button" className="admin-action-btn is-primary" onClick={onDownloadBackup}>
+          <button type="button" className="admin-action-btn is-primary touch-target" onClick={onDownloadBackup}>
             <Download size={14} aria-hidden="true" />
             {adminCopy.downloadBackup(locale)}
           </button>

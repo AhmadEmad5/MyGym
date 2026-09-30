@@ -85,7 +85,7 @@ export function OverviewPanel({ locale, isRTL, stats, athletes, onSelectAthlete,
           title={adminCopy.liveStream(locale)}
           icon={<Activity size={16} aria-hidden="true" />}
           action={
-            <button type="button" className="admin-link-btn" onClick={onOpenWorkouts}>
+            <button type="button" className="admin-link-btn touch-target" onClick={onOpenWorkouts}>
               {adminCopy.openLogbook(locale)}
             </button>
           }
@@ -136,7 +136,7 @@ export function OverviewPanel({ locale, isRTL, stats, athletes, onSelectAthlete,
           title={adminCopy.platformRecords(locale)}
           icon={<Trophy size={16} aria-hidden="true" />}
           action={
-            <button type="button" className="admin-link-btn" onClick={onOpenAthletes}>
+            <button type="button" className="admin-link-btn touch-target" onClick={onOpenAthletes}>
               {adminCopy.allAthletes(locale)}
             </button>
           }

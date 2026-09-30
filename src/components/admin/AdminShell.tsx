@@ -126,7 +126,7 @@ export function AdminShell({
           </div>
           <button
             type="button"
-            className="admin-icon-btn admin-nav-close"
+            className="admin-icon-btn admin-nav-close touch-target"
             onClick={() => setNavOpen(false)}
             aria-label={adminCopy.toggleSidebar(locale)}
           >
@@ -146,7 +146,7 @@ export function AdminShell({
                     <li key={item.id}>
                       <button
                         type="button"
-                        className={`admin-nav-item ${current ? 'is-active' : ''}`}
+                        className={`admin-nav-item touch-target ${current ? 'is-active' : ''}`}
                         aria-current={current ? 'page' : undefined}
                         onClick={() => onCategoryChange(item.id)}
                       >
@@ -163,11 +163,11 @@ export function AdminShell({
         </nav>
 
         <div className="admin-sidebar-foot">
-          <button type="button" className="admin-nav-action" onClick={onSwitchToAthlete}>
+          <button type="button" className="admin-nav-action touch-target" onClick={onSwitchToAthlete}>
             <Dumbbell size={16} aria-hidden="true" />
             <span>{adminCopy.switchToAthlete(locale)}</span>
           </button>
-          <button type="button" className="admin-nav-action is-danger" onClick={onLogout}>
+          <button type="button" className="admin-nav-action is-danger touch-target" onClick={onLogout}>
             <LogOut size={16} aria-hidden="true" />
             <span>{adminCopy.signOut(locale)}</span>
           </button>
@@ -179,7 +179,7 @@ export function AdminShell({
           <div className="admin-topbar-row">
             <button
               type="button"
-              className="admin-icon-btn"
+              className="admin-icon-btn touch-target"
               onClick={() => setNavOpen((open) => !open)}
               aria-label={adminCopy.toggleSidebar(locale)}
               aria-expanded={navOpen}
@@ -202,7 +202,7 @@ export function AdminShell({
 
             <button
               type="button"
-              className="admin-icon-btn"
+              className="admin-icon-btn touch-target"
               onClick={onRefresh}
               disabled={isRefreshing}
               aria-label={adminCopy.refresh(locale)}
@@ -210,7 +210,7 @@ export function AdminShell({
               <RefreshCw size={17} aria-hidden="true" className={isRefreshing ? 'is-spinning' : ''} />
             </button>
 
-            <button type="button" className="admin-lang-pill" onClick={onToggleLanguage} aria-label={adminCopy.navAriaLabel(locale)}>
+            <button type="button" className="admin-lang-pill touch-target" onClick={onToggleLanguage} aria-label={adminCopy.navAriaLabel(locale)}>
               {isRTL ? 'EN' : 'عربي'}
             </button>
 
@@ -234,7 +234,7 @@ export function AdminShell({
                 placeholder={adminCopy.searchPlaceholder(locale)}
               />
               {searchQuery && (
-                <button type="button" onClick={() => onSearchChange('')} aria-label={adminCopy.clearSearch(locale)}>
+                <button type="button" className="touch-target" onClick={() => onSearchChange('')} aria-label={adminCopy.clearSearch(locale)}>
                   <X size={14} aria-hidden="true" />
                 </button>
               )}
@@ -250,7 +250,7 @@ export function AdminShell({
               <button
                 key={item.id}
                 type="button"
-                className={`admin-tab ${activeCategory === item.id ? 'is-active' : ''}`}
+                className={`admin-tab touch-target ${activeCategory === item.id ? 'is-active' : ''}`}
                 aria-current={activeCategory === item.id ? 'page' : undefined}
                 onClick={() => onCategoryChange(item.id)}
               >

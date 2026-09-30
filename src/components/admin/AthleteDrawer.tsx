@@ -142,21 +142,48 @@ export function AthleteDrawer({
                     ) : null}
                   </ul>
                 </div>
-                <button type="button" className="admin-icon-btn" onClick={onClose} aria-label={adminCopy.drawerClose(locale)}>
+                <button type="button" className="admin-icon-btn touch-target" onClick={onClose} aria-label={adminCopy.drawerClose(locale)}>
                   <X size={18} aria-hidden="true" />
                 </button>
               </header>
 
-              <div className="admin-drawer-tabs" role="tablist" aria-label={adminCopy.drawerTitle(locale)}>
+              <div
+                className="admin-drawer-tabs"
+                role="tablist"
+                aria-label={adminCopy.drawerTitle(locale)}
+                onKeyDown={event => {
+                  // Roving focus, so Tab leaves the tablist instead of walking all five
+                  // tabs. Direction-aware: ArrowRight moves forward in LTR, backward in RTL.
+                  const forward = isRTL ? event.key === 'ArrowLeft' : event.key === 'ArrowRight';
+                  const back = isRTL ? event.key === 'ArrowRight' : event.key === 'ArrowLeft';
+                  if (!forward && !back && event.key !== 'Home' && event.key !== 'End') return;
+                  event.preventDefault();
+                  const total = tabs.length;
+                  if (total === 0) return;
+                  const from = tabs.findIndex(item => item.id === tab);
+                  const next =
+                    event.key === 'Home' ? 0
+                    : event.key === 'End' ? total - 1
+                    : ((from < 0 ? 0 : from) + (forward ? 1 : -1) + total) % total;
+                  setTab(tabs[next].id);
+                  window.requestAnimationFrame(() => {
+                    document.getElementById(`admin-drawer-tab-${tabs[next].id}`)?.focus();
+                  });
+                }}
+              >
                 {tabs.map((item) => {
                   const Icon = item.icon;
+                  const selected = tab === item.id;
                   return (
                     <button
                       key={item.id}
+                      id={`admin-drawer-tab-${item.id}`}
                       type="button"
                       role="tab"
-                      aria-selected={tab === item.id}
-                      className={`admin-drawer-tab ${tab === item.id ? 'is-active' : ''}`}
+                      aria-selected={selected}
+                      aria-controls="admin-drawer-tabpanel"
+                      tabIndex={selected ? 0 : -1}
+                      className={`admin-drawer-tab touch-target ${selected ? 'is-active' : ''}`}
                       onClick={() => setTab(item.id)}
                     >
                       <Icon size={14} aria-hidden="true" />
@@ -167,7 +194,7 @@ export function AthleteDrawer({
                 })}
               </div>
 
-              <div className="admin-drawer-body" role="tabpanel">
+              <div className="admin-drawer-body" role="tabpanel" id="admin-drawer-tabpanel" aria-labelledby={`admin-drawer-tab-${tab}`}>
                 {tab === 'workouts' &&
                   (athlete.history.length === 0 ? (
                     <AdminEmptyState title={adminCopy.tabWorkouts(locale)} description={adminCopy.emptyTab(locale)} icon={<Dumbbell size={26} aria-hidden="true" />} />

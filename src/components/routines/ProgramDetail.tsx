@@ -217,14 +217,22 @@ export function ProgramDetail({
                 aria-selected={selected}
                 aria-controls={`routine-session-panel-${index}`}
                 tabIndex={selected ? 0 : -1}
-                className={`routine-session-tab ${selected ? 'is-active' : ''}`}
+                className={`routine-session-tab touch-target ${selected ? 'is-active' : ''}`}
                 onClick={() => setActiveSession(index)}
                 whileTap={reduced ? undefined : { scale: MOTION_SCALE.press }}
                 onKeyDown={event => {
-                  if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+                  // Roving focus, so Tab leaves the tablist instead of walking every
+                  // session tab. Direction-aware: ArrowRight moves forward in LTR and
+                  // backward in RTL, matching the LoginView tablist.
+                  const forward = isRTL ? event.key === 'ArrowLeft' : event.key === 'ArrowRight';
+                  const back = isRTL ? event.key === 'ArrowRight' : event.key === 'ArrowLeft';
+                  if (!forward && !back && event.key !== 'Home' && event.key !== 'End') return;
                   event.preventDefault();
-                  const delta = event.key === 'ArrowRight' ? 1 : -1;
-                  const next = (index + delta + draft.sessions.length) % draft.sessions.length;
+                  const total = draft.sessions.length;
+                  const next =
+                    event.key === 'Home' ? 0
+                    : event.key === 'End' ? total - 1
+                    : (index + (forward ? 1 : -1) + total) % total;
                   setActiveSession(next);
                   window.requestAnimationFrame(() => {
                     document.getElementById(`routine-session-tab-${next}`)?.focus();
@@ -319,7 +327,7 @@ export function ProgramDetail({
 
         <button
           type="button"
-          className="routine-add-exercise"
+          className="routine-add-exercise touch-target"
           onClick={() => draftApi.addExercise(activeSession)}
         >
           <Plus width={15} height={15} aria-hidden="true" />

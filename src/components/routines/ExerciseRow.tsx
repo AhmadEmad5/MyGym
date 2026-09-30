@@ -63,7 +63,12 @@ export function ExerciseRow({
   return (
     <li className="routine-exercise-row" data-exercise-id={exercise.id} data-sortable-id={exercise.id}>
       <div className="routine-exercise-head">
-        <button type="button" className="routine-grip" {...handleProps}>
+        <button
+          type="button"
+          className="routine-grip"
+          {...handleProps}
+          aria-label={isRTL ? `إعادة ترتيب ${name}` : `Reorder ${name}`}
+        >
           <GripVertical width={16} height={16} aria-hidden="true" />
         </button>
 

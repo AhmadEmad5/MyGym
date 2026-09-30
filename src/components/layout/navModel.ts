@@ -11,9 +11,13 @@ import {
   NAV_OVERFLOW_ROUTE_IDS,
   ROUTE_META,
   ROUTE_META_BY_ID,
-  routeIsActive,
   type ShellRouteId,
 } from '../../app/routeMeta';
+// `routeMeta.routeIsActive` is a raw `pathname.startsWith(route.to)` with no
+// segment-boundary check, so it reports `/plan` as active for `/planning`.
+// `isRouteActive` is the tested, boundary-aware form (18 tests in
+// `app/__tests__/navActive.test.ts`) and drives `aria-current="page"`.
+import { isRouteActive } from '../../app/navActive';
 import { SESSION_ROUTE_PREFIX } from '../../app/routes';
 
 export const OFF_DAY = 5;
@@ -172,7 +176,7 @@ export function useShellNavModel(): ShellNavModel {
         label: t(meta.translationKey),
         shortLabel: localize(ROUTE_COPY[id].dockLabel),
         description: localize(ROUTE_COPY[id].overflowDescription),
-        isActive: routeIsActive(pathname, meta),
+        isActive: isRouteActive(pathname, meta),
         badge: id === 'today' && pendingTodayCount > 0 ? pendingTodayCount : undefined,
       };
     },

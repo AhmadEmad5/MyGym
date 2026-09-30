@@ -1,9 +1,13 @@
 import { useState, useMemo } from 'react';
+import type { KeyboardEvent } from 'react';
 import { Calculator, Check, Sparkles, Flame, Dumbbell, Target, Droplet } from 'lucide-react';
 import { useData } from '../hooks/useData';
 import { useTranslation } from '../lib/i18n';
 import { calculateBMR, calculateTDEE, NutritionGoals } from '../lib/api';
 import { ModalShell, InlineNumberField, FieldError, PrimaryAction, SecondaryAction } from './AIMealVisionModal';
+
+const GENDERS = ['male', 'female'] as const;
+const GOALS = ['cut', 'maintain', 'bulk'] as const;
 
 interface TDEECalculatorModalProps {
   isOpen: boolean;
@@ -70,6 +74,41 @@ export function TDEECalculatorModal({ isOpen, onClose }: TDEECalculatorModalProp
     }, 900);
   };
 
+  /**
+   * Roving tabIndex plus arrow/Home/End, delegated from the group container so
+   * Tab leaves the radiogroup instead of walking every radio. `ArrowRight` moves
+   * forward in LTR and backward in RTL — same shape as the LoginView tablist.
+   */
+  const rovingIndex = <T extends string>(
+    event: KeyboardEvent<HTMLDivElement>,
+    options: readonly T[],
+    current: T,
+  ): T | null => {
+    const forward = isRTL ? event.key === 'ArrowLeft' : event.key === 'ArrowRight';
+    const back = isRTL ? event.key === 'ArrowRight' : event.key === 'ArrowLeft';
+    if (!forward && !back && event.key !== 'Home' && event.key !== 'End') return null;
+    event.preventDefault();
+    const from = options.indexOf(current);
+    if (from < 0) return null;
+    if (event.key === 'Home') return options[0];
+    if (event.key === 'End') return options[options.length - 1];
+    return options[(from + (forward ? 1 : -1) + options.length) % options.length];
+  };
+
+  const handleGenderKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const next = rovingIndex(event, GENDERS, gender);
+    if (!next) return;
+    setGender(next);
+    window.requestAnimationFrame(() => document.getElementById(`tdee-gender-${next}`)?.focus());
+  };
+
+  const handleGoalKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const next = rovingIndex(event, GOALS, goal);
+    if (!next) return;
+    setGoal(next);
+    window.requestAnimationFrame(() => document.getElementById(`tdee-goal-${next}`)?.focus());
+  };
+
   return (
     <ModalShell
       isOpen={isOpen}
@@ -83,7 +122,7 @@ export function TDEECalculatorModal({ isOpen, onClose }: TDEECalculatorModalProp
       footer={
         <>
           <SecondaryAction onClick={onClose} fullWidth>{t('cancel')}</SecondaryAction>
-          <PrimaryAction onClick={() => void handleApply()} icon={isApplied ? <Check size={18} /> : <Sparkles size={17} />}>
+          <PrimaryAction onClick={() => void handleApply()} icon={isApplied ? <Check size={18} aria-hidden="true" /> : <Sparkles size={17} aria-hidden="true" />}>
             {isApplied ? t('appliedSuccess') : t('calculateAndApply')}
           </PrimaryAction>
         </>
@@ -92,16 +131,18 @@ export function TDEECalculatorModal({ isOpen, onClose }: TDEECalculatorModalProp
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.7rem' }}>
         <div style={{ gridColumn: '1 / -1' }}>
           <span style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>{t('gender')}</span>
-          <div role="radiogroup" aria-label={t('gender')} style={{ display: 'flex', gap: '0.4rem' }}>
+          <div role="radiogroup" aria-label={t('gender')} onKeyDown={handleGenderKeyDown} style={{ display: 'flex', gap: '0.4rem' }}>
             {([
               { value: 'male' as const, label: t('male') },
               { value: 'female' as const, label: t('female') }
             ]).map(option => (
               <button
                 key={option.value}
+                id={`tdee-gender-${option.value}`}
                 type="button"
                 role="radio"
                 aria-checked={gender === option.value}
+                tabIndex={gender === option.value ? 0 : -1}
                 onClick={() => setGender(option.value)}
                 style={{
                   flex: 1,
@@ -195,17 +236,19 @@ export function TDEECalculatorModal({ isOpen, onClose }: TDEECalculatorModalProp
 
       <div>
         <span style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>{t('tdeeFitnessGoal')}</span>
-        <div role="radiogroup" aria-label={t('tdeeFitnessGoal')} style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
+        <div role="radiogroup" aria-label={t('tdeeFitnessGoal')} onKeyDown={handleGoalKeyDown} style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
           {([
-            { value: 'cut' as const, label: t('cut'), icon: <Flame size={16} /> },
-            { value: 'maintain' as const, label: t('maintain'), icon: <Sparkles size={16} /> },
-            { value: 'bulk' as const, label: t('bulk'), icon: <Dumbbell size={16} /> }
+            { value: 'cut' as const, label: t('cut'), icon: <Flame size={16} aria-hidden="true" /> },
+            { value: 'maintain' as const, label: t('maintain'), icon: <Sparkles size={16} aria-hidden="true" /> },
+            { value: 'bulk' as const, label: t('bulk'), icon: <Dumbbell size={16} aria-hidden="true" /> }
           ]).map(option => (
             <button
               key={option.value}
+              id={`tdee-goal-${option.value}`}
               type="button"
               role="radio"
               aria-checked={goal === option.value}
+              tabIndex={goal === option.value ? 0 : -1}
               onClick={() => setGoal(option.value)}
               style={{
                 padding: '0.6rem 0.4rem',
@@ -240,7 +283,7 @@ export function TDEECalculatorModal({ isOpen, onClose }: TDEECalculatorModalProp
         }}
       >
         <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--accent-primary)', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-          <Target size={13} />
+          <Target size={13} aria-hidden="true" />
           {t('dailyGoals')}
         </span>
 
@@ -263,11 +306,11 @@ export function TDEECalculatorModal({ isOpen, onClose }: TDEECalculatorModalProp
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1.1rem', marginTop: '0.7rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-            <Flame size={12} style={{ color: '#f97316' }} />
+            <Flame size={12} style={{ color: '#f97316' }} aria-hidden="true" />
             {isRTL ? 'معدل الأيض الأساسي' : 'Basal metabolic rate'}: <strong style={{ color: 'var(--text-primary)' }}>{calculation.bmr} kcal</strong>
           </span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-            <Droplet size={12} style={{ color: '#38bdf8' }} />
+            <Droplet size={12} style={{ color: '#38bdf8' }} aria-hidden="true" />
             {isRTL ? 'هدف الماء' : 'Water target'}: <strong style={{ color: 'var(--text-primary)' }}>{finalGoals.dailyWaterMl.toLocaleString()} ml</strong>
           </span>
         </div>
