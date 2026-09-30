@@ -838,6 +838,18 @@ export const TRANSLATIONS = {
     sessionSaved: 'Session saved.',
     sessionSaveFailed: 'Not saved. The session was rejected before it could be stored. Check the name, date and duration. Your changes are still here.',
     saveBlockedFriday: 'Saving is blocked on Fridays. Change the date to enable it.',
+    // Exercise tutorial surface
+    tutorialNoVideoTitle: 'No video for this exercise',
+    tutorialTargetMuscle: 'Target muscle',
+    tutorialReadCuesInstead: 'Read the written coaching cues below instead.',
+    tutorialLoadingTitle: 'Loading video',
+    tutorialLoadingBody: 'This can take a moment…',
+    tutorialErrorTitle: 'The video could not load',
+    tutorialErrorBody: 'Check your connection, or open it directly on YouTube. The written coaching cues below are the same content.',
+    tutorialRetry: 'Try again',
+    tutorialOpenOnYouTube: 'Open on YouTube',
+    tutorialWatchOnYouTube: 'Watch on YouTube',
+    tutorialCuesTitle: 'Written coaching cues',
   },
   ar: {
     // Navigation
@@ -1672,6 +1684,18 @@ export const TRANSLATIONS = {
     sessionSaved: 'تم حفظ الجلسة.',
     sessionSaveFailed: 'لم يتم الحفظ. تم رفض الجلسة قبل تخزينها. تحقق من الاسم والتاريخ والمدة. تغييراتك ما زالت هنا.',
     saveBlockedFriday: 'الحفظ متوقف أيام الجمعة. غيّر التاريخ لتفعيله.',
+    // Exercise tutorial surface
+    tutorialNoVideoTitle: 'لا يوجد فيديو لهذا التمرين',
+    tutorialTargetMuscle: 'العضلة المستهدفة',
+    tutorialReadCuesInstead: 'اقرأ الإرشادات النصية بالأسفل.',
+    tutorialLoadingTitle: 'جارٍ تحميل الفيديو',
+    tutorialLoadingBody: 'قد يستغرق التحميل لحظات…',
+    tutorialErrorTitle: 'تعذر تحميل الفيديو',
+    tutorialErrorBody: 'تحقق من اتصالك، أو افتح الفيديو مباشرة على يوتيوب. الإرشادات النصية بالأسفل هي نفس المحتوى.',
+    tutorialRetry: 'إعادة المحاولة',
+    tutorialOpenOnYouTube: 'فتح في يوتيوب',
+    tutorialWatchOnYouTube: 'مشاهدة على يوتيوب',
+    tutorialCuesTitle: 'إرشادات الإعداد',
   }
 };
 

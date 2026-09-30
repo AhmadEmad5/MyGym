@@ -577,5 +577,154 @@
     font-size: 0.82rem;
     line-height: 1.5;
   }
-  .forma-ai-error strong { color: var(--text-primary); }
+
+  /* ==========================================================================
+     Exercise tutorial surface
+
+     Bounded on purpose: `.in-app-youtube-wrapper` is also capped at 60vh by an
+     UNLAYERED landscape rule in index.css (:3720-3722), and unlayered rules
+     beat layered ones, so nothing here may try to out-rank that cap.
+
+     This block stays inside the `@layer components` that opens above, rather
+     than in a new stylesheet. A new file imported after ui-kit.css would land
+     unlayered, which inverts its `!important` relationship with the
+     reduced-motion floor at index.css:262-286.
+
+     Reduced motion, Binding Rule B: every guard is emitted TWICE — once inside
+     `@media (prefers-reduced-motion: reduce)` and once under
+     `html[data-motion="reduced"]` — and every guard is scoped through
+     `.forma-tutorial-surface[data-load-state]`, which puts it at (0,3,0) or
+     higher. A media query adds NO specificity, so a bare `.forma-tutorial-frame`
+     guard at (0,1,0) would lose to the (0,2,0) rules above and reduced-motion
+     users would still get the animation. routines.css:152-154 documents this
+     exact bug shipping once already. */
+  .forma-tutorial-surface {
+    display: grid;
+    gap: 0.6rem;
+  }
+  .forma-tutorial-surface.is-static {
+    animation: none;
+  }
+  .forma-tutorial-frame {
+    position: relative;
+    inline-size: 100%;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    border-radius: 14px;
+    overflow: hidden;
+    animation: forma-tutorial-frame-in 0.24s ease-out both;
+  }
+  .forma-tutorial-iframe {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    border: 0;
+  }
+  .forma-tutorial-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    margin-block-start: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .forma-tutorial-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin-block-start: 0.6rem;
+    font-size: 0.76rem;
+    color: var(--text-secondary);
+  }
+  .forma-tutorial-surface .forma-3d-chip {
+    text-decoration: none;
+    transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+  }
+  .forma-tutorial-cues {
+    display: grid;
+    gap: 0.5rem;
+    margin-block-start: 0.35rem;
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--color-info-line);
+    border-radius: 12px;
+    background: var(--color-info-soft);
+    animation: forma-tutorial-cues-in 0.22s ease-out both;
+  }
+  .forma-tutorial-cues-title {
+    margin: 0;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--color-info-ink);
+  }
+  .forma-tutorial-cues-list {
+    margin: 0;
+    padding-inline-start: 1.15rem;
+    display: grid;
+    gap: 0.4rem;
+  }
+  .forma-tutorial-cues-item {
+    font-size: 0.84rem;
+    line-height: 1.55;
+    color: var(--text-secondary);
+  }
+  @keyframes forma-tutorial-frame-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes forma-tutorial-cues-in {
+    from { opacity: 0; transform: translate3d(0, 6px, 0); }
+    to { opacity: 1; transform: translate3d(0, 0, 0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .forma-tutorial-surface[data-load-state] .forma-tutorial-frame,
+    .forma-tutorial-surface[data-load-state] .forma-tutorial-cues {
+      animation: none;
+      transition: none;
+    }
+    .forma-tutorial-surface[data-load-state] .forma-3d-chip {
+      transition: none;
+    }
+  }
+  html[data-motion="reduced"] .forma-tutorial-surface[data-load-state] .forma-tutorial-frame,
+  html[data-motion="reduced"] .forma-tutorial-surface[data-load-state] .forma-tutorial-cues {
+    animation: none;
+    transition: none;
+  }
+  html[data-motion="reduced"] .forma-tutorial-surface[data-load-state] .forma-3d-chip {
+    transition: none;
+  }
+
+  /* Exercise guide sheet.
+     Reduced motion, Binding Rule B, same two gates as the tutorial surface.
+     Every guard is scoped through the panel's own state class and reaches
+     (0,3,0) or higher, because a media query adds no specificity. The two
+     switch buttons also carry an INLINE `transition`, which no stylesheet
+     rule can beat without !important, so the load-bearing gate for those is
+     in JS: `reducedMotion ? 'none' : ...` from useReducedMotion, which ORs
+     prefers-reduced-motion with html[data-motion="reduced"]. */
+  .forma-exercise-guide-panel {
+    transition: box-shadow 0.2s ease;
+  }
+  .forma-exercise-guide .forma-exercise-guide-switch {
+    transition: background-color 0.18s ease;
+  }
+  .forma-exercise-guide .forma-exercise-guide-switch button {
+    transition: background-color 0.18s ease, border-color 0.18s ease;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .forma-exercise-guide[data-modal-state].forma-exercise-guide-panel,
+    .forma-exercise-guide[data-modal-state] .forma-exercise-guide-switch,
+    .forma-exercise-guide[data-modal-state] .forma-exercise-guide-switch button {
+      transition: none;
+    }
+  }
+  html[data-motion="reduced"] .forma-exercise-guide[data-modal-state].forma-exercise-guide-panel,
+  html[data-motion="reduced"] .forma-exercise-guide[data-modal-state] .forma-exercise-guide-switch,
+  html[data-motion="reduced"] .forma-exercise-guide[data-modal-state] .forma-exercise-guide-switch button {
+    transition: none;
+  }
 }

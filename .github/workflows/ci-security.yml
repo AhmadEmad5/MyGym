@@ -26,6 +26,9 @@ jobs:
       - name: Run TypeScript Verification
         run: npm run typecheck
 
+      - name: Run Unit Tests
+        run: npm run test
+
       - name: Verify Production Build
         run: npm run build
         env:

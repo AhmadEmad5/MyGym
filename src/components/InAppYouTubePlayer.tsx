@@ -1,68 +1,76 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ExternalLink, AlertTriangle } from 'lucide-react';
 import { useTranslation } from '../lib/i18n';
+import { buildEmbedUrl, parseVideoRef, tutorialTitle } from '../lib/videoRef';
+import { useReducedMotion } from './performance/useReducedMotion';
 
 interface InAppYouTubePlayerProps {
   exerciseName: string;
   targetMuscle?: string;
   initialVideoUrl?: string;
   isArabic?: boolean;
+  /** Written coaching cues, rendered outside and below the player as the guaranteed text alternative. */
+  steps?: string[];
 }
 
 type LoadState = 'loading' | 'ready' | 'error';
 
-function extractVideoId(url: string | undefined): string {
-  if (!url) return '';
-  const trimmed = url.trim();
-  if (!trimmed) return '';
-  const patterns = [
-    /(?:youtube\.com\/watch\?(?:.*&)?v=)([\w-]{6,})/i,
-    /(?:youtu\.be\/)([\w-]{6,})/i,
-    /(?:youtube\.com\/embed\/)([\w-]{6,})/i,
-    /(?:youtube\.com\/shorts\/)([\w-]{6,})/i,
-    /^(?:[\w-]{11})$/
-  ];
-  for (const pattern of patterns) {
-    const match = trimmed.match(pattern);
-    if (match && match[1]) return match[1];
-  }
-  return '';
-}
+/**
+ * A cross-origin iframe does not reliably fire `onError`, so the error UI can
+ * never depend on it alone. This budget is what makes a blocked or dead load
+ * actually reach the error state.
+ */
+const LOAD_TIMEOUT_MS = 6000;
 
-function buildEmbedUrl(videoId: string, origin?: string) {
-  const params = new URLSearchParams({
-    rel: '0',
-    modestbranding: '1',
-    playsinline: '1',
-    'iv_load_policy': '3'
-  });
-  if (origin) params.set('origin', origin);
-  return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?${params.toString()}`;
-}
+const ALLOW =
+  'accelerometer; clipboard-write; encrypted-media; picture-in-picture; web-share';
 
-export function InAppYouTubePlayer({ exerciseName, targetMuscle, initialVideoUrl, isArabic }: InAppYouTubePlayerProps) {
+export function InAppYouTubePlayer({
+  exerciseName,
+  targetMuscle,
+  initialVideoUrl,
+  isArabic,
+  steps,
+}: InAppYouTubePlayerProps) {
   const { t, isRTL } = useTranslation();
+  const reducedMotion = useReducedMotion();
   const rtl = isArabic ?? isRTL;
   const [loadState, setLoadState] = useState<LoadState>('loading');
+  const [attempt, setAttempt] = useState(0);
   const [origin] = useState<string | undefined>(() => {
     if (typeof window === 'undefined') return undefined;
     return window.location.origin.startsWith('http') ? window.location.origin : undefined;
   });
 
-  const videoId = extractVideoId(initialVideoUrl);
+  const videoId = parseVideoRef(initialVideoUrl)?.id ?? '';
   const watchUrl = videoId ? `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}` : '';
-  const playerTitle = rtl ? `فيديو: ${exerciseName}` : `Video: ${exerciseName}`;
+  const playerTitle = tutorialTitle(exerciseName, rtl);
+  const cues = steps;
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!videoId || loadState !== 'loading') return;
+    timerRef.current = setTimeout(() => setLoadState('error'), LOAD_TIMEOUT_MS);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = null;
+    };
+  }, [videoId, loadState, attempt]);
+
+  useEffect(() => {
+    if (videoId) setLoadState('loading');
+  }, [videoId]);
 
   if (!videoId) {
     return (
-      <div className="forma-state-panel" role="status" style={{ borderRadius: '14px', minHeight: '180px' }}>
+      <div className="forma-tutorial-surface forma-state-panel" role="status" data-load-state="absent" style={{ borderRadius: '14px', minHeight: '180px' }}>
         <AlertTriangle size={22} aria-hidden="true" style={{ color: 'var(--text-muted)' }} />
-        <strong>{rtl ? 'لا يوجد فيديو لهذا التمرين' : 'No video for this exercise'}</strong>
+        <strong>{t('tutorialNoVideoTitle')}</strong>
         <span>
           {targetMuscle
-            ? `${rtl ? 'العضلة المستهدفة' : 'Target muscle'}: ${targetMuscle}. `
+            ? `${t('tutorialTargetMuscle')}: ${targetMuscle}. `
             : ''}
-          {rtl ? 'اقرأ الإرشادات النصية بالأسفل.' : 'Read the written coaching cues below instead.'}
+          {t('tutorialReadCuesInstead')}
         </span>
       </div>
     );
@@ -70,31 +78,17 @@ export function InAppYouTubePlayer({ exerciseName, targetMuscle, initialVideoUrl
 
   return (
     <div
-      className="in-app-youtube-wrapper"
-      style={{ position: 'relative' }}
+      className={reducedMotion ? 'forma-tutorial-surface in-app-youtube-wrapper is-static' : 'forma-tutorial-surface in-app-youtube-wrapper'}
+      data-load-state={loadState}
+      data-reduced-motion={reducedMotion ? 'true' : undefined}
     >
-      <div
-        style={{
-          position: 'relative',
-          width: '100%',
-          aspectRatio: '16 / 9',
-          background: '#000',
-          borderRadius: '14px',
-          overflow: 'hidden'
-        }}
-      >
+      <div className="forma-tutorial-frame">
         <iframe
-          key={videoId}
+          key={`${videoId}-${attempt}`}
+          className="forma-tutorial-iframe"
           src={buildEmbedUrl(videoId, origin)}
           title={playerTitle}
-          style={{
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-            border: 0
-          }}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allow={ALLOW}
           referrerPolicy="strict-origin-when-cross-origin"
           allowFullScreen
           onLoad={() => setLoadState('ready')}
@@ -105,8 +99,8 @@ export function InAppYouTubePlayer({ exerciseName, targetMuscle, initialVideoUrl
           <div className="forma-3d-overlay" role="status" aria-live="polite">
             <div>
               <span aria-hidden="true" className="forma-ai-cursor" style={{ margin: '0 auto 0.6rem' }} />
-              <strong>{rtl ? 'جارٍ تحميل الفيديو' : 'Loading video'}</strong>
-              <span>{rtl ? 'قد يستغرق التحميل لحظات...' : 'This can take a moment…'}</span>
+              <strong>{t('tutorialLoadingTitle')}</strong>
+              <span>{t('tutorialLoadingBody')}</span>
             </div>
           </div>
         )}
@@ -114,20 +108,20 @@ export function InAppYouTubePlayer({ exerciseName, targetMuscle, initialVideoUrl
         {loadState === 'error' && (
           <div className="forma-3d-overlay" role="alert">
             <div>
-              <AlertTriangle size={26} aria-hidden="true" style={{ margin: '0 auto 0.6rem', color: 'var(--danger)' }} />
-              <strong>{rtl ? 'تعذر تحميل الفيديو' : 'The video could not load'}</strong>
-              <span>{rtl ? 'تحقق من اتصالك أو افتح الفيديو على يوتيوب.' : 'Check your connection or open it directly on YouTube.'}</span>
-              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginBlockStart: '0.75rem', flexWrap: 'wrap' }}>
+              <AlertTriangle size={26} aria-hidden="true" style={{ margin: '0 auto 0.6rem', color: 'var(--color-danger-ink)' }} />
+              <strong>{t('tutorialErrorTitle')}</strong>
+              <span>{t('tutorialErrorBody')}</span>
+              <div className="forma-tutorial-actions">
                 <button
                   type="button"
                   className="forma-3d-chip"
-                  onClick={() => setLoadState('loading')}
+                  onClick={() => { setLoadState('loading'); setAttempt(prev => prev + 1); }}
                 >
-                  {rtl ? 'إعادة المحاولة' : 'Try again'}
+                  {t('tutorialRetry')}
                 </button>
-                <a href={watchUrl} target="_blank" rel="noopener noreferrer" className="forma-3d-chip" style={{ textDecoration: 'none' }}>
+                <a href={watchUrl} target="_blank" rel="noopener noreferrer" className="forma-3d-chip">
                   <ExternalLink size={13} aria-hidden="true" />
-                  <span>{rtl ? 'فتح في يوتيوب' : 'Open on YouTube'}</span>
+                  <span>{t('tutorialOpenOnYouTube')}</span>
                 </a>
               </div>
             </div>
@@ -135,26 +129,24 @@ export function InAppYouTubePlayer({ exerciseName, targetMuscle, initialVideoUrl
         )}
       </div>
 
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '0.6rem',
-          flexWrap: 'wrap',
-          marginBlockStart: '0.6rem',
-          fontSize: '0.76rem',
-          color: 'var(--text-secondary)'
-        }}
-      >
+      <div className="forma-tutorial-meta">
         <span>{playerTitle}</span>
-        <a href={watchUrl} target="_blank" rel="noopener noreferrer" className="forma-3d-chip" style={{ textDecoration: 'none' }}>
+        <a href={watchUrl} target="_blank" rel="noopener noreferrer" className="forma-3d-chip">
           <ExternalLink size={13} aria-hidden="true" />
-          <span>{rtl ? 'فتح في يوتيوب' : 'Watch on YouTube'}</span>
+          <span>{t('tutorialWatchOnYouTube')}</span>
         </a>
       </div>
 
-      <span className="forma-sr-only">{t('close')}</span>
+      {cues && cues.length > 0 && (
+        <div className="forma-tutorial-cues" data-revealed="true">
+          <h4 className="forma-tutorial-cues-title">{t('tutorialCuesTitle')}</h4>
+          <ol className="forma-tutorial-cues-list">
+            {cues.map((cue, index) => (
+              <li key={index} className="forma-tutorial-cues-item">{cue}</li>
+            ))}
+          </ol>
+        </div>
+      )}
     </div>
   );
 }
