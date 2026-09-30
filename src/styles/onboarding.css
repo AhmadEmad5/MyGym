@@ -70,7 +70,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.75rem;
+    gap: var(--space-sm);
     padding-block: 1.1rem 0.55rem;
     padding-inline: 1.4rem;
   }
@@ -295,7 +295,7 @@
   .forma-days-row {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 0.5rem;
+    gap: var(--space-xs);
   }
 
   .forma-days-pill {
@@ -334,7 +334,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.75rem;
+    gap: var(--space-sm);
     padding: 0.7rem 0.85rem;
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 14px;
@@ -388,7 +388,7 @@
   .forma-themes-swatches {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0.5rem;
+    gap: var(--space-xs);
   }
 
   .forma-theme-swatch-card {
@@ -519,7 +519,7 @@
     flex: 1;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
+    gap: var(--space-xs);
     padding: 0.72rem 1.25rem;
     border: 0;
     border-radius: 14px;
@@ -577,7 +577,7 @@
 
     .forma-days-row {
       grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: 0.5rem;
+      gap: var(--space-xs);
     }
 
     .forma-onboarding-back-btn span {

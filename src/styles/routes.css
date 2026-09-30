@@ -57,7 +57,6 @@
   }
 
   .calendar-page .calendar-workout-card,
-  .routines-page .routine-card,
   .nutrition-page .card,
   .performance-page > section {
     background: linear-gradient(145deg, color-mix(in srgb, var(--bg-secondary) 92%, transparent), color-mix(in srgb, var(--bg-primary) 86%, transparent)) !important;
@@ -67,7 +66,7 @@
     position: relative;
     padding-block-end: 1rem;
     border-block-end: 1px solid var(--premium-line);
-    scroll-padding-inline: 0.5rem;
+    scroll-padding-inline: var(--space-xs);
     scroll-snap-type: x proximity;
   }
 
@@ -89,7 +88,7 @@
   }
 
   .calendar-page .calendar-day-tab-bar {
-    scroll-padding-inline: 0.75rem;
+    scroll-padding-inline: var(--space-sm);
     scroll-snap-type: x proximity;
   }
 
@@ -97,8 +96,7 @@
     scroll-snap-align: center;
   }
 
-  .calendar-page .calendar-workout-card:hover,
-  .routines-page .routine-card:hover {
+  .calendar-page .calendar-workout-card:hover {
     transform: translateY(-2px);
     border-color: color-mix(in srgb, var(--accent-cyan) 42%, var(--premium-line)) !important;
   }
@@ -112,12 +110,9 @@
     min-width: 0;
   }
 
-  .routines-page .routine-card,
   .routines-page .routines-card-grid > div > div {
     border-radius: 0.9rem !important;
   }
-
-  .routines-page .routine-card::after { display: none; }
 
   .nutrition-page .nutrition-overview-grid,
   .nutrition-page .nutrition-form-grid {
@@ -127,13 +122,6 @@
   .nutrition-page .nutrition-overview-grid > .card,
   .nutrition-page .nutrition-form-grid > .card {
     border-inline-start: 1px solid var(--premium-line) !important;
-  }
-
-  .nutrition-page .meal-card,
-.nutrition-page .meal-item {
-    border-color: var(--premium-line) !important;
-    border-radius: 0.8rem !important;
-    box-shadow: none !important;
   }
 
   .performance-page {
@@ -280,21 +268,9 @@
       border-radius: 16px !important;
     }
 
-    .nutrition-page .meal-card {
-      padding-block: 0.65rem !important;
-      padding-inline: 0.75rem !important;
-      margin-block-end: 0.5rem !important;
-    }
-
     .routines-page .routines-card-grid {
       grid-template-columns: 1fr !important;
       gap: 0.75rem !important;
-    }
-
-    .routines-page .routine-card {
-      padding-block: 0.85rem !important;
-      padding-inline: 0.85rem !important;
-      border-radius: 16px !important;
     }
 
     .settings-page .settings-hero {
@@ -313,8 +289,7 @@
       scroll-behavior: auto;
     }
 
-    .calendar-page .calendar-workout-card:hover,
-    .routines-page .routine-card:hover { transform: none; }
+    .calendar-page .calendar-workout-card:hover { transform: none; }
   }
 
   /* The app's own motion gate needs its own copy: a media query adds no
@@ -324,6 +299,5 @@
     scroll-behavior: auto;
   }
 
-  [data-motion='reduced'] .calendar-page .calendar-workout-card:hover,
-  [data-motion='reduced'] .routines-page .routine-card:hover { transform: none; }
+  [data-motion='reduced'] .calendar-page .calendar-workout-card:hover { transform: none; }
 }

@@ -329,7 +329,7 @@
 .ui-modal-body {
   min-block-size: 0;
   -webkit-overflow-scrolling: touch;
-  scroll-padding-block: 0.75rem;
+  scroll-padding-block: var(--space-sm);
 }
 
 /* 640px, the documented --bp-md and the width every other mobile block in the

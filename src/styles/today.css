@@ -34,7 +34,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.75rem;
+    gap: var(--space-sm);
     padding: 0.95rem 1.1rem 0.55rem;
   }
 
@@ -148,7 +148,7 @@
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 0.5rem;
+    gap: var(--space-xs);
     margin-block-start: 0.25rem;
   }
 
@@ -160,7 +160,7 @@
   .today-skeleton-stack {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: var(--space-xs);
     width: 100%;
   }
 
@@ -214,7 +214,7 @@
     display: flex;
     flex: 1;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: var(--space-sm);
     min-width: 0;
     padding: 1rem 1.1rem 1.1rem;
   }
@@ -223,7 +223,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
+    gap: var(--space-xs);
     flex-wrap: wrap;
     margin-block-start: auto;
     padding-block-start: 0.6rem;
@@ -307,7 +307,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
+    gap: var(--space-xs);
     padding: 0.35rem 0.55rem;
     border: 1px solid transparent;
     border-radius: var(--radius-sm);
@@ -411,7 +411,7 @@
   .today-bento-quick-actions {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 6rem), 1fr));
-    gap: 0.5rem;
+    gap: var(--space-xs);
   }
 
   .forma-quick-tile {
@@ -474,7 +474,7 @@
   .today-week-strip {
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: 0.25rem;
+    gap: var(--space-3xs);
     margin: 0;
     padding: 0.5rem 0.35rem;
     border: 1px solid var(--border-subtle);
@@ -850,7 +850,7 @@
   .today-friday-notice-copy {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--space-xs);
     color: var(--color-danger);
     font-size: 0.8rem;
     font-weight: 650;
@@ -881,7 +881,7 @@
   .today-celebration-cell dd {
     display: inline-flex;
     align-items: center;
-    gap: 0.25rem;
+    gap: var(--space-3xs);
     margin: 0;
     color: var(--text-primary);
     font-size: 1.05rem;
@@ -1114,7 +1114,7 @@
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: var(--space-xs);
     margin: 0.65rem 0 0;
     padding: 0.55rem 0.7rem;
     border: 1px solid rgba(239, 68, 68, 0.32);
@@ -1464,109 +1464,6 @@
     gap: 0.4rem;
   }
 
-  /* ==========================================================================
-     Home screen quick actions
-     ========================================================================== */
-  .home-quick-actions-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 7rem), 1fr));
-    gap: 0.45rem;
-  }
-
-  .home-quick-actions-grid .quick-action-card-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.25rem;
-    min-width: 0;
-    min-height: 5.25rem;
-    padding: 0.6rem 0.5rem;
-    border: 1px solid currentColor;
-    border-radius: var(--radius-md);
-    background: color-mix(in srgb, currentColor 10%, transparent);
-    color: var(--text-secondary);
-    font: inherit;
-    text-align: center;
-    cursor: pointer;
-    transition: background-color 0.18s ease;
-  }
-
-  .home-quick-actions-grid .quick-action-card-btn.is-cyan {
-    color: var(--accent-cyan);
-  }
-
-  .home-quick-actions-grid .quick-action-card-btn.is-purple {
-    color: var(--accent-purple);
-  }
-
-  .home-quick-actions-grid .quick-action-card-btn:hover {
-    background: color-mix(in srgb, currentColor 18%, transparent);
-  }
-
-  .home-quick-actions-grid .quick-action-card-btn:disabled {
-    opacity: 0.6;
-    cursor: progress;
-  }
-
-  .home-quick-actions-grid .quick-action-card-btn strong {
-    color: var(--text-primary);
-    font-size: 0.76rem;
-    font-weight: 750;
-    line-height: 1.2;
-  }
-
-  .home-quick-actions-grid .quick-action-card-btn small {
-    color: var(--text-muted);
-    font-size: 0.64rem;
-    line-height: 1.2;
-  }
-
-  .quick-action-icon {
-    display: grid;
-    place-items: center;
-    inline-size: 1.75rem;
-    block-size: 1.75rem;
-    border-radius: var(--radius-sm);
-    background: color-mix(in srgb, currentColor 22%, transparent);
-    color: #ffffff;
-  }
-
-  .quick-action-icon[data-active='true'] {
-    background: var(--accent-emerald);
-  }
-
-  .home-quick-actions-foot {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    margin-block-start: auto;
-    padding-block-start: 0.6rem;
-    border-block-start: 1px solid var(--border-subtle);
-    color: var(--text-muted);
-    font-size: 0.72rem;
-  }
-
-  .home-quick-actions-foot > span {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    min-width: 0;
-  }
-
-  .home-quick-actions-tip {
-    margin: 0.4rem 0 0;
-    padding: 0.55rem 0.7rem;
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-sm);
-    background: color-mix(in srgb, var(--text-primary) 4%, transparent);
-    color: var(--text-secondary);
-    font-size: 0.74rem;
-    line-height: 1.5;
-  }
-
   @media (max-width: 400px) {
     .today-hydration-layout {
       grid-template-columns: minmax(0, 1fr);
@@ -1738,7 +1635,7 @@
     .today-active-heading {
       flex-direction: column;
       align-items: flex-start;
-      gap: 0.5rem;
+      gap: var(--space-xs);
       margin-block-start: 0.85rem;
     }
 
@@ -1750,7 +1647,7 @@
       grid-auto-flow: column;
       justify-items: start;
       align-items: baseline;
-      gap: 0.5rem;
+      gap: var(--space-xs);
       width: 100%;
       padding-inline-start: 0;
       padding-block-start: 0.5rem;
@@ -1763,7 +1660,7 @@
     }
 
     .today-primary-row {
-      gap: 0.5rem;
+      gap: var(--space-xs);
       margin-block-start: 0.6rem;
     }
 

@@ -46,12 +46,6 @@
 
 :root {
   /* High-end Obsidian Athletic Dark Theme */
-  --bg-primary: #080c14;
-
-  /* Containers */
-  --bg-secondary: #0d1524;
-  --bg-tertiary: #131d31;
-  --bg-input: #0b1220;
 
   --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
@@ -59,32 +53,17 @@
 
   /* Vibrant accents based on workout type */
   --accent-cyan: #38bdf8;
-  --accent-green: #10b981;
   --accent-purple: #8b5cf6;
-  --accent-yellow: #eab308;
   --gym-lime: #bef264;
 
-  --accent-primary: #10b981;
-  --accent-hover: #38bdf8;
   --accent-gradient: linear-gradient(135deg, #10b981, #06b6d4);
 
-  --border-color: rgba(255, 255, 255, 0.08);
   --border-highlight: rgba(255, 255, 255, 0.16);
-
-  --success: #10b981;
-  --danger: #ef4444;
-  --warning: #f59e0b;
 
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
   --shadow-md: 0 18px 50px rgba(0, 0, 0, 0.28), 0 2px 6px rgba(0, 0, 0, 0.2);
 
-  --radius-sm: 0.5rem;
-  --radius-md: 0.75rem;
-  --radius-lg: 1rem;
-  --radius-xl: 1.5rem;
-  --theme-radius: 18px;
   --theme-shadow: 0 18px 50px rgba(0, 0, 0, .28);
-  --theme-font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
   color-scheme: dark;
 }
@@ -97,16 +76,10 @@ html[dir="rtl"], [dir="rtl"] {
 }
 
 [data-theme="light"] {
-  --bg-primary: #f8fafc;
-  --bg-secondary: #ffffff;
-  --bg-tertiary: #f1f5f9;
-  --bg-input: #ffffff;
-
   --text-primary: #0f172a;
   --text-secondary: #475569;
   --text-muted: #64748b;
 
-  --border-color: rgba(0, 0, 0, 0.1);
   --border-highlight: rgba(0, 0, 0, 0.2);
 
   color-scheme: light;
@@ -161,10 +134,10 @@ html[dir="rtl"], [dir="rtl"] {
 
 /* Each appearance preset changes spatial character as well as color: radius,
    texture, font flavor, shadow depth, and surface treatment. */
-[data-theme="ocean"] { --bg-primary:#061a26; --bg-secondary:rgba(8,35,50,.82); --bg-tertiary:#0d3b51; --bg-input:#092b3e; --text-primary:#e5fbff; --text-secondary:#9ac4ce; --text-muted:#668d99; --accent-primary:#4ce4e7; --accent-hover:#8df8ee; --accent-gradient:linear-gradient(135deg,#43dcd3,#3686e9); --border-color:rgba(101,234,230,.16); --border-highlight:rgba(101,234,230,.34); --premium-surface:linear-gradient(145deg,rgba(11,55,70,.92),rgba(4,27,40,.96)); --premium-panel:linear-gradient(105deg,rgba(13,68,84,.9),rgba(4,31,47,.94)); --premium-line:rgba(103,239,231,.19); --premium-soft:rgba(84,229,225,.11); --theme-radius:28px; --theme-shadow:0 22px 55px rgba(0,12,22,.34); color-scheme:dark; }
-[data-theme="forest"] { --bg-primary:#0b1811; --bg-secondary:rgba(18,40,28,.84); --bg-tertiary:#254a32; --bg-input:#122c1d; --text-primary:#f0fae9; --text-secondary:#acc3ae; --text-muted:#758e79; --accent-primary:#9edc72; --accent-hover:#c2ee9c; --accent-gradient:linear-gradient(135deg,#b9e875,#38a974); --border-color:rgba(182,232,117,.14); --border-highlight:rgba(182,232,117,.3); --premium-surface:linear-gradient(145deg,rgba(34,67,43,.93),rgba(12,30,19,.96)); --premium-panel:linear-gradient(105deg,rgba(44,82,46,.9),rgba(13,34,22,.95)); --premium-line:rgba(180,232,117,.16); --premium-soft:rgba(169,226,116,.1); --theme-radius:10px; --theme-shadow:0 17px 38px rgba(0,18,7,.33); color-scheme:dark; }
-[data-theme="sunset"] { --bg-primary:#221119; --bg-secondary:rgba(54,26,35,.84); --bg-tertiary:#713747; --bg-input:#3b1d2b; --text-primary:#fff2e9; --text-secondary:#e2b8ab; --text-muted:#a97b78; --accent-primary:#ffb265; --accent-hover:#ffd18d; --accent-gradient:linear-gradient(135deg,#ffbd67,#f06081); --border-color:rgba(255,183,106,.16); --border-highlight:rgba(255,183,106,.34); --premium-surface:linear-gradient(145deg,rgba(77,37,46,.92),rgba(36,17,28,.97)); --premium-panel:linear-gradient(105deg,rgba(104,46,53,.88),rgba(43,19,32,.96)); --premium-line:rgba(255,190,118,.18); --premium-soft:rgba(255,158,99,.12); --theme-radius:24px; --theme-shadow:0 24px 58px rgba(31,6,14,.4); color-scheme:dark; }
-[data-theme="paper"] { --bg-primary:#f3eee5; --bg-secondary:rgba(255,252,247,.9); --bg-tertiary:#e5ddd0; --bg-input:#fffdf9; --text-primary:#2d2925; --text-secondary:#625b52; --text-muted:#8a8177; --accent-primary:#9a493d; --accent-hover:#bd6351; --accent-gradient:linear-gradient(135deg,#ad5546,#ce8054); --border-color:rgba(75,58,44,.16); --border-highlight:rgba(75,58,44,.28); --premium-surface:linear-gradient(145deg,rgba(255,253,248,.98),rgba(237,230,218,.96)); --premium-panel:linear-gradient(105deg,rgba(255,250,242,.98),rgba(240,230,217,.97)); --premium-line:rgba(93,69,50,.16); --premium-soft:rgba(165,83,65,.09); --theme-radius:4px; --theme-shadow:0 10px 22px rgba(79,55,36,.12); color-scheme:light; }
+[data-theme="ocean"] { --text-primary:#e5fbff; --text-secondary:#9ac4ce; --text-muted:#668d99; --accent-primary:#4ce4e7; --accent-hover:#8df8ee; --accent-gradient:linear-gradient(135deg,#43dcd3,#3686e9); --premium-surface:linear-gradient(145deg,rgba(11,55,70,.92),rgba(4,27,40,.96)); --premium-panel:linear-gradient(105deg,rgba(13,68,84,.9),rgba(4,31,47,.94)); --premium-line:rgba(103,239,231,.19); --premium-soft:rgba(84,229,225,.11); --theme-shadow:0 22px 55px rgba(0,12,22,.34); color-scheme:dark; }
+[data-theme="forest"] { --text-primary:#f0fae9; --text-secondary:#acc3ae; --text-muted:#758e79; --accent-primary:#9edc72; --accent-hover:#c2ee9c; --accent-gradient:linear-gradient(135deg,#b9e875,#38a974); --premium-surface:linear-gradient(145deg,rgba(34,67,43,.93),rgba(12,30,19,.96)); --premium-panel:linear-gradient(105deg,rgba(44,82,46,.9),rgba(13,34,22,.95)); --premium-line:rgba(180,232,117,.16); --premium-soft:rgba(169,226,116,.1); --theme-shadow:0 17px 38px rgba(0,18,7,.33); color-scheme:dark; }
+[data-theme="sunset"] { --text-primary:#fff2e9; --text-secondary:#e2b8ab; --text-muted:#a97b78; --accent-primary:#ffb265; --accent-hover:#ffd18d; --accent-gradient:linear-gradient(135deg,#ffbd67,#f06081); --premium-surface:linear-gradient(145deg,rgba(77,37,46,.92),rgba(36,17,28,.97)); --premium-panel:linear-gradient(105deg,rgba(104,46,53,.88),rgba(43,19,32,.96)); --premium-line:rgba(255,190,118,.18); --premium-soft:rgba(255,158,99,.12); --theme-shadow:0 24px 58px rgba(31,6,14,.4); color-scheme:dark; }
+[data-theme="paper"] { --text-primary:#2d2925; --text-secondary:#625b52; --text-muted:#8a8177; --accent-primary:#9a493d; --accent-hover:#bd6351; --accent-gradient:linear-gradient(135deg,#ad5546,#ce8054); --premium-surface:linear-gradient(145deg,rgba(255,253,248,.98),rgba(237,230,218,.96)); --premium-panel:linear-gradient(105deg,rgba(255,250,242,.98),rgba(240,230,217,.97)); --premium-line:rgba(93,69,50,.16); --premium-soft:rgba(165,83,65,.09); --theme-shadow:0 10px 22px rgba(79,55,36,.12); color-scheme:light; }
 
 @layer base {
   * {
@@ -217,8 +190,7 @@ textarea,
 [role="tab"],
 .btn,
 .btn-icon,
-.ui-button,
-.tab-trigger {
+.ui-button {
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
   }
@@ -342,8 +314,8 @@ body::after {
 
 /* Typography */
 h1 { font-size: 2rem; font-weight: 700; margin-bottom: 1rem; letter-spacing: -0.02em; }
-h2 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.75rem; letter-spacing: -0.01em; }
-h3 { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; }
+h2 { font-size: 1.5rem; font-weight: 600; margin-bottom: var(--space-sm); letter-spacing: -0.01em; }
+h3 { font-size: 1.25rem; font-weight: 600; margin-bottom: var(--space-xs); }
 p { margin-bottom: 1rem; line-height: 1.6; color: var(--text-secondary); }
 
 /* Components */
@@ -358,7 +330,7 @@ p { margin-bottom: 1rem; line-height: 1.6; color: var(--text-secondary); }
   cursor: pointer;
   transition: all 0.2s ease;
   border: none;
-  gap: 0.5rem;
+  gap: var(--space-xs);
   font-size: 0.875rem;
 }
 
@@ -469,7 +441,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
 }
 
 .btn-icon {
-  padding: 0.5rem;
+  padding: var(--space-xs);
   border-radius: 50%;
 }
 
@@ -614,7 +586,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
 }
 
 .modern-nav-wrapper.is-scrolled {
-  padding-top: 0.5rem;
+  padding-top: var(--space-xs);
   transition: padding 0.3s ease;
 }
 
@@ -1044,7 +1016,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
 .theme-popover-item {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-xs);
   padding: 0.5rem 0.55rem;
   border-radius: 11px;
   border: 1px solid transparent;
@@ -1194,7 +1166,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
 
 .more-sheet-footer-actions {
   display: flex;
-  gap: 0.75rem;
+  gap: var(--space-sm);
   padding-top: 0.85rem;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
@@ -1204,7 +1176,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: var(--space-xs);
   padding: 0.65rem 0.85rem;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.05);
@@ -1330,7 +1302,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
 .page-surface .card { background: linear-gradient(145deg, rgba(25, 34, 54, .82), rgba(13, 18, 30, .92)); border-color: rgba(255,255,255,.085) !important; box-shadow: 0 16px 36px rgba(0,0,0,.14); }
 .page-surface .card { background: var(--premium-surface); border-color: var(--premium-line) !important; }
 .page-surface .input { border-color: rgba(137, 205, 255, .14); background: rgba(8, 13, 24, .58); }.page-surface .input:focus { border-color: #67e5ff; box-shadow: 0 0 0 4px rgba(83, 220, 255, .1); }
-.routines-page > div:nth-child(2) { background: linear-gradient(100deg, rgba(55, 198, 255, .11), rgba(125, 92, 255, .1)) !important; border-color: rgba(104,224,255,.25) !important; border-radius: 16px !important; }.routine-card { min-height: 220px; position: relative; overflow: hidden; }.routine-card::after { content:''; position:absolute; width:10rem; height:10rem; border-radius:50%; right:-4rem; top:-5rem; background: rgba(124, 101, 255, .11); filter: blur(5px); }.routine-card .btn { position: relative; z-index: 1; }
+.routines-page > div:nth-child(2) { background: linear-gradient(100deg, rgba(55, 198, 255, .11), rgba(125, 92, 255, .1)) !important; border-color: rgba(104,224,255,.25) !important; border-radius: 16px !important; }
 .settings-page section > h2 { color: #b7c6dc !important; font-size: .74rem !important; letter-spacing: .12em; text-transform: uppercase; }.settings-page section .card { border-radius: 18px; }.settings-page select.input { border-radius: 10px; }.settings-page label[title] { background: linear-gradient(135deg, #64e4ff, #7b63ff) !important; box-shadow: 0 8px 20px rgba(84,209,255,.18); }.premium-modal { padding: 1.45rem !important; border-radius: 21px !important; background: rgba(17, 23, 39, .94) !important; backdrop-filter: blur(22px); box-shadow: 0 30px 80px rgba(0,0,0,.48) !important; }
 .ai-fab { background: linear-gradient(135deg, #58e1ff, #7963ff) !important; color: #07101e !important; box-shadow: 0 12px 32px rgba(83,215,255,.28) !important; }.ai-panel { background: rgba(15, 21, 36, .94) !important; border-color: rgba(118,224,255,.18) !important; border-radius: 20px !important; box-shadow: 0 28px 65px rgba(0,0,0,.42) !important; backdrop-filter: blur(22px); }
 button, .btn, .btn-icon { -webkit-tap-highlight-color: transparent; }
@@ -1524,7 +1496,7 @@ button, .btn, .btn-icon { -webkit-tap-highlight-color: transparent; }
   .mobile-live-workout-pill.compact {
     max-width: none;
     padding: 0.16rem 0.42rem;
-    gap: 0.25rem;
+    gap: var(--space-3xs);
     font-size: 0.68rem;
     cursor: pointer;
   }
@@ -1571,7 +1543,7 @@ button, .btn, .btn-icon { -webkit-tap-highlight-color: transparent; }
   .mobile-top-streak {
     display: inline-flex;
     align-items: center;
-    gap: 0.25rem;
+    gap: var(--space-3xs);
     min-height: 32px;
     height: 32px;
     padding: 0 0.5rem;
@@ -2020,14 +1992,14 @@ body:has(.modal-card) .ai-fab {
 /* Mobile Calendar Adjustments */
 
 /* Markdown Content Styles */
-.markdown-content p { margin-bottom: 0.5rem; }
+.markdown-content p { margin-bottom: var(--space-xs); }
 .markdown-content p:last-child { margin-bottom: 0; }
-.markdown-content h1, .markdown-content h2, .markdown-content h3 { font-weight: 600; margin-top: 1rem; margin-bottom: 0.5rem; color: inherit; }
+.markdown-content h1, .markdown-content h2, .markdown-content h3 { font-weight: 600; margin-top: 1rem; margin-bottom: var(--space-xs); color: inherit; }
 .markdown-content h3 { font-size: 1.1rem; }
-.markdown-content ul, .markdown-content ol { padding-left: 1.5rem; margin-bottom: 0.5rem; }
+.markdown-content ul, .markdown-content ol { padding-left: 1.5rem; margin-bottom: var(--space-xs); }
 .markdown-content ul { list-style-type: disc; }
 .markdown-content ol { list-style-type: decimal; }
-.markdown-content li { margin-bottom: 0.25rem; }
+.markdown-content li { margin-bottom: var(--space-3xs); }
 .markdown-content strong { font-weight: 600; color: inherit; }
 
 /* Hide scrollbar but keep functionality */
@@ -2076,18 +2048,6 @@ body:has(.modal-card) .ai-fab {
   }
 
   /* Meal type buttons: 2x2 grid */
-  .meal-type-tabs {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr !important;
-    gap: 0.5rem !important;
-    flex-wrap: unset !important;
-  }
-  .meal-type-tab {
-    width: 100% !important;
-    justify-content: center !important;
-    padding: 0.7rem !important;
-    min-height: 48px !important;
-  }
 
   /* Water intake buttons: evenly sized */
 
@@ -2136,14 +2096,6 @@ body:has(.modal-card) .ai-fab {
   }
 
   /* Routine action buttons */
-  .routine-actions-bar {
-    flex-direction: column !important;
-    gap: 0.65rem !important;
-  }
-  .routine-actions-bar > button {
-    width: 100% !important;
-    justify-content: center !important;
-  }
 }
 
 /* ---- 6. CALENDAR VIEW ---- */
@@ -2341,7 +2293,7 @@ body:has(.modal-card) .ai-fab {
 .zen-pill-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-xs);
   padding: 0.6rem 1.1rem;
   border-radius: 999px;
   font-size: 0.85rem;
@@ -2390,46 +2342,6 @@ html.warm-night-filter {
 
 /* 2. Micro Steppers for Weights & Reps */
 
-.quick-stepper-btn {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--text-secondary);
-  border-radius: 6px;
-  padding: 0.15rem 0.38rem;
-  font-size: 0.68rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  user-select: none;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.2;
-}
-
-.quick-stepper-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.14);
-  color: var(--text-primary);
-  border-color: rgba(255, 255, 255, 0.22);
-}
-
-.quick-stepper-btn:active:not(:disabled) {
-  transform: scale(0.91);
-}
-
-.quick-stepper-btn:disabled {
-  opacity: 0.3;
-  cursor: default;
-}
-
-.quick-stepper-btn.warm {
-  color: #fbbf24;
-  border-color: rgba(251, 191, 36, 0.3);
-  background: rgba(251, 191, 36, 0.08);
-}
-
-.quick-stepper-btn.warm:hover:not(:disabled) {
-  background: rgba(251, 191, 36, 0.18);
-}
-
 /* 3. Collapsed Finished Exercise Card */
 
 /* 4. Screen Wake Lock Pill */
@@ -2439,19 +2351,6 @@ html.warm-night-filter {
    ========================================================================== */
 
 /* 1. Focus Dimming for Finished Sets & Active Next-Set Glow */
-
-@keyframes beaconPulse {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 0.85;
-    box-shadow: 0 0 6px #38bdf8;
-  }
-  50% {
-    transform: scale(1.35);
-    opacity: 1;
-    box-shadow: 0 0 12px #38bdf8;
-  }
-}
 
 /* 2. Smart Stepper Bar (Without Virtual Keyboard) */
 
@@ -2524,23 +2423,6 @@ button, a, input, select, textarea, .btn, .theme-popover-item, .modern-nav-item 
 /* 2. View Mode Toggle Pill */
 
 /* 3. High-Contrast Active Set Beacon and Row Highlight */
-.is-current-active-set {
-  background: linear-gradient(90deg, rgba(56, 189, 248, 0.09), rgba(16, 185, 129, 0.04)) !important;
-  border-left: 3px solid #38bdf8 !important;
-  border-radius: 8px;
-  transition: background 0.3s ease;
-}
-
-[dir="rtl"] .is-current-active-set {
-  border-left: none !important;
-  border-right: 3px solid #38bdf8 !important;
-}
-
-@keyframes pulseBeacon {
-  0% { transform: scale(0.9); opacity: 0.7; }
-  50% { transform: scale(1.4); opacity: 1; }
-  100% { transform: scale(0.9); opacity: 0.7; }
-}
 
 /* 4. Smooth Next-Exercise Floating Callout */
 
@@ -2629,10 +2511,10 @@ button, a, input, select, textarea, .btn, .theme-popover-item, .modern-nav-item 
 .calendar-week-ribbon {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-xs);
   overflow-x: auto;
   padding: 0.25rem 0.25rem 1.25rem 0.25rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--space-xs);
   -webkit-overflow-scrolling: touch;
 }
 
@@ -2643,7 +2525,7 @@ button, a, input, select, textarea, .btn, .theme-popover-item, .modern-nav-item 
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.25rem;
+  gap: var(--space-3xs);
   padding: 0.65rem 0.35rem;
   border-radius: 16px;
   background: var(--bg-secondary);
@@ -2817,7 +2699,7 @@ button, a, input, select, textarea, .btn, .theme-popover-item, .modern-nav-item 
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 0.75rem;
+  gap: var(--space-sm);
 }
 
 .calendar-workout-card .card-title-meta {
@@ -2917,7 +2799,7 @@ button, a, input, select, textarea, .btn, .theme-popover-item, .modern-nav-item 
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: var(--space-xs);
   font-size: 0.8rem;
 }
 
@@ -2964,13 +2846,13 @@ button, a, input, select, textarea, .btn, .theme-popover-item, .modern-nav-item 
 .calendar-workout-card .card-stat-item {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: var(--space-3xs);
 }
 
 .calendar-workout-card .card-go-btn {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: var(--space-3xs);
   font-size: 0.82rem;
   font-weight: 700;
   transition: transform 0.15s ease;
@@ -2993,7 +2875,7 @@ button, a, input, select, textarea, .btn, .theme-popover-item, .modern-nav-item 
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem;
+  gap: var(--space-sm);
   cursor: pointer;
   color: var(--text-secondary);
   transition: all 0.2s ease;
@@ -3187,7 +3069,7 @@ button, a, input, select, textarea, .btn, .theme-popover-item, .modern-nav-item 
   border-radius: 14px;
   padding: 0.9rem 1.1rem;
   display: flex;
-  gap: 0.75rem;
+  gap: var(--space-sm);
   align-items: flex-start;
 }
 
@@ -3206,11 +3088,11 @@ button, a, input, select, textarea, .btn, .theme-popover-item, .modern-nav-item 
 .calendar-day-tab-bar {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-xs);
   overflow-x: auto;
   scrollbar-width: none;
   padding: 0.25rem 0;
-  margin-top: 0.25rem;
+  margin-top: var(--space-3xs);
 }
 .calendar-day-tab-bar::-webkit-scrollbar {
   display: none;
@@ -3279,14 +3161,14 @@ button, a, input, select, textarea, .btn, .theme-popover-item, .modern-nav-item 
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  margin-top: 0.5rem;
+  margin-top: var(--space-xs);
 }
 
 .calendar-section-title-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: var(--space-sm);
   flex-wrap: wrap;
 }
 
@@ -3379,8 +3261,8 @@ button, a, input, select, textarea, .btn, .theme-popover-item, .modern-nav-item 
 .history-card-subtitle {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.25rem;
+  gap: var(--space-xs);
+  margin-top: var(--space-3xs);
   font-size: 0.8rem;
   color: var(--text-muted);
   flex-wrap: wrap;
@@ -3396,7 +3278,7 @@ button, a, input, select, textarea, .btn, .theme-popover-item, .modern-nav-item 
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: var(--space-3xs);
 }
 
 /* 4 Telemetry Stats Grid */
@@ -3413,7 +3295,7 @@ button, a, input, select, textarea, .btn, .theme-popover-item, .modern-nav-item 
 @media (max-width: 480px) {
   .history-card-telemetry-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
+    gap: var(--space-sm);
   }
 }
 
@@ -3473,7 +3355,7 @@ button, a, input, select, textarea, .btn, .theme-popover-item, .modern-nav-item 
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: var(--space-sm);
   padding-top: 0.65rem;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   flex-wrap: wrap;
@@ -3551,7 +3433,7 @@ button, a, input, select, textarea, .btn, .theme-popover-item, .modern-nav-item 
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: var(--space-xs);
   flex-wrap: wrap;
 }
 
@@ -3583,7 +3465,7 @@ button, a, input, select, textarea, .btn, .theme-popover-item, .modern-nav-item 
 .exercise-box-metrics {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-xs);
 }
 
 .exercise-sets-log-table {
@@ -3626,7 +3508,7 @@ button, a, input, select, textarea, .btn, .theme-popover-item, .modern-nav-item 
 .set-log-col-weight, .set-log-col-reps {
   display: flex;
   align-items: baseline;
-  gap: 0.25rem;
+  gap: var(--space-3xs);
 }
 
 .set-log-col-times {
@@ -3638,7 +3520,7 @@ button, a, input, select, textarea, .btn, .theme-popover-item, .modern-nav-item 
 .status-pill.done {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: var(--space-3xs);
   font-size: 0.72rem;
   font-weight: 700;
   color: #10b981;
@@ -3660,14 +3542,14 @@ button, a, input, select, textarea, .btn, .theme-popover-item, .modern-nav-item 
 .day-macro-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 0.75rem;
+  gap: var(--space-sm);
 }
 
 .day-macro-item {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 12px;
-  padding: 0.75rem;
+  padding: var(--space-sm);
   display: flex;
   flex-direction: column;
   gap: 0.35rem;

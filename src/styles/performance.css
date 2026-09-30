@@ -14,7 +14,7 @@
     align-items: flex-end;
     justify-content: space-between;
     gap: 1rem;
-    padding-bottom: 0.75rem;
+    padding-bottom: var(--space-sm);
     border-bottom: 1px solid var(--premium-line);
   }
 
@@ -34,17 +34,17 @@
   .forma-ledger-empty strong { color: var(--text-primary); font-size: 0.8rem; }
   .forma-ledger-plots { display: grid; gap: 0.85rem; min-width: 0; }
   .forma-data-plot { min-width: 0; padding: 0.85rem; border: 1px solid var(--premium-line); border-radius: 0.75rem; background: color-mix(in srgb, var(--bg-primary) 30%, transparent); }
-  .forma-data-plot-header { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.75rem; }
+  .forma-data-plot-header { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-xs); margin-bottom: var(--space-sm); }
   .forma-data-plot-header div { display: flex; align-items: baseline; gap: 0.4rem; }
   .forma-data-plot-header span { color: var(--text-primary); font-size: 0.78rem; font-weight: 750; }
   .forma-data-plot-header strong, .forma-data-plot-header small { color: var(--text-muted); font-size: 0.65rem; }
-  .forma-data-bars { display: flex; align-items: end; gap: 0.3rem; height: 7.2rem; padding-top: 0.5rem; border-bottom: 1px solid var(--premium-line); }
+  .forma-data-bars { display: flex; align-items: end; gap: 0.3rem; height: 7.2rem; padding-top: var(--space-xs); border-bottom: 1px solid var(--premium-line); }
   .forma-data-bar-group { display: grid; flex: 1; align-items: end; justify-items: center; gap: 0.35rem; height: 100%; min-width: 0; }
   .forma-data-bar { display: block; width: min(1.1rem, 100%); min-height: 0.35rem; border-radius: 0.25rem 0.25rem 0 0; background: linear-gradient(180deg, var(--accent-cyan), color-mix(in srgb, var(--accent-cyan) 24%, transparent)); }
   .forma-data-bar-group small { color: var(--text-muted); font-size: 0.58rem; }
-  .forma-plot-empty { min-height: 7rem; place-content: center; padding: 0.75rem; text-align: center; }
+  .forma-plot-empty { min-height: 7rem; place-content: center; padding: var(--space-sm); text-align: center; }
 
-  .forma-adaptive-callout { display: grid; gap: 0.75rem; padding: 0.9rem; border: 1px solid color-mix(in srgb, var(--accent-cyan) 28%, transparent); border-radius: 0.75rem; background: color-mix(in srgb, var(--accent-cyan) 6%, transparent); }
+  .forma-adaptive-callout { display: grid; gap: var(--space-sm); padding: 0.9rem; border: 1px solid color-mix(in srgb, var(--accent-cyan) 28%, transparent); border-radius: 0.75rem; background: color-mix(in srgb, var(--accent-cyan) 6%, transparent); }
   .forma-adaptive-callout.is-empty { color: var(--text-muted); font-size: 0.72rem; }
   .forma-adaptive-chain { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: center; gap: 0.55rem; }
   .forma-adaptive-chain span { display: grid; gap: 0.2rem; }
@@ -117,7 +117,7 @@
 
   .forma-data-table { width: 100%; border-collapse: collapse; font-size: 0.72rem; }
   .forma-data-table caption {
-    padding-bottom: 0.5rem;
+    padding-bottom: var(--space-xs);
     color: var(--text-muted);
     font-size: 0.66rem;
     text-align: start;
@@ -159,8 +159,8 @@
   }
 
   .forma-narrative-flow { display: grid; gap: 1.25rem; }
-  .forma-narrative-section { display: grid; gap: 0.75rem; scroll-margin-block-start: 5rem; }
-  .forma-narrative-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
+  .forma-narrative-section { display: grid; gap: var(--space-sm); scroll-margin-block-start: 5rem; }
+  .forma-narrative-heading { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-sm); flex-wrap: wrap; }
   .forma-narrative-heading h2 { margin: 0; font-size: 1.05rem; }
   .forma-section-kicker-text { display: block; color: var(--accent-primary); font-size: 0.62rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
   .forma-count-label { color: var(--text-muted); font-size: 0.65rem; }
@@ -183,7 +183,7 @@
   .forma-record-chip {
     display: inline-flex;
     align-items: center;
-    gap: 0.25rem;
+    gap: var(--space-3xs);
     padding: 0.25rem 0.6rem;
     border: 1px solid var(--premium-line);
     border-radius: 8px;
@@ -348,7 +348,7 @@
   .session-set-check {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: var(--space-sm);
     width: 100%;
     min-height: 64px;
     padding: 0.7rem 0.85rem;
@@ -402,7 +402,7 @@
     inset-inline-end: 0;
     z-index: 60;
     display: grid;
-    gap: 0.25rem;
+    gap: var(--space-3xs);
     min-width: 13rem;
     padding: 0.35rem;
     border: 1px solid var(--premium-line);
@@ -413,7 +413,7 @@
   .session-overflow-menu button {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--space-xs);
     min-height: 44px;
     padding: 0.5rem 0.7rem;
     border: 0;
@@ -430,7 +430,7 @@
 
   .session-hud-rest {
     position: fixed;
-    inset-inline: 0.75rem;
+    inset-inline: var(--space-sm);
     inset-block-end: var(--session-rest-inset);
     z-index: 960;
     display: flex;
@@ -535,7 +535,7 @@
 @layer components {
   .forma-ai-empty {
     display: grid;
-    gap: 0.5rem;
+    gap: var(--space-xs);
     place-items: center;
     padding: 1.75rem 1rem;
     text-align: center;
@@ -623,7 +623,7 @@
   }
   .forma-tutorial-actions {
     display: flex;
-    gap: 0.5rem;
+    gap: var(--space-xs);
     justify-content: center;
     margin-block-start: 0.75rem;
     flex-wrap: wrap;
@@ -644,7 +644,7 @@
   }
   .forma-tutorial-cues {
     display: grid;
-    gap: 0.5rem;
+    gap: var(--space-xs);
     margin-block-start: 0.35rem;
     padding: 0.9rem 1rem;
     border: 1px solid var(--color-info-line);

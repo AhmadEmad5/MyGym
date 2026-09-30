@@ -356,15 +356,12 @@
   .calendar-page .calendar-day-tab-bar::-webkit-scrollbar { display: none; }
 
   .calendar-page .calendar-workout-card,
-.routines-page .routine-card,
-.nutrition-page .meal-card,
-.performance-page > section,
-.settings-page .settings-list {
+  .performance-page > section,
+  .settings-page .settings-list {
     box-shadow: 0 10px 24px color-mix(in srgb, var(--bg-primary) 20%, transparent) !important;
   }
 
-  .calendar-page .calendar-workout-card:active,
-  .routines-page .routine-card:active {
+  .calendar-page .calendar-workout-card:active {
     transform: scale(0.99);
   }
 
@@ -559,8 +556,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .calendar-page .calendar-workout-card:active,
-  .routines-page .routine-card:active { transform: none; }
+  .calendar-page .calendar-workout-card:active { transform: none; }
 
   .modern-nav-item,
   .modern-nav-item .nav-icon-wrap { transition: none !important; }
@@ -648,7 +644,7 @@
 
   .app-layout:not(.has-live-bar) .main-content:not(.in-workout-session-main) .content-area {
     padding-block: max(0.5rem, var(--shell-safe-top)) max(0.5rem, var(--shell-safe-bottom)) !important;
-    scroll-padding-block: 0.5rem;
+    scroll-padding-block: var(--space-xs);
   }
 
   .forma-page-frame { padding-block-end: 1.5rem !important; }
@@ -686,7 +682,7 @@
     justify-content: center;
     gap: 0.625rem;
     block-size: var(--page-actionbar-block);
-    padding-block: 0.5rem;
+    padding-block: var(--space-xs);
     padding-inline:
       max(0.75rem, var(--shell-safe-inline-start))
       max(0.75rem, var(--shell-safe-inline-end));
@@ -842,7 +838,7 @@
 .performance-ready-strip-copy {
   display: flex;
   align-items: baseline;
-  gap: 0.5rem;
+  gap: var(--space-xs);
   min-width: 0;
 }
 
@@ -1055,7 +1051,6 @@
   .calendar-page .forma-section-kicker-text { font-size: 0.72rem; }
 
   .today-dashboard-stack .today-bento-legend-value small { font-size: 0.72rem; }
-  .today-dashboard-stack .home-quick-actions-grid .quick-action-card-btn small { font-size: 0.72rem; }
 
   .routines-page .routine-ledger-counts { font-size: 0.72rem; }
   .routines-page .routine-ledger-session-meta { font-size: 0.72rem; }
