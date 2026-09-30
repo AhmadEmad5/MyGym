@@ -1126,9 +1126,27 @@
   }
 
   /* ==========================================================================
-     Hydration chamber — compositor-only animation, pauseable
+     Hydration chamber — moving water, compositor-only
+     ==========================================================================
+     The surface is four static sine bands of differing wavelength, speed and
+     phase. Each `<svg>` is 200% of the flask, centred, and its viewBox holds a
+     whole number of wavelengths, so the flask always shows half of them and the
+     band travels exactly one wavelength per cycle: the pattern lands on itself
+     and the loop has no seam. Nothing ever animates `d`.
+
+     The over-wide band is centred by a flex track rather than by a physical
+     `left`, because unsafe `justify-content: center` overflows symmetrically in
+     both writing directions. That is what keeps the whole thing direction-agnostic
+     without a single physical offset.
      ========================================================================== */
   .today-hydration-layout {
+    /* One cyan source token mixed toward a deep and a light end, so the water
+       holds its contrast on both light and dark canvases. `--accent-cyan` is not
+       re-declared per theme, so these four values are theme-stable. */
+    --hw-deep: color-mix(in srgb, var(--accent-cyan) 42%, #0a3b52);
+    --hw-mid: color-mix(in srgb, var(--accent-cyan) 68%, #0a3b52);
+    --hw-crest: color-mix(in srgb, var(--accent-cyan) 88%, #ffffff);
+    --hw-glint: color-mix(in srgb, #ffffff 58%, transparent);
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
@@ -1145,14 +1163,16 @@
     flex-direction: column;
     justify-content: flex-end;
     overflow: hidden;
-    border: 2px solid rgba(56, 189, 248, 0.35);
+    border: 2px solid color-mix(in srgb, var(--accent-cyan) 38%, var(--border-card));
     border-radius: var(--radius-xl);
     background: color-mix(in srgb, var(--surface-canvas) 75%, transparent);
     box-shadow: inset 0 0 20px rgba(56, 189, 248, 0.15);
   }
 
+  /* Ticks sit above the water so the scale reference survives the fill. */
   .today-hydration-tick {
     position: absolute;
+    z-index: 1;
     inset-inline-end: 6px;
     inline-size: 8px;
     block-size: 1px;
@@ -1167,19 +1187,93 @@
 
   .today-hydration-liquid {
     position: relative;
+    z-index: 0;
     inline-size: 100%;
-    background: linear-gradient(180deg, rgba(56, 189, 248, 0.85) 0%, rgba(6, 182, 212, 0.95) 100%);
-    box-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
+    background: linear-gradient(180deg, var(--hw-mid) 0%, var(--hw-deep) 100%);
+    box-shadow: 0 0 20px var(--accent-cyan-glow);
     transition: block-size 420ms cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  .today-hydration-wave {
+  /* 7px of the 26px band is buried inside the liquid so the vertical bob can
+     never open a gap between the waves and the body of water. `min` keeps the
+     overlap inside the liquid when the fill is at its 6% floor. */
+  .today-hydration-surface {
     position: absolute;
-    inset-block-end: 100%;
-    inset-inline-start: 0;
-    inline-size: 200%;
-    block-size: 22px;
-    animation: forma-hydration-drift 5.5s linear infinite;
+    inset-inline: 0;
+    inset-block-end: min(7px, 100%);
+    block-size: 26px;
+    pointer-events: none;
+  }
+
+  .today-hydration-surface-track {
+    position: absolute;
+    inset-block: 0;
+    inset-inline: 0;
+    display: flex;
+    justify-content: center;
+  }
+
+  .today-hydration-wave {
+    flex: 0 0 200%;
+    block-size: 100%;
+  }
+
+  /* Every animation below is declared ONLY under `data-hydration-motion='full'`.
+     Reduced motion therefore has no `animation-name` to override, which is what
+     makes it a genuine still state — and it cannot be undone by a specificity
+     contest, the way an `animation: none` override would be. */
+  [data-hydration-motion='full'] .today-hydration-surface {
+    animation: forma-hydration-bob 6.5s ease-in-out infinite alternate;
+  }
+
+  [data-hydration-motion='full'] .today-hydration-wave {
+    will-change: transform;
+  }
+
+  /* One wavelength is 1/N of the element, so N is also how far the band must
+     travel. 20% is the most any layer uses; the flask can absorb up to 25%
+     before the band would run out of path on either side. */
+  [data-hydration-motion='full'] .today-hydration-surface-track.is-swell .today-hydration-wave {
+    --hw-travel: 20%;
+    animation: forma-hydration-drift 11s linear infinite;
+  }
+
+  [data-hydration-motion='full'] .today-hydration-surface-track.is-ripple .today-hydration-wave {
+    --hw-travel: 16.6667%;
+    animation: forma-hydration-drift 7.5s linear infinite;
+  }
+
+  [data-hydration-motion='full'] .today-hydration-surface-track.is-crest .today-hydration-wave {
+    --hw-travel: 12.5%;
+    animation: forma-hydration-drift 5s linear infinite;
+  }
+
+  /* The glint adds an opacity shimmer on top of its drift. Opacity is a
+     compositor property, so it costs no extra layout or paint per frame. */
+  [data-hydration-motion='full'] .today-hydration-surface-track.is-glint .today-hydration-wave {
+    --hw-travel: 16.6667%;
+    animation: forma-hydration-drift 8.5s linear infinite,
+      forma-hydration-glint-pulse 4.5s ease-in-out infinite alternate;
+  }
+
+  .today-hydration-wave-path {
+    fill: var(--hw-deep);
+  }
+
+  .today-hydration-wave-path.is-ripple {
+    fill: var(--hw-mid);
+  }
+
+  .today-hydration-wave-path.is-crest {
+    fill: var(--hw-crest);
+  }
+
+  .today-hydration-wave-path.is-glint {
+    fill: none;
+    stroke: var(--hw-glint);
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    vector-effect: non-scaling-stroke;
   }
 
   @keyframes forma-hydration-drift {
@@ -1187,61 +1281,150 @@
       transform: translate3d(0, 0, 0);
     }
     to {
-      transform: translate3d(-33.333%, 0, 0);
+      transform: translate3d(calc(-1 * var(--hw-travel, 20%)), 0, 0);
     }
+  }
+
+  @keyframes forma-hydration-bob {
+    from {
+      transform: translate3d(0, -1.5px, 0);
+    }
+    to {
+      transform: translate3d(0, 1.5px, 0);
+    }
+  }
+
+  @keyframes forma-hydration-glint-pulse {
+    from {
+      opacity: 0.45;
+    }
+    to {
+      opacity: 0.9;
+    }
+  }
+
+  /* Fades the buried bottom edge of the wave bands into the body of water.
+     `min` stops it spilling past the liquid at the lowest fill level. */
+  .today-hydration-seal {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline: 0;
+    block-size: min(12px, 100%);
+    pointer-events: none;
+    background: linear-gradient(
+      180deg,
+      var(--hw-crest) 0%,
+      color-mix(in srgb, var(--hw-mid) 55%, transparent) 55%,
+      transparent 100%
+    );
+  }
+
+  .today-hydration-bubbles {
+    position: absolute;
+    inset-block: 0;
+    inset-inline: 0;
+    overflow: hidden;
+    pointer-events: none;
   }
 
   .today-hydration-bubble {
     position: absolute;
-    inset-block-end: 12%;
+    inset-block-end: 10%;
     inline-size: 5px;
     block-size: 5px;
     border-radius: var(--radius-full);
-    background: rgba(255, 255, 255, 0.6);
-    animation: forma-hydration-rise 2.4s linear infinite;
+    background: var(--hw-glint);
+  }
+
+  [data-hydration-motion='full'] .today-hydration-bubble {
+    animation: forma-hydration-bubble-rise var(--hw-bubble-duration, 2.6s) linear
+      var(--hw-bubble-delay, 0s) infinite;
   }
 
   .today-hydration-bubble.bubble-a {
-    inset-inline-start: 32%;
+    inset-inline-start: 22%;
   }
 
   .today-hydration-bubble.bubble-b {
-    inset-inline-start: 64%;
+    inset-inline-start: 52%;
     inline-size: 4px;
     block-size: 4px;
-    animation-duration: 3.1s;
-    animation-delay: 0.6s;
+    --hw-bubble-duration: 3.4s;
+    --hw-bubble-delay: 0.7s;
   }
 
-  @keyframes forma-hydration-rise {
+  .today-hydration-bubble.bubble-c {
+    inset-inline-start: 74%;
+    inline-size: 3px;
+    block-size: 3px;
+    --hw-bubble-duration: 2.9s;
+    --hw-bubble-delay: 1.5s;
+  }
+
+  @keyframes forma-hydration-bubble-rise {
     0% {
       opacity: 0;
-      transform: translate3d(0, 0, 0) scale(0.7);
+      transform: translate3d(0, 0, 0) scale(0.65);
     }
-    18% {
-      opacity: 0.75;
+    22% {
+      opacity: 0.9;
+    }
+    72% {
+      opacity: 0.55;
     }
     100% {
       opacity: 0;
-      transform: translate3d(0, -58px, 0) scale(1);
+      transform: translate3d(0, -46px, 0) scale(1.1);
     }
   }
 
-  [data-motion-paused='true'] .today-hydration-wave,
-  [data-motion-paused='true'] .today-hydration-bubble {
+  /* Off-screen with motion allowed: hold the current frame and keep the layers,
+     so scrolling back resumes without a re-promotion hitch. */
+  [data-motion-paused='true'][data-hydration-motion='full'] .today-hydration-surface,
+  [data-motion-paused='true'][data-hydration-motion='full'] .today-hydration-surface *,
+  [data-motion-paused='true'][data-hydration-motion='full'] .today-hydration-bubble {
     animation-play-state: paused;
   }
 
+  /* Reduced motion rests on the still band: the shimmer settles and the bubbles
+     become calm standing dots rather than vanishing, so the fill still reads. */
+  [data-hydration-motion='reduced'] .today-hydration-surface-track.is-glint .today-hydration-wave {
+    opacity: 0.7;
+  }
+
+  [data-hydration-motion='reduced'] .today-hydration-bubble {
+    opacity: 0.5;
+  }
+
+  /* Backstop straight from the OS setting, covering the first paint before the
+     hook has written the attribute. `!important` because these lose on
+     specificity to the three-class per-layer rules above. */
+  @media (prefers-reduced-motion: reduce) {
+    .today-hydration-surface,
+    .today-hydration-surface *,
+    .today-hydration-bubble {
+      animation: none !important;
+    }
+  }
+
+  /* A readout chip rather than bare text: `--surface-elevated` over
+     `--text-primary` is the one pair every theme keeps high contrast, so the
+     percentage stays legible whether it lands on water or on bare glass. */
   .today-hydration-flask-value {
     position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #ffffff;
-    font-size: 1.1rem;
+    z-index: 2;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    transform: translate(-50%, -50%);
+    padding: 0.16rem 0.5rem;
+    border: 1px solid var(--border-card);
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--surface-elevated) 92%, transparent);
+    box-shadow: 0 2px 10px color-mix(in srgb, #04121c 45%, transparent);
+    color: var(--text-primary);
+    font-size: 1.05rem;
     font-weight: 900;
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.75);
+    line-height: 1.15;
   }
 
   .today-hydration-metrics {

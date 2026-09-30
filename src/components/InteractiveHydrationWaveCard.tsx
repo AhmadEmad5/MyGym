@@ -14,7 +14,34 @@ interface InteractiveHydrationWaveCardProps {
   onRetry?: () => void;
 }
 
-const WAVE_SPAN = 240;
+/* Four pre-drawn sine bands make up the water surface.
+   Each band is static; only its transform changes, so the whole loop stays on the
+   compositor. Every `<svg>` is rendered at 200% of the flask and centred, and its
+   viewBox holds N whole wavelengths, so the flask always shows N/2 of them and a
+   `translate3d(-1/N)` travels exactly one wavelength. The pattern therefore lands
+   on itself every cycle and the seam is invisible. */
+const waveLayers = [
+  {
+    id: 'swell',
+    viewBox: '0 0 600 26',
+    d: 'M 0,7 C 30,7 90,19 120,19 C 150,19 210,7 240,7 C 270,7 330,19 360,19 C 390,19 450,7 480,7 C 510,7 570,19 600,19 L 600,26 L 0,26 Z',
+  },
+  {
+    id: 'ripple',
+    viewBox: '0 0 576 26',
+    d: 'M 0,8.5 C 24,8.5 72,17.5 96,17.5 C 120,17.5 168,8.5 192,8.5 C 216,8.5 264,17.5 288,17.5 C 312,17.5 360,8.5 384,8.5 C 408,8.5 456,17.5 480,17.5 C 504,17.5 552,8.5 576,8.5 L 576,26 L 0,26 Z',
+  },
+  {
+    id: 'crest',
+    viewBox: '0 0 576 26',
+    d: 'M 0,10.5 C 18,10.5 54,15.5 72,15.5 C 90,15.5 126,10.5 144,10.5 C 162,10.5 198,15.5 216,15.5 C 234,15.5 270,10.5 288,10.5 C 306,10.5 342,15.5 360,15.5 C 378,15.5 414,10.5 432,10.5 C 450,10.5 486,15.5 504,15.5 C 522,15.5 558,10.5 576,10.5 L 576,26 L 0,26 Z',
+  },
+  {
+    id: 'glint',
+    viewBox: '0 0 528 26',
+    d: 'M 0,9.5 C 22,9.5 66,16.5 88,16.5 C 110,16.5 154,9.5 176,9.5 C 198,9.5 242,16.5 264,16.5 C 286,16.5 330,9.5 352,9.5 C 374,9.5 418,16.5 440,16.5 C 462,16.5 506,9.5 528,9.5',
+  },
+];
 
 const quickCups = [
   { amount: 250, label: '+250ml', icon: '🥛' },
@@ -98,6 +125,7 @@ export function InteractiveHydrationWaveCard({
         className="today-hydration-layout"
         ref={frameRef}
         data-motion-paused={pauseAnimation ? 'true' : 'false'}
+        data-hydration-motion={reduceMotion ? 'reduced' : 'full'}
       >
         <div
           className="today-hydration-flask"
@@ -113,21 +141,29 @@ export function InteractiveHydrationWaveCard({
           <span className="today-hydration-tick" style={{ insetBlockStart: '75%' }} aria-hidden="true" />
 
           <div className="today-hydration-liquid" style={{ blockSize: `${Math.max(6, waterPct)}%` }}>
-            <svg
-              className="today-hydration-wave"
-              viewBox={`0 0 ${WAVE_SPAN} 28`}
-              preserveAspectRatio="none"
-              aria-hidden="true"
-              focusable="false"
-            >
-              <path
-                d={`M -120,14 C -90,5 -60,23 -30,14 C 0,5 30,23 60,14 C 90,5 120,23 150,14 C 180,5 210,23 240,14 C 270,5 300,23 330,14 L 360,28 L -120,28 Z`}
-                fill="var(--accent-cyan)"
-                fillOpacity="0.85"
-              />
-            </svg>
-            <span className="today-hydration-bubble bubble-a" aria-hidden="true" />
-            <span className="today-hydration-bubble bubble-b" aria-hidden="true" />
+            <div className="today-hydration-bubbles" aria-hidden="true">
+              <span className="today-hydration-bubble bubble-a" />
+              <span className="today-hydration-bubble bubble-b" />
+              <span className="today-hydration-bubble bubble-c" />
+            </div>
+
+            <div className="today-hydration-surface" aria-hidden="true">
+              {waveLayers.map((layer) => (
+                <div key={layer.id} className={`today-hydration-surface-track is-${layer.id}`}>
+                  <svg
+                    className="today-hydration-wave"
+                    viewBox={layer.viewBox}
+                    preserveAspectRatio="none"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <path className={`today-hydration-wave-path is-${layer.id}`} d={layer.d} />
+                  </svg>
+                </div>
+              ))}
+            </div>
+
+            <span className="today-hydration-seal" aria-hidden="true" />
           </div>
 
           <span className="today-hydration-flask-value tabular-nums" aria-hidden="true">
