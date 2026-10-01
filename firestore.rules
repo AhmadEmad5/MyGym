@@ -38,6 +38,18 @@ service cloud.firestore {
       return num is number && num >= minVal && num <= maxVal;
     }
 
+    // A `date` must be an ISO 8601 calendar date, optionally carrying a time:
+    //   2026-01-05
+    //   2026-01-05T10:00            (local value from <input type="datetime-local">)
+    //   2026-01-05T10:00:00.000Z    (new Date().toISOString())
+    // A bare length check accepts junk like "aaaaaaaaaa", which then poisons
+    // every read that parses the field. The pattern mirrors the client-side
+    // ISO_DATE_PATTERN in src/lib/api.ts.
+    function validTimestamp(text) {
+      return text is string
+        && text.matches('^\\d{4}-\\d{2}-\\d{2}([T ]\\d{2}:\\d{2}(:\\d{2}(\\.\\d{1,9})?)?(Z|[+-]\\d{2}:?\\d{2})?)?$');
+    }
+
     // --- Root Document Validator (/users/{userId}) ---
     function isValidRootUser() {
       let data = request.resource.data;
@@ -67,7 +79,7 @@ service cloud.firestore {
       return data.keys().hasAll(['id', 'title', 'date', 'duration', 'type', 'isCompleted'])
         && data.id == docId
         && validString(data.title, 1, 150)
-        && validString(data.date, 8, 35)
+        && validTimestamp(data.date)
         && validNumber(data.duration, 0, 1440)
         && data.type is string && data.type.size() <= 50
         && data.isCompleted is bool
@@ -94,7 +106,7 @@ service cloud.firestore {
         && data.id == docId
         && validString(data.sessionId, 1, 100)
         && validString(data.title, 1, 150)
-        && validString(data.date, 8, 35)
+        && validTimestamp(data.date)
         && (!('duration' in data) || validNumber(data.duration, 0, 1440))
         && (!('snapshot' in data) || data.snapshot is map);
     }
@@ -105,12 +117,17 @@ service cloud.firestore {
       return data.keys().hasAll(['id', 'date', 'mealType', 'title', 'calories'])
         && data.id == docId
         && validString(data.title, 1, 150)
-        && validString(data.date, 8, 35)
+        && validTimestamp(data.date)
         && data.mealType in ['breakfast', 'lunch', 'dinner', 'snack']
         && validNumber(data.calories, 0, 25000)
         && (!('protein' in data) || validNumber(data.protein, 0, 1000))
         && (!('carbs' in data) || validNumber(data.carbs, 0, 2000))
-        && (!('fats' in data) || validNumber(data.fats, 0, 1000));
+        && (!('fats' in data) || validNumber(data.fats, 0, 1000))
+        // Photos live in Cloud Storage; only a short download URL belongs here.
+        // 280000 characters is the base64 length of the 200 KB inline payload
+        // ceiling enforced in src/lib/api.ts (~273067 chars worst case), kept
+        // far below the 1 MiB document limit.
+        && (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() <= 280000));
     }
 
     // --- Collection Rules Scoped to Owner and Admin ---

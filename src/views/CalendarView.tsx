@@ -6,7 +6,8 @@ import { createPortal } from 'react-dom';
 import { CalendarDays, Plus } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { WorkoutSession } from '../lib/api';
-import { estimateWorkoutCalories } from '../lib/api';
+import { DEFAULT_NUTRITION_GOALS, estimateWorkoutCalories } from '../lib/api';
+import { resolveDailyTargets } from '../lib/selectors';
 import { useData } from '../hooks/useData';
 import { useTranslation } from '../lib/i18n';
 import { notify } from '../lib/feedback';
@@ -556,11 +557,8 @@ export function CalendarView() {
           meals={dayMeals}
           nutrition={dayNutrition}
           targets={{
-            calories: data.nutritionGoals?.dailyCalories || 2400,
-            protein: data.nutritionGoals?.dailyProtein || 160,
-            carbs: data.nutritionGoals?.dailyCarbs || 250,
-            fats: data.nutritionGoals?.dailyFats || 70,
-            water: data.nutritionGoals?.dailyWaterMl || 3000
+            ...resolveDailyTargets(data.nutritionGoals),
+            water: data.nutritionGoals?.dailyWaterMl || DEFAULT_NUTRITION_GOALS.dailyWaterMl
           }}
           isRTL={isRTL}
           isClearing={isClearing}

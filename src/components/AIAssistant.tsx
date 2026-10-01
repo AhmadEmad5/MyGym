@@ -3,10 +3,11 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MessageSquare, X, Send, Bot, RotateCcw, AlertTriangle,
-  Calendar, Play, Utensils, PlusCircle, Check, Square
+  Calendar, Play, Utensils, PlusCircle, Check, Square,
+  ShieldAlert, CheckCircle2, XCircle
 } from 'lucide-react';
 import { useData } from '../hooks/useData';
-import { useAI, ChatActionCard } from '../hooks/useAI';
+import { useAI, ChatActionCard, PendingSessionAction } from '../hooks/useAI';
 import { useTranslation } from '../lib/i18n';
 import { notify } from '../lib/feedback';
 import { MealRecord } from '../lib/api';
@@ -29,11 +30,13 @@ export function AIAssistant() {
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [loggedMealIds, setLoggedMealIds] = useState<Set<string>>(new Set());
-  const { messages, isTyping, sendMessage, clearHistory } = useAI(data);
+  const { messages, isTyping, sendMessage, clearHistory, confirmAction, cancelAction } = useAI(data);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isModalOpenOnPage, setIsModalOpenOnPage] = useState(false);
   const [stoppedAfterIndex, setStoppedAfterIndex] = useState<number | null>(null);
   const [startingStep, setStartingStep] = useState(0);
+  // Message ids whose confirmation is mid-write, so the card can lock itself.
+  const [busyActionIds, setBusyActionIds] = useState<Set<string>>(new Set());
 
   const visibleMessages = useMemo(() => {
     if (stoppedAfterIndex === null) return messages;
@@ -115,12 +118,373 @@ export function AIAssistant() {
 
   const hasRealConversation = visibleMessages.some(msg => msg.role === 'user');
 
+  /** Only reachable from the card's Confirm button - never from a model reply. */
+  const handleConfirmAction = async (messageId: string, actionId: string, title: string) => {
+    if (busyActionIds.has(actionId)) return;
+    setBusyActionIds(prev => new Set(prev).add(actionId));
+    try {
+      const outcome = await confirmAction(messageId, actionId);
+      if (outcome === 'confirmed') {
+        notify(isArabic ? `تم تحديد "${title}" كجلسة مكتملة ✓` : `Marked "${title}" as completed ✓`, 'success');
+      } else if (outcome === 'failed') {
+        notify(isArabic ? 'تعذر تحديث الجلسة. يرجى المحاولة من صفحة التقويم.' : 'Could not update the session. Try again from the calendar.', 'error');
+      }
+    } finally {
+      setBusyActionIds(prev => {
+        const next = new Set(prev);
+        next.delete(actionId);
+        return next;
+      });
+    }
+  };
+
+  /** Declines the request. No write happens anywhere on this path. */
+  const handleCancelAction = (messageId: string, actionId: string) => {
+    if (cancelAction(messageId, actionId) === 'cancelled') {
+      notify(isArabic ? 'تم رفض الإجراء. لم يتغيّر شيء.' : 'Action declined. Nothing was changed.', 'info');
+    }
+  };
+
   const renderMessageBody = (content: string, isStreaming: boolean) => (
     <div className="forma-ai-stream markdown-content">
       <ReactMarkdown>{content}</ReactMarkdown>
       {isStreaming && <span className="forma-ai-cursor" aria-hidden="true" />}
     </div>
   );
+
+  const formatActionDate = (value: string) => {
+    if (!value) return '';
+    const parsed = new Date(value);
+    if (isNaN(parsed.getTime())) return value;
+    return parsed.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  /**
+   * Renders a single action card. Only `confirmation_required` can change user
+   * data, and it renders fully inert: no write is triggered by the reply that
+   * produced it, only by an explicit tap on Confirm.
+   */
+  const renderActionCard = (card: ChatActionCard, messageId: string, cardIndex: number) => {
+    const cardKey = `${messageId}:${cardIndex}`;
+
+    if (card.type === 'confirmation_required') {
+      const data: PendingSessionAction = card.data;
+      const isBusy = busyActionIds.has(data.actionId);
+      const meta = {
+        pending: { Icon: ShieldAlert, tone: '#f59e0b', label: isArabic ? 'بانتظار تأكيدك' : 'Awaiting your confirmation' },
+        confirmed: { Icon: CheckCircle2, tone: '#10b981', label: isArabic ? 'تم التأكيد' : 'Confirmed' },
+        cancelled: { Icon: XCircle, tone: 'var(--text-muted)', label: isArabic ? 'تم رفض الإجراء' : 'Declined' },
+        failed: { Icon: AlertTriangle, tone: 'var(--danger, #ef4444)', label: isArabic ? 'تعذّر تنفيذ الإجراء' : 'Could not be applied' }
+      }[data.status];
+      const StatusIcon = meta.Icon;
+      const isPending = data.status === 'pending';
+
+      return (
+        <div
+          key={cardKey}
+          role="group"
+          aria-label={isArabic ? 'إجراء يتطلب تأكيدك' : 'Action requiring your confirmation'}
+          style={{
+            padding: '0.85rem',
+            borderRadius: '0.75rem',
+            backgroundColor: isPending ? 'rgba(245, 158, 11, 0.08)' : 'rgba(255, 255, 255, 0.03)',
+            border: `1px solid ${isPending ? 'rgba(245, 158, 11, 0.35)' : 'var(--border-color)'}`,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.5rem'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600, fontSize: '0.82rem', color: meta.tone }}>
+              <StatusIcon className="w-4 h-4" aria-hidden="true" />
+              <span>
+                {isArabic ? 'إجراء مقترح' : 'Proposed Action'}
+                {isPending ? '' : ` · ${meta.label}`}
+              </span>
+            </div>
+            {data.sessionType && (
+              <span style={{
+                fontSize: '0.7rem',
+                padding: '0.15rem 0.5rem',
+                borderRadius: '9999px',
+                backgroundColor: 'rgba(255,255,255,0.08)',
+                color: 'var(--text-secondary)'
+              }}>
+                {data.sessionType}
+              </span>
+            )}
+          </div>
+
+          {isPending && (
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+              {isArabic
+                ? 'لن يتم تغيير أي شيء حتى توافق.'
+                : 'Nothing changes until you approve. The coach cannot apply this on its own.'}
+            </div>
+          )}
+
+          <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+            {isArabic ? 'تحديد الجلسة كمكتملة' : 'Mark session as completed'}
+          </div>
+
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+            {data.sessionTitle}
+          </div>
+
+          {data.sessionDate && (
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+              📅 {formatActionDate(data.sessionDate)}
+            </div>
+          )}
+
+          {isPending ? (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.45rem', marginTop: '0.2rem' }}>
+              <button
+                type="button"
+                disabled={isBusy}
+                onClick={() => handleConfirmAction(messageId, data.actionId, data.sessionTitle)}
+                className="btn btn-primary"
+                style={{
+                  padding: '0.4rem 0.5rem',
+                  fontSize: '0.76rem',
+                  borderRadius: '0.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.3rem',
+                  fontWeight: 600,
+                  opacity: isBusy ? 0.6 : 1,
+                  cursor: isBusy ? 'wait' : 'pointer'
+                }}
+              >
+                <Check className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>
+                  {isBusy
+                    ? (isArabic ? 'جارٍ التنفيذ…' : 'Applying…')
+                    : (isArabic ? 'تأكيد' : 'Confirm')}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                disabled={isBusy}
+                onClick={() => handleCancelAction(messageId, data.actionId)}
+                className="btn btn-ghost"
+                style={{
+                  padding: '0.4rem 0.5rem',
+                  fontSize: '0.76rem',
+                  borderRadius: '0.5rem',
+                  border: '1px solid var(--border-color)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.3rem',
+                  color: 'var(--text-secondary)',
+                  cursor: isBusy ? 'not-allowed' : 'pointer'
+                }}
+              >
+                <X className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>{isArabic ? 'رفض' : 'Decline'}</span>
+              </button>
+            </div>
+          ) : (
+            <div style={{
+              marginTop: '0.2rem',
+              padding: '0.45rem',
+              borderRadius: '0.5rem',
+              fontSize: '0.76rem',
+              fontWeight: 600,
+              textAlign: 'center',
+              color: meta.tone,
+              backgroundColor: 'rgba(255,255,255,0.04)',
+              border: `1px solid ${meta.tone}`
+            }}>
+              {meta.label}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (card.type === 'meal_suggestion') {
+      const data = card.data;
+      const logged = loggedMealIds.has(cardKey);
+      return (
+        <div key={cardKey} style={{
+          padding: '0.85rem',
+          borderRadius: '0.75rem',
+          backgroundColor: 'rgba(16, 185, 129, 0.08)',
+          border: '1px solid rgba(16, 185, 129, 0.25)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.5rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600, fontSize: '0.82rem', color: '#10b981' }}>
+              <Utensils className="w-4 h-4" />
+              <span>{isArabic ? 'وجبة مقترحة' : 'Meal Suggestion'}</span>
+            </div>
+            <span style={{
+              fontSize: '0.7rem',
+              padding: '0.15rem 0.5rem',
+              borderRadius: '9999px',
+              backgroundColor: 'rgba(16, 185, 129, 0.15)',
+              color: '#10b981',
+              fontWeight: 600
+            }}>
+              {data.mealType}
+            </span>
+          </div>
+
+          <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+            {data.title}
+          </div>
+
+          {data.notes && (
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic', lineHeight: 1.3 }}>
+              {data.notes}
+            </div>
+          )}
+
+          {/* Macros Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.35rem', marginTop: '0.1rem' }}>
+            <div style={{ padding: '0.3rem 0.2rem', borderRadius: '0.45rem', backgroundColor: 'rgba(239, 68, 68, 0.12)', textAlign: 'center' }}>
+              <div style={{ fontSize: '0.62rem', color: '#ef4444', fontWeight: 600 }}>{isArabic ? 'سعرة' : 'Cals'}</div>
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>{data.calories}</div>
+            </div>
+            <div style={{ padding: '0.3rem 0.2rem', borderRadius: '0.45rem', backgroundColor: 'rgba(59, 130, 246, 0.12)', textAlign: 'center' }}>
+              <div style={{ fontSize: '0.62rem', color: '#3b82f6', fontWeight: 600 }}>{isArabic ? 'بروتين' : 'Protein'}</div>
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>{data.protein}g</div>
+            </div>
+            <div style={{ padding: '0.3rem 0.2rem', borderRadius: '0.45rem', backgroundColor: 'rgba(245, 158, 11, 0.12)', textAlign: 'center' }}>
+              <div style={{ fontSize: '0.62rem', color: '#f59e0b', fontWeight: 600 }}>{isArabic ? 'كارب' : 'Carbs'}</div>
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>{data.carbs}g</div>
+            </div>
+            <div style={{ padding: '0.3rem 0.2rem', borderRadius: '0.45rem', backgroundColor: 'rgba(139, 92, 246, 0.12)', textAlign: 'center' }}>
+              <div style={{ fontSize: '0.62rem', color: '#8b5cf6', fontWeight: 600 }}>{isArabic ? 'دهون' : 'Fats'}</div>
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>{data.fats}g</div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            disabled={logged}
+            onClick={() => handleAddMealToToday(cardKey, data)}
+            style={{
+              marginTop: '0.2rem',
+              padding: '0.45rem',
+              borderRadius: '0.5rem',
+              fontSize: '0.78rem',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.35rem',
+              backgroundColor: logged ? 'rgba(16, 185, 129, 0.2)' : '#10b981',
+              color: logged ? '#10b981' : '#ffffff',
+              border: logged ? '1px solid #10b981' : 'none',
+              cursor: logged ? 'default' : 'pointer'
+            }}
+          >
+            {logged ? (
+              <>
+                <Check className="w-3.5 h-3.5" />
+                <span>{isArabic ? 'تمت الإضافة إلى وجبات اليوم ✓' : 'Added to Today\'s Meals ✓'}</span>
+              </>
+            ) : (
+              <>
+                <PlusCircle className="w-3.5 h-3.5" />
+                <span>{isArabic ? 'إضافة إلى وجبات اليوم' : 'Add to Today\'s Meals'}</span>
+              </>
+            )}
+          </button>
+        </div>
+      );
+    }
+
+    const data = card.data;
+    return (
+      <div key={cardKey} style={{
+        padding: '0.85rem',
+        borderRadius: '0.75rem',
+        backgroundColor: 'rgba(var(--accent-primary-rgb, 14, 165, 233), 0.08)',
+        border: '1px solid rgba(var(--accent-primary-rgb, 14, 165, 233), 0.3)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.5rem'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600, fontSize: '0.82rem', color: 'var(--accent-primary)' }}>
+            <Calendar className="w-4 h-4" />
+            <span>{isArabic ? 'تمرين مجدول' : 'Scheduled Workout'}</span>
+          </div>
+          <span style={{
+            fontSize: '0.7rem',
+            padding: '0.15rem 0.5rem',
+            borderRadius: '9999px',
+            backgroundColor: 'rgba(255,255,255,0.08)',
+            color: 'var(--text-secondary)'
+          }}>
+            {data.type}
+          </span>
+        </div>
+
+        <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+          {data.title}
+        </div>
+
+        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+          ⏱️ {data.duration} {isArabic ? 'دقيقة' : 'min'}
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.45rem', marginTop: '0.2rem' }}>
+          <button
+            type="button"
+            onClick={() => {
+              navigate('/session/' + data.sessionId);
+              setIsOpen(false);
+            }}
+            className="btn btn-primary"
+            style={{
+              padding: '0.4rem 0.5rem',
+              fontSize: '0.76rem',
+              borderRadius: '0.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.3rem',
+              fontWeight: 600
+            }}
+          >
+            <Play className="w-3.5 h-3.5 fill-current" />
+            <span>{isArabic ? 'بدء فوراً' : 'Start Now'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              navigate('/plan');
+              setIsOpen(false);
+            }}
+            className="btn btn-ghost"
+            style={{
+              padding: '0.4rem 0.5rem',
+              fontSize: '0.76rem',
+              borderRadius: '0.5rem',
+              border: '1px solid var(--border-color)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.3rem'
+            }}
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            <span>{isArabic ? 'فتح بالتقويم' : 'Calendar'}</span>
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   const PROMPT_CHIPS = useMemo(() => {
     return isArabic ? [
@@ -338,188 +702,10 @@ export function AIAssistant() {
                       <>
                         {renderMessageBody(msg.content, false)}
 
-                        {/* Rich Interactive Action Card */}
-                        {msg.actionCard && (
-                          <div style={{ marginTop: '0.65rem' }}>
-                            {msg.actionCard.type === 'workout_scheduled' && (
-                              <div style={{
-                                padding: '0.85rem',
-                                borderRadius: '0.75rem',
-                                backgroundColor: 'rgba(var(--accent-primary-rgb, 14, 165, 233), 0.08)',
-                                border: '1px solid rgba(var(--accent-primary-rgb, 14, 165, 233), 0.3)',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '0.5rem'
-                              }}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600, fontSize: '0.82rem', color: 'var(--accent-primary)' }}>
-                                    <Calendar className="w-4 h-4" />
-                                    <span>{isArabic ? 'تمرين مجدول' : 'Scheduled Workout'}</span>
-                                  </div>
-                                  <span style={{ 
-                                    fontSize: '0.7rem', 
-                                    padding: '0.15rem 0.5rem', 
-                                    borderRadius: '9999px', 
-                                    backgroundColor: 'rgba(255,255,255,0.08)',
-                                    color: 'var(--text-secondary)'
-                                  }}>
-                                    {msg.actionCard.data.type}
-                                  </span>
-                                </div>
-
-                                <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                                  {msg.actionCard.data.title}
-                                </div>
-
-                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                                  ⏱️ {msg.actionCard.data.duration} {isArabic ? 'دقيقة' : 'min'}
-                                </div>
-
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.45rem', marginTop: '0.2rem' }}>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      if (msg.actionCard?.type === 'workout_scheduled') {
-                                        navigate('/session/' + msg.actionCard.data.sessionId);
-                                        setIsOpen(false);
-                                      }
-                                    }}
-                                    className="btn btn-primary"
-                                    style={{
-                                      padding: '0.4rem 0.5rem',
-                                      fontSize: '0.76rem',
-                                      borderRadius: '0.5rem',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      gap: '0.3rem',
-                                      fontWeight: 600
-                                    }}
-                                  >
-                                    <Play className="w-3.5 h-3.5 fill-current" />
-                                    <span>{isArabic ? 'بدء فوراً' : 'Start Now'}</span>
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      navigate('/plan');
-                                      setIsOpen(false);
-                                    }}
-                                    className="btn btn-ghost"
-                                    style={{
-                                      padding: '0.4rem 0.5rem',
-                                      fontSize: '0.76rem',
-                                      borderRadius: '0.5rem',
-                                      border: '1px solid var(--border-color)',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      gap: '0.3rem'
-                                    }}
-                                  >
-                                    <Calendar className="w-3.5 h-3.5" />
-                                    <span>{isArabic ? 'فتح بالتقويم' : 'Calendar'}</span>
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-
-                            {msg.actionCard.type === 'meal_suggestion' && (
-                              <div style={{
-                                padding: '0.85rem',
-                                borderRadius: '0.75rem',
-                                backgroundColor: 'rgba(16, 185, 129, 0.08)',
-                                border: '1px solid rgba(16, 185, 129, 0.25)',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '0.5rem'
-                              }}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600, fontSize: '0.82rem', color: '#10b981' }}>
-                                    <Utensils className="w-4 h-4" />
-                                    <span>{isArabic ? 'وجبة مقترحة' : 'Meal Suggestion'}</span>
-                                  </div>
-                                  <span style={{ 
-                                    fontSize: '0.7rem', 
-                                    padding: '0.15rem 0.5rem', 
-                                    borderRadius: '9999px', 
-                                    backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                                    color: '#10b981',
-                                    fontWeight: 600
-                                  }}>
-                                    {msg.actionCard.data.mealType}
-                                  </span>
-                                </div>
-
-                                <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                                  {msg.actionCard.data.title}
-                                </div>
-
-                                {msg.actionCard.data.notes && (
-                                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic', lineHeight: 1.3 }}>
-                                    {msg.actionCard.data.notes}
-                                  </div>
-                                )}
-
-                                {/* Macros Grid */}
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.35rem', marginTop: '0.1rem' }}>
-                                  <div style={{ padding: '0.3rem 0.2rem', borderRadius: '0.45rem', backgroundColor: 'rgba(239, 68, 68, 0.12)', textAlign: 'center' }}>
-                                    <div style={{ fontSize: '0.62rem', color: '#ef4444', fontWeight: 600 }}>{isArabic ? 'سعرة' : 'Cals'}</div>
-                                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>{msg.actionCard.data.calories}</div>
-                                  </div>
-                                  <div style={{ padding: '0.3rem 0.2rem', borderRadius: '0.45rem', backgroundColor: 'rgba(59, 130, 246, 0.12)', textAlign: 'center' }}>
-                                    <div style={{ fontSize: '0.62rem', color: '#3b82f6', fontWeight: 600 }}>{isArabic ? 'بروتين' : 'Protein'}</div>
-                                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>{msg.actionCard.data.protein}g</div>
-                                  </div>
-                                  <div style={{ padding: '0.3rem 0.2rem', borderRadius: '0.45rem', backgroundColor: 'rgba(245, 158, 11, 0.12)', textAlign: 'center' }}>
-                                    <div style={{ fontSize: '0.62rem', color: '#f59e0b', fontWeight: 600 }}>{isArabic ? 'كارب' : 'Carbs'}</div>
-                                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>{msg.actionCard.data.carbs}g</div>
-                                  </div>
-                                  <div style={{ padding: '0.3rem 0.2rem', borderRadius: '0.45rem', backgroundColor: 'rgba(139, 92, 246, 0.12)', textAlign: 'center' }}>
-                                    <div style={{ fontSize: '0.62rem', color: '#8b5cf6', fontWeight: 600 }}>{isArabic ? 'دهون' : 'Fats'}</div>
-                                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>{msg.actionCard.data.fats}g</div>
-                                  </div>
-                                </div>
-
-                                <button
-                                  type="button"
-                                  disabled={loggedMealIds.has(msg.id)}
-                                  onClick={() => {
-                                    if (msg.actionCard?.type === 'meal_suggestion') {
-                                      handleAddMealToToday(msg.id, msg.actionCard.data);
-                                    }
-                                  }}
-                                  style={{
-                                    marginTop: '0.2rem',
-                                    padding: '0.45rem',
-                                    borderRadius: '0.5rem',
-                                    fontSize: '0.78rem',
-                                    fontWeight: 600,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '0.35rem',
-                                    backgroundColor: loggedMealIds.has(msg.id) ? 'rgba(16, 185, 129, 0.2)' : '#10b981',
-                                    color: loggedMealIds.has(msg.id) ? '#10b981' : '#ffffff',
-                                    border: loggedMealIds.has(msg.id) ? '1px solid #10b981' : 'none',
-                                    cursor: loggedMealIds.has(msg.id) ? 'default' : 'pointer'
-                                  }}
-                                >
-                                  {loggedMealIds.has(msg.id) ? (
-                                    <>
-                                      <Check className="w-3.5 h-3.5" />
-                                      <span>{isArabic ? 'تمت الإضافة إلى وجبات اليوم ✓' : 'Added to Today\'s Meals ✓'}</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <PlusCircle className="w-3.5 h-3.5" />
-                                      <span>{isArabic ? 'إضافة إلى وجبات اليوم' : 'Add to Today\'s Meals'}</span>
-                                    </>
-                                  )}
-                                </button>
-                              </div>
-                            )}
+                        {/* Rich Interactive Action Cards */}
+                        {msg.actionCards && msg.actionCards.length > 0 && (
+                          <div style={{ marginTop: '0.65rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            {msg.actionCards.map((card, cardIndex) => renderActionCard(card, msg.id, cardIndex))}
                           </div>
                         )}
                       </>

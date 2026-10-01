@@ -1,13 +1,13 @@
 import { collection, getDocs } from 'firebase/firestore';
 import { db, auth } from './firebase';
 import { getCurrentUserEmail } from './adminAuth';
+import { readLocalMirror } from './api';
 import type { 
   WorkoutSession, 
   HistoryRecord, 
   MealRecord, 
   Routine, 
-  BodyMetricEntry, 
-  AppData 
+  BodyMetricEntry 
 } from './api';
 
 export type AthleteTier = 'Elite' | 'Pro' | 'Dedicated' | 'Rookie';
@@ -238,12 +238,12 @@ export async function loadAdminPlatformData(): Promise<{
     }
   }
 
-  // Fallback to local storage if running in local environment or empty database
+  // Fallback to the device mirror of whoever is active if running in local
+  // environment or empty database
   if (athletes.length === 0) {
     try {
-      const localRaw = localStorage.getItem('gym_data');
-      if (localRaw) {
-        const local = JSON.parse(localRaw) as AppData;
+      const local = readLocalMirror();
+      if (local) {
         const history = local.history || [];
         const sessions = local.sessions || [];
         const meals = local.meals || [];

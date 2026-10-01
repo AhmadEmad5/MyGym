@@ -3,10 +3,13 @@ import type { ReactNode } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Dumbbell } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { onAuthStateChanged, type User } from 'firebase/auth';
 import { AppShell } from './app/AppShell';
 import { APP_ROUTES } from './app/routes';
 import { useData } from './hooks/useData';
 import { useTranslation } from './lib/i18n';
+import { auth } from './lib/firebase';
+import { GUEST_EMAIL } from './lib/guestIdentity';
 import { useAdminStatus } from './lib/useAdminStatus';
 import { NetworkStatusIndicator } from './components/NetworkStatusIndicator';
 import { InstallAppPrompt } from './components/InstallAppPrompt';
@@ -95,30 +98,13 @@ export const prefetchRoute = (route: string) => {
   }
 };
 
-const preloadAllAppRoutes = () => {
-  if (typeof window === 'undefined') return;
-  const load = () => {
-    import('./views/CalendarView');
-    import('./views/RoutinesView');
-    import('./views/NutritionView');
-    import('./views/PerformanceHubView');
-    import('./views/SettingsView');
-    import('./views/SessionDetailView');
-  };
-  if ('requestIdleCallback' in window) {
-    (window as any).requestIdleCallback(load, { timeout: 2500 });
-  } else {
-    setTimeout(load, 1500);
-  }
-};
-
-function GlobalLoading() {
+function GlobalLoading({ label }: { label?: string }) {
   const { t } = useTranslation();
   return (
     <div className="flex h-full w-full items-center justify-center bg-[var(--bg-primary)]">
       <div className="flex flex-col items-center justify-center gap-4">
         <Dumbbell className="w-10 h-10 animate-bounce" style={{ color: 'var(--accent-primary)' }} />
-        <span style={{ color: 'var(--text-secondary)' }}>{t('loading')}</span>
+        <span style={{ color: 'var(--text-secondary)' }}>{label ?? t('loading')}</span>
       </div>
     </div>
   );
@@ -162,11 +148,23 @@ function RequireAdmin({ children }: { children: ReactNode }) {
 
 function App() {
   const { data, loading, updateSettings, saveSession, signOutUser } = useData();
-  const { isRTL } = useTranslation();
+  const { isRTL, t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [workoutReminderBanner, setWorkoutReminderBanner] = useState<{ title: string; message: string } | null>(null);
+  /**
+   * Signed-in account, tracked separately from `data.user`. `data.user` is
+   * absent for a beat on first sign-in and on a failed profile read, so it
+   * cannot be used to tell "nobody is signed in" from "the athlete is still
+   * loading" — only the auth observer can.
+   */
+  const [authUser, setAuthUser] = useState<User | null>(() => auth?.currentUser ?? null);
+
+  useEffect(() => {
+    if (!auth) return;
+    return onAuthStateChanged(auth, (firebaseUser) => setAuthUser(firebaseUser));
+  }, []);
 
   // Single source of truth for `.content-area` scroll memory. Restoration is
   // applied by RouteTransition once the new route is actually mounted, so the
@@ -174,7 +172,6 @@ function App() {
   useScrollRestoration('.content-area');
 
   useEffect(() => {
-    preloadAllAppRoutes();
     sessionStorage.removeItem('chunk_has_refreshed');
     document.documentElement.setAttribute('data-density', data?.settings?.density || 'comfortable');
     document.documentElement.setAttribute('data-motion', data?.settings?.motion || 'full');
@@ -211,11 +208,14 @@ function App() {
 
   const handleLogin = async (user?: { email: string, name: string; isAdmin?: boolean }) => {
     const isAdmin = user?.isAdmin === true;
-    if (data) {
-      await updateSettings(
-        data.settings,
-        user || { email: 'guest@example.com', name: 'Guest' }
-      );
+    // The guest fallback is only ever valid for a truly unauthenticated
+    // visitor; a signed-in athlete must keep their own identity.
+    const guestProfile = authUser
+      ? undefined
+      : { email: GUEST_EMAIL, name: isRTL ? 'رياضي FORMA' : 'FORMA Athlete' };
+    const targetUser = user ?? guestProfile;
+    if (data && targetUser) {
+      await updateSettings(data.settings, targetUser);
     }
     
     // Route to admin dashboard if admin credentials used
@@ -261,6 +261,13 @@ function App() {
   if (loading) return <PageSkeleton />;
 
   if (!data?.user) {
+    /**
+     * Signed in but the profile has not resolved yet (first sign-in, slow or
+     * failed read). Showing the login screen here would offer "guest" actions
+     * that would overwrite the real athlete's identity — wait it out instead.
+     */
+    if (authUser) return <GlobalLoading label={t('restoringSession')} />;
+
     return (
       <Suspense fallback={<GlobalLoading />}>
         <LoginView onLogin={handleLogin} />

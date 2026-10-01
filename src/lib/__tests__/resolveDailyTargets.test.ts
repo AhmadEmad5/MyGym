@@ -1,11 +1,15 @@
 import { describe, it, expect } from 'vitest';
+import { DEFAULT_NUTRITION_TARGETS } from '../api';
 import { resolveDailyTargets } from '../selectors';
 
 /**
- * The Today screen renders four macro targets in two places. The fallbacks
- * below are load-bearing for the `0` case: a target explicitly stored as zero
- * should resolve to the default rather than render "0 kcal" as a goal.
+ * The Today screen and NutritionView both resolve their four macro targets
+ * through here, so these fallbacks are load-bearing for the `0` case: a target
+ * explicitly stored as zero should resolve to the app-wide default rather than
+ * render "0 kcal" as a goal.
  */
+const FALLBACK = DEFAULT_NUTRITION_TARGETS;
+
 describe('resolveDailyTargets', () => {
   it('passes through stored targets unchanged', () => {
     expect(
@@ -18,26 +22,26 @@ describe('resolveDailyTargets', () => {
     ).toEqual({ calories: 2400, protein: 180, carbs: 250, fats: 70 });
   });
 
-  it('falls back when the whole goal block is missing', () => {
-    expect(resolveDailyTargets(undefined)).toEqual({ calories: 2154, protein: 162, carbs: 242, fats: 60 });
-    expect(resolveDailyTargets(null)).toEqual({ calories: 2154, protein: 162, carbs: 242, fats: 60 });
+  it('falls back to the shared default when the whole goal block is missing', () => {
+    expect(resolveDailyTargets(undefined)).toEqual(FALLBACK);
+    expect(resolveDailyTargets(null)).toEqual(FALLBACK);
   });
 
   it('falls back per field for a partial block', () => {
     expect(resolveDailyTargets({ dailyCalories: 2400 })).toEqual({
       calories: 2400,
-      protein: 162,
-      carbs: 242,
-      fats: 60,
+      protein: FALLBACK.protein,
+      carbs: FALLBACK.carbs,
+      fats: FALLBACK.fats,
     });
   });
 
   it('treats a zero target as unset rather than as a goal of zero', () => {
     expect(resolveDailyTargets({ dailyCalories: 0, dailyFats: 0 })).toEqual({
-      calories: 2154,
-      protein: 162,
-      carbs: 242,
-      fats: 60,
+      calories: FALLBACK.calories,
+      protein: FALLBACK.protein,
+      carbs: FALLBACK.carbs,
+      fats: FALLBACK.fats,
     });
   });
 

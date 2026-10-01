@@ -8,6 +8,7 @@ import {
   Scale
 } from 'lucide-react';
 import { useTranslation } from '../../lib/i18n';
+import { DEFAULT_NUTRITION_TARGETS } from '../../lib/api';
 
 export interface CalorieBalanceDialProps {
   todayCalories: number;
@@ -38,7 +39,7 @@ export function CalorieBalanceDial({
 }: CalorieBalanceDialProps) {
   const { isRTL } = useTranslation();
 
-  const safeTarget = dailyCaloriesTarget > 0 ? dailyCaloriesTarget : 2200;
+  const safeTarget = dailyCaloriesTarget > 0 ? dailyCaloriesTarget : DEFAULT_NUTRITION_TARGETS.calories;
   // Total Expended = Base metabolic budget + workout calories burned
   const totalExpended = safeTarget + todayBurnedCalories;
   // Net Balance = Consumed - Expended

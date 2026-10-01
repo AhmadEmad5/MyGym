@@ -250,11 +250,34 @@ export type PersonalRecord = {
   date: string;
 };
 
+/**
+ * The one canonical set of macro defaults for the whole app.
+ *
+ * Anything that needs a daily macro target for display or for seeding stored
+ * goals must read these: the seed defaults below, `selectDailySummary` in
+ * `lib/selectors`, and `NutritionView` all funnel through this object, so a
+ * goal block that is missing (or explicitly zero) always lands on the same
+ * numbers. Changing a value here changes every fallback in one place.
+ */
+export type DailyNutritionTargets = {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fats: number;
+};
+
+export const DEFAULT_NUTRITION_TARGETS: DailyNutritionTargets = {
+  calories: 2200,
+  protein: 150,
+  carbs: 220,
+  fats: 65
+};
+
 export const DEFAULT_NUTRITION_GOALS: NutritionGoals = {
-  dailyCalories: 2200,
-  dailyProtein: 150,
-  dailyCarbs: 220,
-  dailyFats: 65,
+  dailyCalories: DEFAULT_NUTRITION_TARGETS.calories,
+  dailyProtein: DEFAULT_NUTRITION_TARGETS.protein,
+  dailyCarbs: DEFAULT_NUTRITION_TARGETS.carbs,
+  dailyFats: DEFAULT_NUTRITION_TARGETS.fats,
   dailyWaterMl: 2500
 };
 
@@ -271,6 +294,13 @@ const MAX_SESSION_EXERCISES = 60;
 // (or throw) and a value over 1500 characters is rejected by the backend.
 const MAX_ID_LENGTH = 150;
 const MAX_MEAL_TYPE = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
+// A Cloud Storage download URL is a few hundred characters; a data URL would
+// otherwise be allowed to grow until the document write fails.
+const MAX_MEAL_IMAGE_URL_LENGTH = 1000;
+// Mirrors `validTimestamp` in `firestore.rules`. `date` is either an ISO 8601
+// calendar date ("2026-01-05"), a local <input type="datetime-local"> value
+// ("2026-01-05T10:00"), or a full UTC instant ("2026-01-05T10:00:00.000Z").
+const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2}(\.\d{1,9})?)?(Z|[+-]\d{2}:?\d{2})?)?$/;
 
 // ============================================================================
 // VALIDATION FUNCTIONS
@@ -291,10 +321,16 @@ function assertFiniteNonNegative(value: unknown, field: string, maximum = 1_000_
   }
 }
 
+function assertIsoDate(value: unknown, label: string) {
+  if (typeof value !== 'string' || !ISO_DATE_PATTERN.test(value) || Number.isNaN(Date.parse(value))) {
+    throw new Error(`${label} is invalid.`);
+  }
+}
+
 function assertValidSession(session: WorkoutSession) {
   assertId(session?.id, 'Workout session');
   if (!session.title?.trim() || session.title.length > MAX_TEXT_LENGTH) throw new Error('Workout title is required and must be under 150 characters.');
-  if (!session.date || Number.isNaN(Date.parse(session.date))) throw new Error('Workout date is invalid.');
+  assertIsoDate(session.date, 'Workout date');
   assertFiniteNonNegative(session.duration, 'Workout duration', 1_440);
   if (typeof session.type !== 'string' || session.type.length > MAX_SESSION_TYPE_LENGTH) throw new Error('Workout type is invalid.');
   if (session.isCompleted !== undefined && typeof session.isCompleted !== 'boolean') throw new Error('Workout completion flag is invalid.');
@@ -311,12 +347,13 @@ function assertValidSession(session: WorkoutSession) {
 function assertValidMeal(meal: MealRecord) {
   assertId(meal?.id, 'Meal');
   if (!meal.title?.trim() || meal.title.length > MAX_TEXT_LENGTH) throw new Error('Meal title is required and must be under 150 characters.');
-  if (!meal.date || Number.isNaN(Date.parse(meal.date))) throw new Error('Meal date is invalid.');
+  assertIsoDate(meal.date, 'Meal date');
   if (!MAX_MEAL_TYPE.includes(meal.mealType)) throw new Error('Meal type is invalid.');
   assertFiniteNonNegative(meal.calories, 'Meal calories', 25_000);
   assertFiniteNonNegative(meal.protein, 'Meal protein', 1_000);
   assertFiniteNonNegative(meal.carbs, 'Meal carbs', 2_000);
   assertFiniteNonNegative(meal.fats, 'Meal fats', 1_000);
+  assertMealImage(meal.imageUrl);
 }
 
 function assertValidGoals(goals: NutritionGoals) {
@@ -328,12 +365,37 @@ function assertValidHistory(record: HistoryRecord) {
   if (typeof record?.sessionId !== 'string' || !record.sessionId.trim() || record.sessionId.length > 100) {
     throw new Error('History session must have a valid identifier.');
   }
-  if (!record.date || Number.isNaN(Date.parse(record.date))) throw new Error('History date is invalid.');
+  assertIsoDate(record.date, 'History date');
   if (typeof record.title !== 'string' || !record.title.trim() || record.title.length > MAX_TEXT_LENGTH) {
     throw new Error('History title is required and must be under 150 characters.');
   }
   if (record.snapshot !== undefined && (record.snapshot === null || typeof record.snapshot !== 'object')) {
     throw new Error('History snapshot must be an object.');
+  }
+}
+
+// A meal photo belongs in Cloud Storage, not in the document. An inline base64
+// payload is capped at MAX_INLINE_MEAL_IMAGE_BYTES so a single photo cannot push
+// the document past the 1 MiB Firestore limit or flood the offline mirror in
+// localStorage; anything larger has to be uploaded and stored as a download URL.
+function assertMealImage(imageUrl: unknown) {
+  if (imageUrl === undefined) return;
+  if (typeof imageUrl !== 'string' || !imageUrl.trim()) {
+    throw new Error('Meal image must be a URL.');
+  }
+  if (isInlineImagePayload(imageUrl)) {
+    const bytes = inlineImageBytes(imageUrl);
+    if (bytes > MAX_INLINE_MEAL_IMAGE_BYTES) {
+      const kb = (bytes / 1024).toFixed(0);
+      throw new Error(
+        `Meal photo is ${kb} KB, over the ${MAX_INLINE_MEAL_IMAGE_BYTES / 1024} KB inline limit. ` +
+        'Photos are stored in Cloud Storage — capture a smaller photo or log the meal without one.'
+      );
+    }
+    return;
+  }
+  if (imageUrl.length > MAX_MEAL_IMAGE_URL_LENGTH) {
+    throw new Error('Meal image must be a URL under 1,000 characters.');
   }
 }
 
@@ -582,7 +644,9 @@ export function estimateWorkoutCalories(session: WorkoutSession): number {
 }
 
 import { auth, db } from './firebase';
+import { GUEST_EMAIL } from './guestIdentity';
 import { doc, getDoc, getDocs, setDoc, deleteDoc, collection, writeBatch } from 'firebase/firestore';
+import { isInlineImagePayload, inlineImageBytes, MAX_INLINE_MEAL_IMAGE_BYTES } from './imagePayload';
 import { notify } from './feedback';
 
 const getDefaultLanguage = (): 'en' | 'ar' => {
@@ -699,40 +763,212 @@ function sanitizeForFirestore<T>(data: T, depth = 0): T {
   return data;
 }
 
-/**
- * Applies `updater` to the local mirror and writes it back. Returns the object
- * that was persisted so callers can reuse it instead of re-parsing the whole
- * mirror (which may hold megabytes of base64 photos). The body is synchronous
- * on purpose: read-modify-write can never interleave with another mutation.
- */
-function mirrorLocalData(updater: (data: AppData) => void): AppData | null {
-  const emptyData = (): AppData => ({
+// ============================================================================
+// DEVICE MIRROR SCOPING
+// ============================================================================
+// The mirror used to live under one global `gym_data` key, so whichever account
+// was active absorbed every workout, meal and setting cached before it. Each
+// scope now owns a separate key and the payload records who owns it: a key left
+// behind by a previous account can then never be replayed as somebody else's
+// data.
+const LEGACY_MIRROR_KEY = 'gym_data';
+const MIRROR_KEY_PREFIX = 'gym_data:';
+const GUEST_SCOPE = 'guest';
+
+/** Owner stamp written into every mirrored payload. */
+type ScopedMirror = AppData & { _mirrorUid?: string };
+
+/** The signed-in athlete's uid, or the guest scope when nobody is signed in. */
+function activeMirrorScope(): string {
+  const uid = auth?.currentUser?.uid;
+  return typeof uid === 'string' && uid.trim() ? uid : GUEST_SCOPE;
+}
+
+const mirrorKeyForScope = (scope: string): string => `${MIRROR_KEY_PREFIX}${scope}`;
+
+function createEmptyAppData(): AppData {
+  return {
     sessions: [],
     routines: [],
     exercises: [],
     history: [],
     meals: [],
-    settings: DEFAULT_SETTINGS,
+    settings: normalizeSettings({}),
     bodyMetrics: [],
     nutritionGoals: DEFAULT_NUTRITION_GOALS,
     waterLogs: {},
     insights: { ...DEFAULT_PERFORMANCE_INSIGHTS }
-  });
+  };
+}
 
+/** Fills in the collections a mirror written by an older build may be missing. */
+function normalizeMirrorPayload(raw: unknown): AppData {
+  const source = (raw && typeof raw === 'object' ? raw : {}) as Partial<ScopedMirror>;
+  const waterLogs = source.waterLogs;
+  return {
+    sessions: Array.isArray(source.sessions) ? source.sessions : [],
+    routines: Array.isArray(source.routines) ? source.routines : [],
+    exercises: Array.isArray(source.exercises) ? source.exercises : [],
+    history: Array.isArray(source.history) ? source.history : [],
+    meals: Array.isArray(source.meals) ? source.meals : [],
+    settings: normalizeSettings(source.settings),
+    ...(source.user ? { user: source.user } : {}),
+    bodyMetrics: Array.isArray(source.bodyMetrics) ? source.bodyMetrics : [],
+    nutritionGoals: source.nutritionGoals || DEFAULT_NUTRITION_GOALS,
+    waterLogs:
+      waterLogs && typeof waterLogs === 'object' && !Array.isArray(waterLogs)
+        ? (waterLogs as Record<string, number>)
+        : {},
+    insights: { ...DEFAULT_PERFORMANCE_INSIGHTS, ...(source.insights || {}) }
+  };
+}
+
+/**
+ * One-shot upgrade from the pre-scoped build: a global `gym_data` payload is
+ * copied to the active scope's key, stamped with its owner, and the global key
+ * is dropped so it cannot be handed to a second account.
+ */
+function migrateLegacyMirror(scope: string): void {
   try {
-    const raw = localStorage.getItem('gym_data');
-    let data: AppData;
-    if (raw) {
-      try {
-        data = JSON.parse(raw);
-      } catch {
-        data = emptyData();
-      }
-    } else {
-      data = emptyData();
+    const legacyRaw = localStorage.getItem(LEGACY_MIRROR_KEY);
+    if (!legacyRaw) return;
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(legacyRaw);
+    } catch {
+      parsed = null;
     }
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      localStorage.removeItem(LEGACY_MIRROR_KEY);
+      return;
+    }
+
+    const legacy = parsed as ScopedMirror;
+    // A payload already stamped for another scope is somebody else's cached
+    // copy, so it is dropped rather than copied over.
+    if (typeof legacy._mirrorUid === 'string' && legacy._mirrorUid !== scope) {
+      localStorage.removeItem(LEGACY_MIRROR_KEY);
+      return;
+    }
+    // With nobody signed in the legacy payload cannot be attributed, and the
+    // first mirror read happens before Firebase has restored the session:
+    // adopting it into the guest scope would park a signed-in athlete's
+    // workouts where the next guest could read them. It is left for the first
+    // identity that signs in, unless the payload carries the device-local guest
+    // profile, which can only belong to the guest scope.
+    if (scope === GUEST_SCOPE && legacy.user?.email !== GUEST_EMAIL) return;
+
+    // Never overwrite a scoped mirror that already exists for this scope.
+    if (!localStorage.getItem(mirrorKeyForScope(scope))) {
+      localStorage.setItem(mirrorKeyForScope(scope), JSON.stringify({ ...legacy, _mirrorUid: scope }));
+    }
+    localStorage.removeItem(LEGACY_MIRROR_KEY);
+  } catch (e) {
+    console.warn('Could not migrate the legacy local training mirror:', e);
+  }
+}
+
+/**
+ * Reads the mirror owned by `scope`, or null when there is none. A payload
+ * stamped for another uid is deleted rather than returned: keys outlive
+ * sign-out, and the previous athlete's cached data must never surface as
+ * somebody else's.
+ */
+function readMirrorForScope(scope: string): AppData | null {
+  migrateLegacyMirror(scope);
+
+  let raw: string | null = null;
+  try {
+    raw = localStorage.getItem(mirrorKeyForScope(scope));
+  } catch (e) {
+    console.warn('Could not read the local training mirror:', e);
+    return null;
+  }
+  if (!raw) return null;
+
+  const discard = (): null => {
+    try {
+      localStorage.removeItem(mirrorKeyForScope(scope));
+    } catch (e) {
+      console.warn('Could not discard an unusable local training mirror:', e);
+    }
+    return null;
+  };
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (e) {
+    console.warn('Discarding an unreadable local training mirror:', e);
+    return discard();
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    console.warn('Discarding a malformed local training mirror.');
+    return discard();
+  }
+
+  const mirror = parsed as ScopedMirror;
+  if (typeof mirror._mirrorUid === 'string' && mirror._mirrorUid !== scope) {
+    console.warn(`Discarding a local mirror owned by "${mirror._mirrorUid}" while "${scope}" is active.`);
+    return discard();
+  }
+  return normalizeMirrorPayload(mirror);
+}
+
+/** Stamps the payload with its owner so the scope can be verified on read. */
+function writeMirrorForScope(scope: string, data: AppData): boolean {
+  try {
+    localStorage.setItem(mirrorKeyForScope(scope), JSON.stringify({ ...data, _mirrorUid: scope }));
+    return true;
+  } catch (e) {
+    console.warn('Could not cache training data on this device:', e);
+    return false;
+  }
+}
+
+/** The device copy that belongs to whoever is active right now. */
+export function readLocalMirror(): AppData | null {
+  return readMirrorForScope(activeMirrorScope());
+}
+
+/**
+ * Existence check without parsing: the mirror can hold megabytes of base64
+ * photos and the loading state only needs to know whether one exists.
+ */
+export function hasLocalMirror(): boolean {
+  const scope = activeMirrorScope();
+  try {
+    migrateLegacyMirror(scope);
+    return localStorage.getItem(mirrorKeyForScope(scope)) !== null;
+  } catch (e) {
+    console.warn('Could not read the local training mirror:', e);
+    return false;
+  }
+}
+
+/** Drops the mirror of `scope` only, leaving other athletes' copies intact. */
+export function clearLocalMirror(scope: string = activeMirrorScope()): void {
+  try {
+    localStorage.removeItem(mirrorKeyForScope(scope));
+  } catch (e) {
+    console.warn('Could not clear the local training mirror:', e);
+  }
+}
+
+/**
+ * Applies `updater` to the local mirror of the active scope and writes it back.
+ * Returns the object that was persisted so callers can reuse it instead of
+ * re-parsing the whole mirror (which may hold megabytes of base64 photos). The
+ * body is synchronous on purpose: read-modify-write can never interleave with
+ * another mutation.
+ */
+function mirrorLocalData(updater: (data: AppData) => void): AppData | null {
+  const scope = activeMirrorScope();
+  try {
+    const data = readMirrorForScope(scope) ?? createEmptyAppData();
     updater(data);
-    localStorage.setItem('gym_data', JSON.stringify(data));
+    if (!writeMirrorForScope(scope, data)) throw new Error('local mirror write failed');
     return data;
   } catch (e) {
     // A full localStorage quota (the mirror holds base64 photos) silently breaks
@@ -799,10 +1035,11 @@ export const api = {
 
         // CRITICAL: Merge with local cached data so that locally logged or saved items
         // are NEVER wiped out when refreshing before remote sync or if remote returned empty!
-        const localRaw = localStorage.getItem('gym_data');
-        if (localRaw) {
+        // Only this uid's own mirror may be merged: the previous account's cached
+        // copy must not be replayed into this one.
+        const local = readMirrorForScope(uid);
+        if (local) {
           try {
-            const local = JSON.parse(localRaw) as AppData;
             if (Array.isArray(local.sessions) && local.sessions.length > 0) {
               const remoteSessionIds = new Set(sessions.map(s => s.id));
               const missingSessions = local.sessions.filter(s => !remoteSessionIds.has(s.id));
@@ -859,37 +1096,36 @@ export const api = {
         }
 
         const result: AppData = { sessions, routines, history, meals, exercises: [], settings, user, bodyMetrics, nutritionGoals, waterLogs, insights };
-        
-        // Cache snapshot locally for offline use
-        try {
-          localStorage.setItem('gym_data', JSON.stringify(result));
-        } catch (e) {}
+
+        // Cache snapshot locally for offline use, under this uid's own key
+        writeMirrorForScope(uid, result);
 
         return result;
       } catch (err) {
         console.warn("Offline or failed fetching from Firestore, falling back to local mirror:", err);
       }
     }
-    
-    // Fallback to local storage (Offline or Guest mode)
-    const stored = localStorage.getItem('gym_data');
-    if (stored) {
-      try {
-        const data = JSON.parse(stored);
-        if (!data.settings) data.settings = DEFAULT_SETTINGS;
-        else data.settings = normalizeSettings(data.settings);
-        if (!data.meals) data.meals = [];
-        if (!data.bodyMetrics) data.bodyMetrics = [];
-        if (!data.nutritionGoals) data.nutritionGoals = DEFAULT_NUTRITION_GOALS;
-        if (!data.waterLogs) data.waterLogs = {};
-        if (!data.insights) data.insights = { ...DEFAULT_PERFORMANCE_INSIGHTS };
-        return data;
-      } catch (e) {}
-    }
-    return { sessions: [], routines: [], exercises: [], history: [], meals: [], settings: DEFAULT_SETTINGS, bodyMetrics: [], nutritionGoals: DEFAULT_NUTRITION_GOALS, waterLogs: {}, insights: { ...DEFAULT_PERFORMANCE_INSIGHTS } };
+
+    // Fallback to local storage (Offline or Guest mode), scoped to whoever is
+    // active so an offline reload cannot resurrect the previous account's data.
+    return readLocalMirror() ?? createEmptyAppData();
   },
 
   async updateRootSettings(settings: UserSettings, user?: AppData['user']) {
+    /**
+     * Identity guard. A signed-in athlete's document is keyed by uid, so any
+     * identity that is not their own authenticated email (the local guest
+     * profile being the realistic case) must never be persisted there. Guest
+     * mode is unaffected: with nobody signed in there is no remote document,
+     * and the local mirror keeps the guest profile.
+     */
+    const signedInEmail = auth?.currentUser?.email ?? null;
+    const userIsOwnIdentity = signedInEmail === null || (user !== undefined && user !== null && user.email === signedInEmail);
+    if (!userIsOwnIdentity && user !== undefined) {
+      console.warn('Refusing to persist a user profile that does not match the signed-in account.');
+      user = undefined;
+    }
+
     mirrorLocalData(local => {
       local.settings = settings;
       if (user !== undefined) {
@@ -1186,14 +1422,9 @@ export const api = {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) throw new Error('Water log date must use YYYY-MM-DD.');
     assertFiniteNonNegative(totalMl, 'Water total', 20_000);
 
-    // 1. Immediately persist to localStorage synchronously
-    mirrorLocalData(local => {
-      if (!local.waterLogs) local.waterLogs = {};
-      local.waterLogs[dateKey] = Math.max(0, totalMl);
-    });
-
-    // The mirror is the source of truth for the full water map, so reuse the
-    // object it just persisted rather than re-parsing the whole dataset.
+    // 1. Immediately persist to localStorage synchronously. The mirror is the
+    // source of truth for the full water map, so reuse the object it persisted
+    // rather than re-parsing the whole dataset.
     const mirrored = mirrorLocalData(local => {
       if (!local.waterLogs) local.waterLogs = {};
       local.waterLogs[dateKey] = Math.max(0, totalMl);
@@ -1221,7 +1452,16 @@ export const api = {
       local.insights = cleanInsights;
     });
     if (auth?.currentUser && db) {
-      await setDoc(doc(db, 'users', auth.currentUser.uid), { insights: cleanInsights }, { merge: true });
+      try {
+        await setDoc(doc(db, 'users', auth.currentUser.uid), { insights: cleanInsights }, { merge: true });
+      } catch (err) {
+        // Same contract as every other mutation: a permanent error (rules,
+        // permission-denied) is a real failure the caller must handle, while a
+        // transient one keeps the local mirror and only warns the user.
+        if (isPermanentFirestoreError(err)) throw err;
+        console.warn("Could not sync performance insights to Firestore (retained in local cache):", err);
+        notify('Performance insights are saved on this device but could not be synced to the cloud.', 'warning');
+      }
     }
   },
 
@@ -1313,15 +1553,22 @@ export const api = {
       }
     }
 
-    try {
-      localStorage.setItem('gym_data', JSON.stringify(fullData));
-    } catch (e) {
-      // The cloud copy is already written at this point; losing the device
-      // mirror is worth a warning but must not report the import as failed.
-      console.warn('Imported data could not be cached in local storage:', e);
+    // The cloud copy is already written at this point; losing the device
+    // mirror is worth a warning but must not report the import as failed.
+    if (!writeMirrorForScope(activeMirrorScope(), fullData)) {
       notify('Backup imported to the cloud, but not cached on this device (storage full).', 'warning');
     }
     return fullData;
+  },
+
+  /**
+   * Points the device mirror at the guest scope before a guest session starts,
+   * so a guest can neither inherit nor overwrite the cached copy of an athlete
+   * who signed in earlier on this device. Returns the guest's own cached data
+   * (after the legacy migration), or null when there is none.
+   */
+  enterGuestScope(): AppData | null {
+    return readMirrorForScope(GUEST_SCOPE);
   }
 };
 

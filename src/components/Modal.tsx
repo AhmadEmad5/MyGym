@@ -113,7 +113,7 @@ export function Modal({
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        style={reducedMotion ? undefined : { animation: 'none' }}
+        style={reducedMotion ? { animation: 'none' } : undefined}
       >
         <div className="modal-drag-handle" />
         <div

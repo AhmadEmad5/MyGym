@@ -11,7 +11,10 @@
         "node_modules",
         ".git",
         "firebase-debug.log",
-        "firebase-debug.*.log"
+        "firebase-debug.*.log",
+        ".env",
+        "**/.env*",
+        "!.env.example"
       ]
     }
   ],
@@ -37,13 +40,16 @@
         "headers": [
           { "key": "X-Content-Type-Options", "value": "nosniff" },
           { "key": "X-Frame-Options", "value": "DENY" },
-          { "key": "X-XSS-Protection", "value": "1; mode=block" },
           { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
           { "key": "Strict-Transport-Security", "value": "max-age=31536000; includeSubDomains; preload" },
           { "key": "Permissions-Policy", "value": "camera=(self), microphone=(), geolocation=()" },
           {
+            "key": "Report-To",
+            "value": "{\"group\":\"csp-endpoint\",\"max_age\":10886400,\"endpoints\":[{\"url\":\"/__csp_report\"}]}"
+          },
+          {
             "key": "Content-Security-Policy",
-            "value": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebase.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com; img-src 'self' data: blob: https:; media-src 'self' blob: data:; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com; object-src 'none'; base-uri 'self';"
+            "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'sha256-QfQeinb7dVujNhJUpI+ZalQKUpWBA8ZQcvUULM7kZNg='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://firebasestorage.googleapis.com https://mygym-ab892.firebasestorage.app; media-src 'self' blob: data:; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://firebasestorage.googleapis.com https://firebaseappcheck.googleapis.com https://firebaseinstallations.googleapis.com https://mygym-ab892.firebaseapp.com https://mygym-ab892.firebasestorage.app https://us-central1-mygym-ab892.cloudfunctions.net; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com; upgrade-insecure-requests; report-uri /__csp_report; report-to csp-endpoint;"
           }
         ]
       },

@@ -18,6 +18,8 @@ import { MealRecord, MealType } from '../lib/api';
 import { useTranslation, TranslationKey } from '../lib/i18n';
 import { gymAudio } from '../lib/audio';
 import { validateClientFile, MAX_IMAGE_UPLOAD_BYTES, ALLOWED_IMAGE_MIME_TYPES } from '../lib/fileValidation';
+import { downscaleToJpegDataUrl, inlineImageBytes } from '../lib/imagePayload';
+import { MealPhotoUploadError, uploadMealPhoto } from '../lib/mealPhotoStorage';
 import { useReducedMotion } from './performance/useReducedMotion';
 
 const FOCUSABLE_SELECTOR = [
@@ -618,7 +620,7 @@ export function kcalToEnergy(kcal: number, unit: EnergyUnit) {
 interface AIMealVisionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSaveMeal: (meal: Omit<MealRecord, 'id'>) => void;
+  onSaveMeal: (meal: Omit<MealRecord, 'id'> & { id?: string }) => void;
   onManualEntry?: () => void;
 }
 
@@ -632,7 +634,7 @@ const MEAL_TYPES: { type: MealType; labelKey: TranslationKey; icon: string }[] =
 type Stage = 'intro' | 'preview' | 'scanning' | 'review';
 type CameraState = 'unknown' | 'requesting' | 'granted' | 'denied' | 'unavailable' | 'busy';
 type ScanPhase = 'reading' | 'optimising' | 'encoding' | 'uploading' | 'analysing' | 'done';
-type FailureKind = 'permission' | 'no-camera' | 'too-large' | 'network' | 'malformed' | 'decode' | null;
+type FailureKind = 'permission' | 'no-camera' | 'too-large' | 'network' | 'malformed' | 'decode' | 'photo-upload' | null;
 
 const PHASE_WEIGHTS: Record<ScanPhase, number> = {
   reading: 8,
@@ -677,6 +679,7 @@ export function AIMealVisionModal({ isOpen, onClose, onSaveMeal, onManualEntry }
   const [phase, setPhase] = useState<ScanPhase>('reading');
   const [elapsedMs, setElapsedMs] = useState(0);
   const [mealType, setMealType] = useState<MealType>('lunch');
+  const [isSaving, setIsSaving] = useState(false);
 
   const [dishTitle, setDishTitle] = useState('');
   const [calories, setCalories] = useState('0');
@@ -728,6 +731,7 @@ export function AIMealVisionModal({ isOpen, onClose, onSaveMeal, onManualEntry }
     setAiNotes('');
     setNeedsCorrection(false);
     setFieldErrors({});
+    setIsSaving(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
     if (cameraInputRef.current) cameraInputRef.current.value = '';
   }, [stopCamera, stopTimer]);
@@ -790,19 +794,14 @@ export function AIMealVisionModal({ isOpen, onClose, onSaveMeal, onManualEntry }
   const captureFromStream = useCallback(() => {
     const video = videoRef.current;
     if (!video || !streamRef.current) return;
-    const width = video.videoWidth || 1280;
-    const height = video.videoHeight || 720;
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
+    // Same 800px / 0.72 cap as the upload path: a native-resolution capture was
+    // the larger of the two base64 payloads sent to Gemini and stored inline.
+    const dataUrl = downscaleToJpegDataUrl(video, video.videoWidth || 1280, video.videoHeight || 720);
+    if (!dataUrl) {
       setFailure('decode');
       return;
     }
-    ctx.drawImage(video, 0, 0, width, height);
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-    const payloadBytes = Math.round((dataUrl.length - dataUrl.indexOf(',') - 1) * 0.75);
+    const payloadBytes = inlineImageBytes(dataUrl);
     stopCamera();
     setCameraState('unknown');
     setPhoto({ dataUrl, originalBytes: payloadBytes, payloadBytes, source: 'camera' });
@@ -943,34 +942,17 @@ Respond ONLY with valid JSON with NO markdown fences:
       URL.revokeObjectURL(objectUrl);
       setPhase('optimising');
 
-      const maxDim = 800;
-      let width = img.width;
-      let height = img.height;
-      if (width > height && width > maxDim) {
-        height = Math.round((height * maxDim) / width);
-        width = maxDim;
-      } else if (height > maxDim) {
-        width = Math.round((width * maxDim) / height);
-        height = maxDim;
-      }
-
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        stopTimer();
-        setFailure('decode');
-        setStage('intro');
-        return;
-      }
-
       window.setTimeout(() => {
-        ctx.drawImage(img, 0, 0, width, height);
         setPhase('encoding');
         window.setTimeout(() => {
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.72);
-          const payloadBytes = Math.round((dataUrl.length - dataUrl.indexOf(',') - 1) * 0.75);
+          const dataUrl = downscaleToJpegDataUrl(img, img.naturalWidth || img.width, img.naturalHeight || img.height);
+          if (!dataUrl) {
+            stopTimer();
+            setFailure('decode');
+            setStage('intro');
+            return;
+          }
+          const payloadBytes = inlineImageBytes(dataUrl);
           const captured: CapturedPhoto = { dataUrl, originalBytes: file.size, payloadBytes, source: 'upload' };
           setPhoto(captured);
           void runScan(captured);
@@ -1003,9 +985,40 @@ Respond ONLY with valid JSON with NO markdown fences:
     return Object.keys(next).length === 0;
   };
 
-  const handleSaveAndAdd = () => {
+  const handleSaveAndAdd = async (skipPhoto = false) => {
+    if (isSaving) return;
     if (!validateReview()) return;
+    setIsSaving(true);
+    setFailure(null);
+    setFailureDetail(null);
+
+    // The id is minted here so the Storage object and the Firestore document
+    // land under the same `users/{uid}/meals/{mealId}` path.
+    const mealId = `meal-${Date.now()}`;
+
+    let imageUrl: string | undefined;
+    if (photo && !skipPhoto) {
+      try {
+        imageUrl = await uploadMealPhoto(photo.dataUrl, mealId);
+      } catch (err) {
+        const reason = err instanceof MealPhotoUploadError ? err.reason : null;
+        // No cloud photo is possible at all (a guest/offline session, or a
+        // client without a Storage bucket). Keep the analysis the athlete just
+        // paid for and log the meal without the photo, the same way a failed
+        // Firestore sync is only warned about.
+        if (reason === 'not-signed-in' || reason === 'unavailable') {
+          console.warn('Meal photo skipped:', (err as Error).message);
+        } else {
+          setIsSaving(false);
+          setFailure('photo-upload');
+          setFailureDetail((err as Error)?.message || null);
+          return;
+        }
+      }
+    }
+
     onSaveMeal({
+      id: mealId,
       title: dishTitle.trim(),
       date: new Date().toISOString(),
       mealType,
@@ -1016,8 +1029,9 @@ Respond ONLY with valid JSON with NO markdown fences:
       ingredients,
       healthScore,
       aiNotes,
-      imageUrl: photo?.dataUrl
+      imageUrl
     });
+    setIsSaving(false);
     gymAudio.playCelebrationFanfare();
     gymAudio.triggerSubtleHaptic([50, 70, 50]);
     onClose();
@@ -1066,6 +1080,16 @@ Respond ONLY with valid JSON with NO markdown fences:
         body: isRTL
           ? `الحد الأقصى ${limitMb} ميغابايت${actual}. صغّر الصورة أو التقط لقطة جديدة بمقاس أصغر.`
           : `This photo is ${(oversizeBytes ? (oversizeBytes / 1048576).toFixed(1) : '?')} MB and the limit is ${limitMb} MB. Crop it, or retake it at a smaller size.`
+      };
+    }
+    if (failure === 'photo-upload') {
+      return {
+        tone: 'error' as const,
+        icon: <AlertCircle size={15} />,
+        title: isRTL ? 'تعذّر رفع صورة الوجبة' : 'Could not upload the meal photo',
+        body: isRTL
+          ? 'لم تُحفظ الوجبة بعد. تحقّق من اتصالك ثم أعد المحاولة، أو سجّل الوجبة يدوياً بدون صورة.'
+          : 'The meal has not been saved yet. Check your connection and try again, or log the meal without a photo.'
       };
     }
     if (failure === 'network') {
@@ -1122,8 +1146,14 @@ Respond ONLY with valid JSON with NO markdown fences:
               <SecondaryAction onClick={reset} icon={<RefreshCw size={15} />}>
                 {isRTL ? 'صورة جديدة' : 'New photo'}
               </SecondaryAction>
-              <PrimaryAction onClick={handleSaveAndAdd} icon={<Check size={18} />}>
-                {isRTL ? 'سجّل الوجبة' : 'Log meal'}
+              <PrimaryAction
+                onClick={() => void handleSaveAndAdd()}
+                loading={isSaving}
+                icon={<Check size={18} />}
+              >
+                {isSaving
+                  ? (isRTL ? 'جارٍ الرفع…' : 'Uploading…')
+                  : (isRTL ? 'سجّل الوجبة' : 'Log meal')}
               </PrimaryAction>
             </>
           ) : stage === 'preview' ? (
@@ -1206,7 +1236,16 @@ Respond ONLY with valid JSON with NO markdown fences:
             icon={permissionState.icon}
             action={
               <>
-                {failure === 'too-large' || failure === 'decode' || failure === 'no-camera' ? (
+                {failure === 'photo-upload' ? (
+                  <>
+                    <SecondaryAction onClick={() => void handleSaveAndAdd(true)} icon={<Check size={15} />}>
+                      {isRTL ? 'سجّل بدون صورة' : 'Log without photo'}
+                    </SecondaryAction>
+                    <SecondaryAction onClick={() => void handleSaveAndAdd()} icon={<RefreshCw size={15} />}>
+                      {isRTL ? 'أعد الرفع' : 'Retry upload'}
+                    </SecondaryAction>
+                  </>
+                ) : failure === 'too-large' || failure === 'decode' || failure === 'no-camera' ? (
                   <SecondaryAction onClick={() => fileInputRef.current?.click()} icon={<Upload size={15} />}>
                     {isRTL ? 'اختيار صورة' : 'Pick a photo'}
                   </SecondaryAction>

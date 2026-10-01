@@ -1160,7 +1160,7 @@
   color: var(--text-primary);
 }
 
-.ui-segmented-trigger[aria-selected="true"] {
+.ui-segmented-trigger[aria-checked="true"] {
   color: var(--text-primary);
 }
 

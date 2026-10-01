@@ -1,8 +1,8 @@
-import { useCallback, useId, useRef } from 'react';
-import type { KeyboardEvent } from 'react';
+import { useId } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from './cn';
 import { useReducedMotion } from '../performance/useReducedMotion';
+import { useRovingRadioGroup } from './useRovingRadioGroup';
 import { MOTION_SCALE, resolveTransition } from '../../lib/motion';
 
 export interface SegmentOption<T extends string | number> {
@@ -22,6 +22,9 @@ export interface SegmentedControlProps<T extends string | number> {
   size?: 'sm' | 'md';
   layoutId?: string;
   'aria-label'?: string;
+  'aria-labelledby'?: string;
+  /** Forces the writing direction; when omitted it is read from the DOM. */
+  dir?: 'ltr' | 'rtl';
 }
 
 export function SegmentedControl<T extends string | number>({
@@ -31,55 +34,38 @@ export function SegmentedControl<T extends string | number>({
   className,
   size = 'md',
   layoutId: customLayoutId,
-  'aria-label': ariaLabel
+  'aria-label': ariaLabel,
+  'aria-labelledby': ariaLabelledBy,
+  dir
 }: SegmentedControlProps<T>) {
   const generatedId = useId();
   const activeLayoutId = customLayoutId || `segmented-active-${generatedId}`;
-  const triggerRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const sizeClasses = size === 'sm' ? 'p-0.5 text-xs' : 'p-1 text-sm';
   const itemPadding = size === 'sm' ? 'py-1 px-2.5' : 'py-1.5 px-3.5';
   const reduced = useReducedMotion();
   const motionEnabled = !reduced;
+  // A segmented control picks exactly one option out of a set; it never reveals a
+  // panel, so `radiogroup` is the honest role. `tablist` promises a tabpanel and
+  // `aria-controls` target that does not exist here.
+  const { containerRef, handleKeyDown, tabIndexFor, registerOption } = useRovingRadioGroup({
+    items: options,
+    value,
+    onChange,
+    dir
+  });
   // `layout="position"` keeps the thumb on the compositor: framer corrects
   // position only and never animates the trigger's width/height, so switching
   // segments can never reflow the surrounding page.
   const indicatorTransition = resolveTransition({ type: 'spring', stiffness: 500, damping: 36 }, motionEnabled);
   const pressTransition = resolveTransition({ duration: 0.12, ease: [0.22, 1, 0.36, 1] }, motionEnabled);
 
-  const focusOption = useCallback(
-    (index: number) => {
-      const step = index >= options.length ? 0 : index < 0 ? options.length - 1 : index;
-      const next = options[step];
-      if (!next || next.disabled) return;
-      onChange(next.value);
-      triggerRefs.current[step]?.focus();
-    },
-    [onChange, options]
-  );
-
-  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    const currentIndex = options.findIndex((option) => option.value === value);
-    if (currentIndex < 0) return;
-    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
-      event.preventDefault();
-      focusOption(currentIndex + 1);
-    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
-      event.preventDefault();
-      focusOption(currentIndex - 1);
-    } else if (event.key === 'Home') {
-      event.preventDefault();
-      focusOption(0);
-    } else if (event.key === 'End') {
-      event.preventDefault();
-      focusOption(options.length - 1);
-    }
-  };
-
   return (
     <div
+      ref={containerRef}
       className={cn('ui-segmented items-center border rounded-full', sizeClasses, className)}
-      role="tablist"
+      role="radiogroup"
       aria-label={ariaLabel}
+      aria-labelledby={ariaLabelledBy}
       onKeyDown={handleKeyDown}
     >
       {options.map((option, index) => {
@@ -87,16 +73,14 @@ export function SegmentedControl<T extends string | number>({
         return (
           <motion.button
             key={String(option.value)}
-            ref={(node) => {
-              triggerRefs.current[index] = node;
-            }}
+            ref={(node) => registerOption(index, node)}
             type="button"
-            role="tab"
-            id={`${activeLayoutId}-tab-${index}`}
-            aria-selected={isSelected}
+            role="radio"
+            id={`${activeLayoutId}-option-${index}`}
+            aria-checked={isSelected}
             aria-label={option['aria-label']}
             disabled={option.disabled}
-            tabIndex={isSelected ? 0 : -1}
+            tabIndex={tabIndexFor(index)}
             onClick={() => onChange(option.value)}
             whileTap={option.disabled || !motionEnabled ? undefined : { scale: MOTION_SCALE.pressControl }}
             transition={pressTransition}

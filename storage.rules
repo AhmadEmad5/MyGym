@@ -1,10 +1,38 @@
 rules_version = '2';
 
 // FORMA Cloud Storage Security Rules
-// Cloud Storage is not used by the web client.
-// All unauthorized read/write attempts are strictly rejected.
+// Cloud Storage holds meal photos (src/lib/mealPhotoStorage.ts). Every other
+// path is strictly rejected.
 service firebase.storage {
+
+  // --- Authentication & Identity Verification ---
+  function isAuthenticated() {
+    return request.auth != null;
+  }
+
+  function isOwner(userId) {
+    return isAuthenticated() && request.auth.uid == userId;
+  }
+
+  function isAdmin() {
+    return isAuthenticated()
+      && request.auth.token.get('admin', false) == true;
+  }
+
+  // --- Meal photos (/users/{userId}/meals/{mealId}/{fileName}) ---
+  // The 1 MB ceiling and the image/* content type mirror MEAL_PHOTO_MAX_BYTES
+  // and the JPEG content type sent by the client, so a value the rules reject
+  // never leaves the device.
   match /b/{bucket}/o {
+    match /users/{userId}/meals/{mealId}/{fileName} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isOwner(userId)
+        && request.resource != null
+        && request.resource.size < 1048576
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+
     match /{allPaths=**} {
       allow read, write: if false;
     }

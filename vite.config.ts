@@ -14,9 +14,31 @@ export default defineConfig(() => ({
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,
-        // Only precache JS/CSS/HTML — do NOT precache all assets generically
-        // This prevents stale chunk references after redeployment
-        globPatterns: ['**/*.{html,webmanifest}', 'assets/*.{js,css}'],
+        // Only precache the app shell: HTML/manifest, the entry chunk, vendor
+        // chunks and CSS. Do NOT precache every JS asset — that would pull all
+        // lazy route chunks into the first visit and nullify code splitting.
+        // This also prevents stale chunk references after redeployment.
+        globPatterns: [
+          '**/*.{html,webmanifest}',
+          'assets/index-*.js', // entry chunk
+          'assets/vendor-*.js', // vendor chunks
+          'assets/*.css',
+        ],
+        // Route chunks are fetched on demand (see the NetworkFirst
+        // runtimeCaching rule for /assets/*.js) — never precached.
+        globIgnores: [
+          '**/TodayView-*.js',
+          '**/CalendarView-*.js',
+          '**/RoutinesView-*.js',
+          '**/NutritionView-*.js',
+          '**/SessionDetailView-*.js',
+          '**/SettingsView-*.js',
+          '**/PerformanceHubView-*.js',
+          '**/LoginView-*.js',
+          '**/AdminDashboard-*.js',
+          '**/AIAssistant-*.js',
+          '**/OnboardingTour-*.js',
+        ],
         // Prevent the SW from intercepting requests for JS/CSS assets
         // and returning HTML (which causes the MIME type error)
         navigateFallback: '/index.html',

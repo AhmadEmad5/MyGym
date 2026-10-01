@@ -187,8 +187,9 @@ input,
 select,
 textarea,
 [role="button"],
-[role="tab"],
-.btn,
+  [role="tab"],
+  [role="radio"],
+  .btn,
 .btn-icon,
 .ui-button {
     touch-action: manipulation;

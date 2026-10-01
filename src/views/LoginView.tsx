@@ -35,7 +35,10 @@ import {
   updateProfile
 } from 'firebase/auth';
 import { notify } from '../lib/feedback';
+import { GUEST_EMAIL } from '../lib/guestIdentity';
+import { api } from '../lib/api';
 import { Button } from '../components/ui/Button';
+import { useRovingRadioGroup } from '../components/ui/useRovingRadioGroup';
 import { useModalA11y } from '../components/AIMealVisionModal';
 import { isUserAdmin } from '../lib/adminAuth';
 
@@ -279,6 +282,25 @@ export function LoginView({ onLogin }: LoginProps) {
   const isRTL = lang === 'ar';
   const copy = useMemo(() => COPY[lang], [lang]);
 
+  // Sign in / sign up picks one option out of a set; it does not reveal a panel,
+  // so this is a radiogroup rather than a tablist. The shared hook owns the
+  // RTL-aware arrow keys and the roving tabindex so the keyboard contract is
+  // identical to SegmentedControl. Direction is inherited from `.forma-login`,
+  // so the hook reads it from the computed style.
+  const modeOptions = useMemo(
+    () => [
+      { value: 'signin' as Mode, disabled: isSubmitting },
+      { value: 'signup' as Mode, disabled: isSubmitting }
+    ],
+    [isSubmitting]
+  );
+  const {
+    containerRef: modeSwitchRef,
+    handleKeyDown: handleModeKeyDown,
+    tabIndexFor: modeTabIndex,
+    registerOption: registerModeOption
+  } = useRovingRadioGroup({ items: modeOptions, value: mode, onChange: setMode });
+
   useEffect(() => {
     setErrors({});
     setFormError(null);
@@ -407,8 +429,19 @@ export function LoginView({ onLogin }: LoginProps) {
     setPendingAction('guest');
     setFormError(null);
     try {
+      /**
+       * The guest profile is device-local and must never replace a signed-in
+       * athlete's identity. Reaching this with an existing session means the
+       * app is still restoring that account, so abort instead of writing.
+       */
+      if (auth?.currentUser) {
+        throw new Error(isRTL ? 'جلسة نشطة قيد الاستعادة' : 'An active session is still being restored');
+      }
+      // The guest session owns a dedicated mirror, so it can neither inherit
+      // nor overwrite the cached copy of an athlete who used this device.
+      api.enterGuestScope();
       await onLogin({
-        email: 'guest@forma.app',
+        email: GUEST_EMAIL,
         name: isRTL ? 'رياضي FORMA' : 'FORMA Athlete'
       });
       notify(isRTL ? 'تم تسجيل الدخول كرياضي زائر بنجاح ⚡' : 'Signed in as Guest Athlete ⚡', 'success');
@@ -550,33 +583,20 @@ export function LoginView({ onLogin }: LoginProps) {
           </div>
 
           <div
+            ref={modeSwitchRef}
             className="forma-mode-switch"
-            role="tablist"
+            role="radiogroup"
             aria-label={mode === 'signin' ? copy.eyebrowSignIn : copy.eyebrowSignUp}
-            onKeyDown={(event) => {
-              // Roving focus, so Tab leaves the switch instead of walking both tabs.
-              const forward = isRTL ? event.key === 'ArrowLeft' : event.key === 'ArrowRight';
-              const back = isRTL ? event.key === 'ArrowRight' : event.key === 'ArrowLeft';
-              if (!forward && !back && event.key !== 'Home' && event.key !== 'End') return;
-              event.preventDefault();
-              const next: Mode =
-                event.key === 'Home' ? 'signin'
-                : event.key === 'End' ? 'signup'
-                : mode === 'signin' ? 'signup' : 'signin';
-              setMode(next);
-              window.requestAnimationFrame(() => {
-                document.getElementById(next === 'signin' ? 'forma-tab-signin' : 'forma-tab-signup')?.focus();
-              });
-            }}
+            onKeyDown={handleModeKeyDown}
           >
             <button
               type="button"
-              role="tab"
+              role="radio"
               id="forma-tab-signin"
-              aria-selected={mode === 'signin'}
-              aria-controls="forma-auth-form"
-              tabIndex={mode === 'signin' ? 0 : -1}
+              aria-checked={mode === 'signin'}
+              tabIndex={modeTabIndex(0)}
               className={mode === 'signin' ? 'is-active' : ''}
+              ref={(node) => registerModeOption(0, node)}
               onClick={() => setMode('signin')}
               disabled={isSubmitting}
             >
@@ -584,12 +604,12 @@ export function LoginView({ onLogin }: LoginProps) {
             </button>
             <button
               type="button"
-              role="tab"
+              role="radio"
               id="forma-tab-signup"
-              aria-selected={mode === 'signup'}
-              aria-controls="forma-auth-form"
-              tabIndex={mode === 'signup' ? 0 : -1}
+              aria-checked={mode === 'signup'}
+              tabIndex={modeTabIndex(1)}
               className={mode === 'signup' ? 'is-active' : ''}
+              ref={(node) => registerModeOption(1, node)}
               onClick={() => setMode('signup')}
               disabled={isSubmitting}
             >

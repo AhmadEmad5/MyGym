@@ -15,15 +15,17 @@ export const GEMINI_MAX_TOTAL_CHARS = 1_000_000;
 
 const AUTH_WAIT_TIMEOUT_MS = 5000;
 const RETRY_BASE_DELAY_MS = 600;
+// `internal` is deliberately absent. The callable throws HttpsError('internal')
+// only after every model in its own cascade has failed and the reserved quota
+// unit has already been refunded, so a client retry re-runs the same exhausted
+// cascade and only burns rate limit for a result the user can already be shown.
 const RETRYABLE_CODES = new Set([
   'functions/aborted',
   'functions/unavailable',
-  'functions/internal',
   'functions/deadline-exceeded',
   'functions/resource-exhausted',
   'aborted',
   'unavailable',
-  'internal',
   'deadline-exceeded'
 ]);
 
@@ -68,7 +70,8 @@ export interface CloudAIResponse {
   text: string;
   functionCalls?: any[];
   isPro: boolean;
-  remainingQuota?: number;
+  /** null means PRO/unlimited; a number is the real remaining free count. */
+  remainingQuota?: number | null;
 }
 
 export interface GeminiProxyRequest {
@@ -238,8 +241,13 @@ async function invokeProxy(payload: {
   return result.data;
 }
 
+/** Exponential backoff with full jitter, so parallel tabs do not resend in lockstep. */
+function retryDelayMs(attempt: number): number {
+  return RETRY_BASE_DELAY_MS * 2 ** attempt * (0.5 + Math.random() * 0.5);
+}
+
 async function withRetry<T>(operation: () => Promise<T>, maxRetries: number): Promise<T> {
-  const attempts = Math.max(0, Math.min(3, Math.floor(maxRetries))) + 1;
+  const attempts = Math.max(0, Math.min(2, Math.floor(maxRetries))) + 1;
   let lastError: unknown;
 
   for (let attempt = 0; attempt < attempts; attempt++) {
@@ -250,7 +258,7 @@ async function withRetry<T>(operation: () => Promise<T>, maxRetries: number): Pr
       if (attempt === attempts - 1 || !isRetryable(error)) {
         break;
       }
-      await wait(RETRY_BASE_DELAY_MS * (attempt + 1));
+      await wait(retryDelayMs(attempt));
     }
   }
 
@@ -268,6 +276,10 @@ export function getAIClient(): GeminiProxyClient {
           tools: request?.config?.tools
         };
         validateGeminiOptions(options);
+        // One retry, not three. The callable already walks its own model
+        // cascade, so a client retry only covers a genuinely transient
+        // transport failure - anything the server could recover from it has
+        // already tried by the time the error reaches us.
         return withRetry(
           () =>
             invokeProxy({
@@ -275,33 +287,25 @@ export function getAIClient(): GeminiProxyClient {
               systemInstruction: request.config?.systemInstruction,
               tools: request.config?.tools
             }),
-          2
+          1
         );
       }
     }
   };
 }
 
+/**
+ * Kept as the single entry point for chat/tool-calling callers, but no longer a
+ * fallback loop. The callable ignores the requested model and always starts its
+ * own cascade at `GEMINI_FALLBACK_MODELS[0]`, so re-entering this with a
+ * different model re-ran the identical 4-model sequence and multiplied the
+ * upstream calls (3 models x 3 attempts x 4 server models) for no new coverage.
+ * Model fallback is now the server's job alone.
+ */
 export async function callWithModelFallback<T>(
   caller: (model: string, client: GeminiProxyClient) => Promise<T>
 ): Promise<T> {
-  const client = getAIClient();
-  const attempts = Math.min(GEMINI_FALLBACK_MODELS.length, 3);
-  let lastError: unknown;
-
-  for (let attempt = 0; attempt < attempts; attempt++) {
-    try {
-      return await caller(GEMINI_FALLBACK_MODELS[attempt], client);
-    } catch (error) {
-      lastError = error;
-      if (attempt === attempts - 1 || !isRetryable(error)) {
-        break;
-      }
-      await wait(RETRY_BASE_DELAY_MS * (attempt + 1));
-    }
-  }
-
-  throw toFriendlyError(lastError);
+  return caller(GEMINI_FALLBACK_MODELS[0], getAIClient());
 }
 
 export async function generateGeminiContent(options: GenerateGeminiOptions): Promise<string> {
@@ -315,7 +319,9 @@ export async function generateGeminiContent(options: GenerateGeminiOptions): Pro
     tools: options.tools && options.tools.length > 0 ? options.tools : undefined
   };
 
-  const data = await withRetry(() => invokeProxy(payload), options.maxRetries ?? 2);
+  // One retry at most: the server-side model cascade already covers model
+  // failures, so extra client attempts only duplicate paid calls.
+  const data = await withRetry(() => invokeProxy(payload), options.maxRetries ?? 1);
   const text = typeof data?.text === 'string' ? data.text : '';
   if (!text.trim() && !(data?.functionCalls && data.functionCalls.length > 0)) {
     throw new Error(MESSAGES.emptyResponse);

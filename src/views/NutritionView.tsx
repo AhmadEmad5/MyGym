@@ -10,6 +10,7 @@ import { isSameDay, format, parse } from 'date-fns';
 import { useData } from '../hooks/useData';
 import { useReducedMotion } from '../components/performance/useReducedMotion';
 import { MealRecord, MealType, estimateWorkoutCalories, DEFAULT_NUTRITION_GOALS } from '../lib/api';
+import { resolveDailyTargets } from '../lib/selectors';
 import { useTranslation, TranslationKey } from '../lib/i18n';
 import { Button, Badge, Hint, PageSkeleton, EmptyState } from '../components/ui';
 import { TDEECalculatorModal } from '../components/TDEECalculatorModal';
@@ -130,8 +131,9 @@ export function NutritionView() {
   }, [data?.sessions, data?.history, todayKey]);
 
   const nutritionGoals = data?.nutritionGoals || DEFAULT_NUTRITION_GOALS;
+  const targets = resolveDailyTargets(nutritionGoals);
   const todayWater = data?.waterLogs?.[todayKey] || 0;
-  const waterGoal = nutritionGoals.dailyWaterMl || 2500;
+  const waterGoal = nutritionGoals.dailyWaterMl || DEFAULT_NUTRITION_GOALS.dailyWaterMl;
 
   const filteredQuickMeals = useMemo(() => {
     const q = quickMealSearch.trim().toLowerCase();
@@ -410,13 +412,13 @@ export function NutritionView() {
           <CalorieBalanceDial
             todayCalories={totalCaloriesConsumed}
             todayBurnedCalories={todayBurnedCalories}
-            dailyCaloriesTarget={nutritionGoals.dailyCalories || 2200}
+            dailyCaloriesTarget={targets.calories}
             todayProtein={totalProtein}
-            dailyProteinTarget={nutritionGoals.dailyProtein}
+            dailyProteinTarget={targets.protein}
             todayCarbs={totalCarbs}
-            dailyCarbsTarget={nutritionGoals.dailyCarbs}
+            dailyCarbsTarget={targets.carbs}
             todayFats={totalFats}
-            dailyFatsTarget={nutritionGoals.dailyFats}
+            dailyFatsTarget={targets.fats}
             onEditTargets={() => setIsTDEEModalOpen(true)}
             onLogMeal={() => {
               setEditingMeal(null);
@@ -427,13 +429,13 @@ export function NutritionView() {
           <DailyNutritionTargetsCard
             todayCalories={totalCaloriesConsumed}
             todayBurnedCalories={todayBurnedCalories}
-            dailyCaloriesTarget={nutritionGoals.dailyCalories || 2200}
+            dailyCaloriesTarget={targets.calories}
             todayProtein={totalProtein}
-            dailyProteinTarget={nutritionGoals.dailyProtein}
+            dailyProteinTarget={targets.protein}
             todayCarbs={totalCarbs}
-            dailyCarbsTarget={nutritionGoals.dailyCarbs}
+            dailyCarbsTarget={targets.carbs}
             todayFats={totalFats}
-            dailyFatsTarget={nutritionGoals.dailyFats}
+            dailyFatsTarget={targets.fats}
             onEdit={() => setIsTDEEModalOpen(true)}
             onLogMeal={() => {
               setEditingMeal(null);
@@ -935,7 +937,7 @@ export function NutritionView() {
           setIsManualMealModalOpen(true);
         }}
         onSaveMeal={meal => {
-          void saveMeal({ ...meal, id: `meal-${Date.now()}` });
+          void saveMeal({ ...meal, id: meal.id ?? `meal-${Date.now()}` });
         }}
       />
 

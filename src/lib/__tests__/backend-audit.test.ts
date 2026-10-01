@@ -1,9 +1,11 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   api,
   computeAllPersonalRecords,
   normalizeSettings,
   normalizeAthleteProfile,
+  clearLocalMirror,
+  readLocalMirror,
   type AppData,
   type HistoryRecord,
   type MealRecord,
@@ -11,6 +13,13 @@ import {
   type WorkoutSession,
 } from '../api';
 import { validateClientFile, ALLOWED_IMAGE_MIME_TYPES } from '../fileValidation';
+
+// Firebase is replaced so the suite can pretend an athlete is signed in: the
+// device mirror is keyed by uid, so an identity is required to exercise it.
+const { authMock } = vi.hoisted(() => ({
+  authMock: { currentUser: null as { uid: string; email: string } | null },
+}));
+vi.mock('../firebase', () => ({ auth: authMock, db: null, app: null, functions: null }));
 
 // The suite runs in vitest's `node` environment (no jsdom in this project), so
 // stand in a minimal localStorage. It also lets the offline-first mirror write
@@ -28,8 +37,9 @@ class MemoryStorage {
 const storage = new MemoryStorage();
 (globalThis as unknown as { localStorage: MemoryStorage }).localStorage = storage;
 
+// `auth.currentUser` is null here, so the mirror lives under the guest scope.
 function readMirror(): AppData {
-  return JSON.parse(storage.getItem('gym_data') || '{}') as AppData;
+  return readLocalMirror() || ({} as AppData);
 }
 
 function makeSet(weight: number, reps: number, unit: 'lb' | 'kg') {
@@ -185,6 +195,25 @@ describe('write validation matches the Firestore rules', () => {
     await expect(api.saveMeal(meal({ protein: 1001 }))).rejects.toThrow(/protein/);
   });
 
+  it('keeps a Cloud Storage photo URL on the meal', async () => {
+    const downloadUrl = 'https://firebasestorage.googleapis.com/v0/b/forma/o/users%2Fu1%2Fmeals%2Fmeal-1%2Fphoto.jpg?token=abc';
+    await expect(api.saveMeal(meal({ imageUrl: downloadUrl }))).resolves.toBeUndefined();
+    expect(readMirror().meals?.find(m => m.id === 'meal-1')?.imageUrl).toBe(downloadUrl);
+  });
+
+  it('rejects a base64 photo past the inline ceiling instead of bloating the document', async () => {
+    // ~300 KB of payload: the exact shape that used to blow past the 1 MiB
+    // Firestore limit and flood localStorage.
+    const oversized = `data:image/jpeg;base64,${'A'.repeat(400_000)}`;
+    await expect(api.saveMeal(meal({ imageUrl: oversized }))).rejects.toThrow(/inline limit/);
+    expect(readMirror().meals ?? []).toEqual([]);
+  });
+
+  it('rejects an image value that is not a usable URL', async () => {
+    await expect(api.saveMeal(meal({ imageUrl: 42 as unknown as string }))).rejects.toThrow(/Meal image/);
+    await expect(api.saveMeal(meal({ imageUrl: `https://example.com/${'a'.repeat(1200)}` }))).rejects.toThrow(/Meal image/);
+  });
+
   it('rejects a history record the rules would reject', async () => {
     const base = makeHistory('hist-1', 'sess-1', 'Push Day', '2026-01-05T10:00:00.000Z', []);
     await expect(api.saveHistory({ ...base, sessionId: 's'.repeat(101) })).rejects.toThrow(/History session/);
@@ -265,6 +294,98 @@ describe('importAllData', () => {
     expect(Object.getPrototypeOf(result.waterLogs)).toBe(Object.prototype);
     expect(({} as Record<string, unknown>).polluted).toBeUndefined();
     expect(readMirror().waterLogs).toEqual({ '2026-03-04': 10 });
+  });
+});
+
+describe('the device mirror is uid-scoped', () => {
+  const signIn = (uid: string) => {
+    authMock.currentUser = { uid, email: `${uid}@example.com` };
+  };
+
+  beforeEach(() => {
+    storage.clear();
+    authMock.currentUser = null;
+  });
+
+  afterEach(() => {
+    authMock.currentUser = null;
+  });
+
+  it('writes one key per account instead of a single shared one', async () => {
+    signIn('athlete-a');
+    await api.saveSession(makeSession({ id: 'a-1' }));
+    signIn('athlete-b');
+    await api.saveSession(makeSession({ id: 'b-1' }));
+
+    expect(JSON.parse(storage.getItem('gym_data:athlete-a') || '{}').sessions.map((s: WorkoutSession) => s.id)).toEqual(['a-1']);
+    expect(JSON.parse(storage.getItem('gym_data:athlete-b') || '{}').sessions.map((s: WorkoutSession) => s.id)).toEqual(['b-1']);
+    expect(storage.getItem('gym_data')).toBeNull();
+  });
+
+  it('never loads another account mirror as the current athlete data', async () => {
+    signIn('athlete-a');
+    await api.saveSession(makeSession({ id: 'a-1' }));
+    signIn('athlete-b');
+
+    expect((await api.getData()).sessions).toEqual([]);
+    expect(readLocalMirror()).toBeNull();
+  });
+
+  it('drops a mirror stamped for another uid', async () => {
+    signIn('athlete-b');
+    storage.setItem('gym_data:athlete-b', JSON.stringify({ sessions: [makeSession({ id: 'stolen' })], _mirrorUid: 'athlete-a' }));
+
+    expect(readLocalMirror()).toBeNull();
+    expect(storage.getItem('gym_data:athlete-b')).toBeNull();
+  });
+
+  it('clears only the mirror of the account signing out', async () => {
+    signIn('athlete-a');
+    await api.saveSession(makeSession({ id: 'a-1' }));
+    signIn('athlete-b');
+    await api.saveSession(makeSession({ id: 'b-1' }));
+
+    clearLocalMirror();
+
+    expect(storage.getItem('gym_data:athlete-b')).toBeNull();
+    expect(storage.getItem('gym_data:athlete-a')).not.toBeNull();
+  });
+
+  it('migrates the legacy global mirror to the signed-in uid key once', async () => {
+    signIn('athlete-a');
+    storage.setItem('gym_data', JSON.stringify({ sessions: [makeSession({ id: 'legacy' })] }));
+
+    const result = await api.getData();
+
+    expect(result.sessions.map(s => s.id)).toEqual(['legacy']);
+    expect(storage.getItem('gym_data')).toBeNull();
+    expect(JSON.parse(storage.getItem('gym_data:athlete-a') || '{}')._mirrorUid).toBe('athlete-a');
+  });
+
+  it('holds the legacy mirror back until an identity can be attributed', async () => {
+    // Nobody is signed in, which is also the state before Firebase restores a
+    // persisted session: adopting it into the guest scope here would park the
+    // athlete's workouts where the next guest could read them.
+    storage.setItem('gym_data', JSON.stringify({ sessions: [makeSession({ id: 'legacy' })], user: { email: 'athlete-a@example.com', name: 'A' } }));
+
+    expect((await api.getData()).sessions).toEqual([]);
+    expect(storage.getItem('gym_data:guest')).toBeNull();
+
+    signIn('athlete-a');
+    expect((await api.getData()).sessions.map(s => s.id)).toEqual(['legacy']);
+    expect(storage.getItem('gym_data')).toBeNull();
+  });
+
+  it('gives a guest session its own mirror and leaves the previous account untouched', async () => {
+    signIn('athlete-a');
+    await api.saveSession(makeSession({ id: 'a-1' }));
+    authMock.currentUser = null;
+
+    expect(api.enterGuestScope()).toBeNull();
+    await api.saveSession(makeSession({ id: 'guest-1' }));
+
+    expect(JSON.parse(storage.getItem('gym_data:guest') || '{}').sessions.map((s: WorkoutSession) => s.id)).toEqual(['guest-1']);
+    expect(storage.getItem('gym_data:athlete-a')).not.toBeNull();
   });
 });
 

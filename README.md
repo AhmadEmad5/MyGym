@@ -386,7 +386,7 @@ The server side reads `functions/.env` (or Secret Manager):
 GEMINI_API_KEY=""            # firebase functions:secrets:set GEMINI_API_KEY
 DAILY_FREE_AI_LIMIT=10        # per-user daily cap
 MAX_AI_REQUESTS_PER_MINUTE=10 # burst guard, applies to every tier
-MAX_IMAGE_BASE64_CHARS=800000 # ~600 KB; the app compresses to ~35-100 KB
+MAX_IMAGE_BASE64_CHARS=800000 # ~600 KB, per image; the app compresses to ~35-100 KB
 ALLOWED_ORIGINS=""            # defence in depth; App Check is the real control
 ```
 

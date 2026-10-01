@@ -30,7 +30,7 @@ import {
   Waves,
   Wifi
 } from 'lucide-react';
-import type { UserSettings } from '../lib/api';
+import { clearLocalMirror, type UserSettings } from '../lib/api';
 import { useData } from '../hooks/useData';
 import { useTranslation } from '../lib/i18n';
 import { useAdminStatus } from '../lib/useAdminStatus';
@@ -586,7 +586,7 @@ export function SettingsView() {
                   phraseLabel: isRTL ? 'اكتب مسح للمتابعة' : 'Type ERASE to continue',
                   phraseHint: 'ERASE',
                   onConfirm: () => {
-                    localStorage.removeItem('gym_data');
+                    clearLocalMirror();
                     window.location.reload();
                   }
                 })

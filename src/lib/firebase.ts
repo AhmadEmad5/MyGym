@@ -8,6 +8,7 @@ import {
   Firestore
 } from 'firebase/firestore';
 import { getFunctions, Functions } from 'firebase/functions';
+import { getStorage, FirebaseStorage } from 'firebase/storage';
 
 // CRITICAL: Validate all required environment variables before initialization
 const validateFirebaseConfig = (): boolean => {
@@ -36,6 +37,7 @@ let appInstance: any = null;
 let authInstance: Auth | null = null;
 let dbInstance: Firestore | null = null;
 let functionsInstance: Functions | null = null;
+let storageInstance: FirebaseStorage | null = null;
 
 try {
   // Check if Firebase is already initialized
@@ -57,6 +59,11 @@ try {
       functionsInstance = getFunctions(appInstance);
     } catch (fnErr) {
       console.warn('Functions initialization failed:', fnErr);
+    }
+    try {
+      storageInstance = getStorage(appInstance);
+    } catch (storageErr) {
+      console.warn('Storage initialization failed (VITE_FIREBASE_STORAGE_BUCKET missing?):', storageErr);
     }
   } else if (validateFirebaseConfig()) {
     appInstance = initializeApp({
@@ -87,7 +94,14 @@ try {
       try {
         functionsInstance = getFunctions(appInstance);
       } catch (fnErr) {
-        console.warn('Firebase Functions init warning:', fnErr);
+        console.warn('Functions init warning:', fnErr);
+      }
+
+      // Cloud Storage holds meal photos (see src/lib/mealPhotoStorage.ts)
+      try {
+        storageInstance = getStorage(appInstance);
+      } catch (storageErr) {
+        console.warn('Storage init warning:', storageErr);
       }
     } catch (authError) {
       console.error('Failed to initialize Firebase Auth:', authError);
@@ -103,6 +117,7 @@ try {
   authInstance = null;
   dbInstance = null;
   functionsInstance = null;
+  storageInstance = null;
 }
 
 // Export with proper null checks and validation
@@ -110,17 +125,18 @@ export const getFirebaseServices = (): {
   app: any, 
   auth: Auth | null, 
   db: Firestore | null,
-  functions: Functions | null
+  functions: Functions | null,
+  storage: FirebaseStorage | null
 } => {
   if (!validateFirebaseConfig()) {
     console.error('Firebase configuration is invalid. Services are not available.');
-    return { app: null, auth: null, db: null, functions: null };
+    return { app: null, auth: null, db: null, functions: null, storage: null };
   }
   
   // Validate all services exist before returning
   if (!appInstance) {
     console.error('Firebase app is not initialized.');
-    return { app: null, auth: null, db: null, functions: null };
+    return { app: null, auth: null, db: null, functions: null, storage: null };
   }
   
   if (!authInstance) {
@@ -131,7 +147,7 @@ export const getFirebaseServices = (): {
     console.error('Firestore database is not initialized.');
   }
   
-  return { app: appInstance, auth: authInstance, db: dbInstance, functions: functionsInstance };
+  return { app: appInstance, auth: authInstance, db: dbInstance, functions: functionsInstance, storage: storageInstance };
 };
 
 // Backward compatibility exports (with null checks).
@@ -142,4 +158,5 @@ export const app = services.app;
 export const auth = services.auth;
 export const db = services.db;
 export const functions = services.functions;
+export const storage = services.storage;
 

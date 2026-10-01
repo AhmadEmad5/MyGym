@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react';
 import { format } from 'date-fns';
-import { api, AppData, WorkoutSession, Routine, HistoryRecord, UserSettings, MealRecord, BodyMetricEntry, NutritionGoals, PerformanceInsights, estimateWorkoutCalories } from '../lib/api';
+import { api, AppData, WorkoutSession, Routine, HistoryRecord, UserSettings, MealRecord, BodyMetricEntry, NutritionGoals, PerformanceInsights, estimateWorkoutCalories, readLocalMirror, hasLocalMirror, clearLocalMirror } from '../lib/api';
 import { auth } from '../lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { notify } from '../lib/feedback';
@@ -32,10 +32,12 @@ type DataContextType = {
   saveInsights: (insights: PerformanceInsights) => Promise<void>;
   updateSettings: (settings: UserSettings, user?: AppData['user']) => Promise<void>;
   /**
-   * Ends the session: signs out of Firebase Auth, drops the device-local
-   * mirror, and clears the in-memory athlete so the app returns to the login
-   * screen. Device-level preferences (theme, language) live outside
-   * `gym_data` and deliberately survive.
+   * Ends the session: signs out of Firebase Auth, drops this athlete's
+   * device-local mirror, and clears the in-memory athlete so the app returns to
+   * the login screen. Only the mirror owned by the account being signed out is
+   * removed - another account that used this device keeps its own copy.
+   * Device-level preferences (theme, language) live outside the mirror and
+   * deliberately survive.
    */
   signOutUser: () => Promise<void>;
   exportBackup: () => void;
@@ -78,19 +80,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<AppData | null>(() => {
     if (typeof window === 'undefined') return null;
     try {
-      const raw = localStorage.getItem('gym_data');
-      if (raw) {
-        return JSON.parse(raw) as AppData;
-      }
+      return readLocalMirror();
     } catch (e) {
-      console.warn('Failed to parse cached gym_data:', e);
+      console.warn('Failed to read the cached training mirror:', e);
     }
     return null;
   });
   const [loading, setLoading] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true;
     try {
-      return !localStorage.getItem('gym_data');
+      return !hasLocalMirror();
     } catch {
       return true;
     }
@@ -139,7 +138,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     // slower one must not overwrite the state the newer one already published.
     const requestId = ++loadRequestRef.current;
     try {
-      if (!localStorage.getItem('gym_data')) {
+      if (!hasLocalMirror()) {
         setLoading(true);
       }
     } catch (e) {
@@ -176,7 +175,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         if (firebaseUser) {
           const requestId = ++loadRequestRef.current;
           try {
-            if (!localStorage.getItem('gym_data')) {
+            if (!hasLocalMirror()) {
               setLoading(true);
             }
           } catch (e) {
@@ -598,6 +597,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error('Failed to save performance insights, rolling back:', err);
       if (previousInsights) setData(prev => (prev ? { ...prev, insights: previousInsights } : prev));
+      notify('Could not save performance insights.', 'error');
       throw err;
     }
   }, []);
@@ -647,17 +647,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
   /**
    * Order matters here. `signOut(auth)` makes `onAuthStateChanged` fire with
    * `null`, which triggers `fetchInitialData()` and rebuilds state from the
-   * `gym_data` mirror. Dropping the mirror first means that reload finds
+   * local mirror. Dropping this athlete's mirror first means that reload finds
    * nothing and yields a clean, user-less athlete instead of resurrecting the
    * previous one. Calling `api.updateRootSettings` on the way out would
    * re-create the very cache we are trying to delete.
+   *
+   * Only the mirror owned by the account being signed out is removed, so an
+   * account that used this device earlier keeps its cached workouts.
    */
   const signOutUser = useCallback(async () => {
-    try {
-      localStorage.removeItem('gym_data');
-    } catch (e) {
-      console.warn('Could not clear the local training cache:', e);
-    }
+    clearLocalMirror();
 
     if (auth?.currentUser) {
       try {
