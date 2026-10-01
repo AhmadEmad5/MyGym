@@ -407,7 +407,7 @@ Only use tools if explicitly requested by the user or if it's the clear intent. 
           const errorMsg: ChatMessage = {
             id: (Date.now() + 1).toString(),
             role: 'assistant',
-            content: `Error: ${error.message || "Failed to get response from AI."}`,
+            content: error?.message || (isArabic ? 'عذراً، حدث خطأ أثناء معالجة طلبك. يرجى المحاولة مرة أخرى.' : 'Sorry, an error occurred while processing your request. Please try again.'),
             timestamp: new Date(),
           };
           setMessages(currentMessages => [...currentMessages, errorMsg]);

@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { Check, ChevronRight, Clock, Dumbbell, Moon, Plus, Sparkles, Trash2 } from 'lucide-react';
+import { Check, ChevronRight, Clock, Dumbbell, Moon, Pencil, Plus, Sparkles, Trash2 } from 'lucide-react';
 import type { WorkoutSession } from '../../../lib/api';
 import { sessionAccent, targetMusclesText } from './calendarData';
 
@@ -13,6 +13,7 @@ type DayPlannedSectionProps = {
   tMuscle: (muscle: string) => string;
   formatDate: (date: Date | string | number, pattern: string) => string;
   onOpenSession: (id: string) => void;
+  onEditSession: (session: WorkoutSession) => void;
   onComplete: (session: WorkoutSession) => void;
   onDelete: (id: string) => void;
   onAddSession: (day: Date) => void;
@@ -32,6 +33,7 @@ export function DayPlannedSection({
   tMuscle,
   formatDate,
   onOpenSession,
+  onEditSession,
   onComplete,
   onDelete,
   onAddSession,
@@ -148,6 +150,14 @@ export function DayPlannedSection({
                   </div>
                 </div>
                 <div className="card-actions">
+                  <button
+                    type="button"
+                    className="btn-card-action edit-action"
+                    onClick={() => onEditSession(session)}
+                    aria-label={`${t('editSession') || t('edit')} — ${session.title}`}
+                  >
+                    <Pencil width={15} height={15} aria-hidden="true" />
+                  </button>
                   <button
                     type="button"
                     className="btn-card-action complete-action"

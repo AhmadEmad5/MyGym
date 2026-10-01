@@ -234,7 +234,7 @@ export function ModalShell({
                 <button
                   type="button"
                   onClick={onClose}
-                  aria-label={closeLabel ?? (isRTL ? 'Ø¥ØºÙ„Ø§Ù‚' : 'Close dialog')}
+                  aria-label={closeLabel ?? (isRTL ? 'إغلاق' : 'Close dialog')}
                   style={{
                     minWidth: 44,
                     minHeight: 44,
@@ -644,12 +644,12 @@ const PHASE_WEIGHTS: Record<ScanPhase, number> = {
 };
 
 const PHASE_LABELS: Record<ScanPhase, { en: string; ar: string }> = {
-  reading: { en: 'Reading photo', ar: 'Ù‚Ø±Ø§Ø¡Ø© Ø§Ù„ØµÙˆØ±Ø©' },
-  optimising: { en: 'Resizing for fast upload', ar: 'ØªØµØºÙŠØ± Ø§Ù„ØµÙˆØ±Ø© Ù„Ø±ÙØ¹ Ø£Ø³Ø±Ø¹' },
-  encoding: { en: 'Compressing', ar: 'Ø¶ØºØ· Ø§Ù„ØµÙˆØ±Ø©' },
-  uploading: { en: 'Uploading to Gemini', ar: 'Ø±ÙØ¹ Ø§Ù„ØµÙˆØ±Ø© Ø¥Ù„Ù‰ Gemini' },
-  analysing: { en: 'Identifying foods & macros', ar: 'ØªØ­Ø¯ÙŠØ¯ Ø§Ù„Ø£Ø·Ø¹Ù…Ø© ÙˆØ§Ù„Ù…Ø§ÙƒØ±ÙˆØ²' },
-  done: { en: 'Ready', ar: 'Ø¬Ø§Ù‡Ø²' }
+  reading: { en: 'Reading photo', ar: 'قراءة الصورة' },
+  optimising: { en: 'Resizing for fast upload', ar: 'تصغير الصورة لرفع أسرع' },
+  encoding: { en: 'Compressing', ar: 'ضغط الصورة' },
+  uploading: { en: 'Uploading to Gemini', ar: 'رفع الصورة إلى Gemini' },
+  analysing: { en: 'Identifying foods & macros', ar: 'تحديد الأطعمة والماكروز' },
+  done: { en: 'Ready', ar: 'جاهز' }
 };
 
 interface CapturedPhoto {
@@ -849,18 +849,18 @@ Please estimate:
 
 Respond ONLY with valid JSON with NO markdown fences:
 {
-  "title": "Ø·Ø¨Ù‚ Ø£Ø±Ø² Ø¨Ø³Ù…ØªÙŠ Ù…Ø¹ ØµØ¯ÙˆØ± Ø¯Ø¬Ø§Ø¬ Ù…Ø´ÙˆÙŠØ© ÙˆØ³Ù„Ø·Ø©",
+  "title": "طبق أرز بسمتي مع صدور دجاج مشوية وسلطة",
   "calories": 540,
   "protein": 42,
   "carbs": 58,
   "fats": 12,
   "ingredients": [
-    {"name": "ØµØ¯Ø± Ø¯Ø¬Ø§Ø¬ Ù…Ø´ÙˆÙŠ", "portion": "150g", "calories": 250},
-    {"name": "Ø£Ø±Ø² Ø¨Ø³Ù…ØªÙŠ Ù…Ø·Ø¨ÙˆØ®", "portion": "200g", "calories": 240},
-    {"name": "Ø³Ù„Ø·Ø© Ø®Ø¶Ø±Ø§Ø¡ ÙˆØ²ÙŠØª Ø²ÙŠØªÙˆÙ†", "portion": "100g", "calories": 50}
+    {"name": "صدر دجاج مشوي", "portion": "150g", "calories": 250},
+    {"name": "أرز بسمتي مطبوخ", "portion": "200g", "calories": 240},
+    {"name": "سلطة خضراء وزيت زيتون", "portion": "100g", "calories": 50}
   ],
   "healthScore": 9,
-  "aiNotes": "ÙˆØ¬Ø¨Ø© Ù…Ø«Ø§Ù„ÙŠØ© Ø¨Ø¹Ø¯ Ø§Ù„ØªÙ…Ø±ÙŠÙ†ØŒ ØºÙ†ÙŠØ© Ø¨Ø§Ù„Ø¨Ø±ÙˆØªÙŠÙ† Ø§Ù„ØµØ§ÙÙŠ ÙˆØ§Ù„ÙƒØ§Ø±Ø¨ÙˆÙ‡ÙŠØ¯Ø±Ø§Øª Ø§Ù„Ù…Ø¹Ù‚Ø¯Ø© Ù„Ø¥Ø¹Ø§Ø¯Ø© Ù…Ù„Ø¡ Ù…Ø®Ø§Ø²Ù† Ø§Ù„Ø¬Ù„ÙŠÙƒÙˆØ¬ÙŠÙ† ÙˆØªØ³Ø±ÙŠØ¹ Ø§Ù„Ø§Ø³ØªØ´ÙØ§Ø¡."
+  "aiNotes": "وجبة مثالية بعد التمرين، غنية بالبروتين الصافي والكاربوهيدرات المعقدة لإعادة ملء مخازن الجليكوجين وتسريع الاستشفاء."
 }`;
 
       const parsed = await generateGeminiJson<Record<string, unknown>>({ prompt, imageBase64: base64Data, mimeType });
@@ -890,7 +890,7 @@ Respond ONLY with valid JSON with NO markdown fences:
       setHealthScore(typeof parsed.healthScore === 'number' ? parsed.healthScore : undefined);
       setAiNotes(typeof parsed.aiNotes === 'string' ? parsed.aiNotes : '');
       setNeedsCorrection(malformed);
-      setFieldErrors(malformed ? { title: isRTL ? 'Ø£Ø¯Ø®Ù„ Ø§Ø³Ù… Ø§Ù„ÙˆØ¬Ø¨Ø©' : 'Add a meal name', macros: isRTL ? 'Ø£ÙƒÙ…Ù„ Ø§Ù„Ù…Ø§ÙƒØ±ÙˆØ²' : 'Fill in the macros' } : {});
+      setFieldErrors(malformed ? { title: isRTL ? 'أدخل اسم الوجبة' : 'Add a meal name', macros: isRTL ? 'أكمل الماكروز' : 'Fill in the macros' } : {});
       setPhase('done');
       stopTimer();
       setStage('review');
@@ -991,13 +991,13 @@ Respond ONLY with valid JSON with NO markdown fences:
 
   const validateReview = () => {
     const next: { title?: string; calories?: string; macros?: string } = {};
-    if (!dishTitle.trim()) next.title = isRTL ? 'Ø§Ø³Ù… Ø§Ù„ÙˆØ¬Ø¨Ø© Ù…Ø·Ù„ÙˆØ¨' : 'Meal name is required';
+    if (!dishTitle.trim()) next.title = isRTL ? 'اسم الوجبة مطلوب' : 'Meal name is required';
     const cal = Number(calories);
-    if (!Number.isFinite(cal) || cal < 0) next.calories = isRTL ? 'Ø£Ø¯Ø®Ù„ Ø³Ø¹Ø±Ø§Øª ØµØ­ÙŠØ­Ø©' : 'Enter valid calories';
+    if (!Number.isFinite(cal) || cal < 0) next.calories = isRTL ? 'أدخل سعرات صحيحة' : 'Enter valid calories';
     const macroValues = [protein, carbs, fats].map(v => Number(v));
-    if (macroValues.some(v => !Number.isFinite(v) || v < 0)) next.macros = isRTL ? 'Ù‚ÙŠÙ… Ø§Ù„Ù…Ø§ÙƒØ±ÙˆØ² ØºÙŠØ± ØµØ§Ù„Ø­Ø©' : 'Invalid macro values';
+    if (macroValues.some(v => !Number.isFinite(v) || v < 0)) next.macros = isRTL ? 'قيم الماكروز غير صالحة' : 'Invalid macro values';
     if (macroValues.every(v => v === 0) && !(cal > 0)) {
-      next.macros = isRTL ? 'Ø£Ø¯Ø®Ù„ Ø§Ù„Ø³Ø¹Ø±Ø§Øª Ø£Ùˆ Ø§Ù„Ù…Ø§ÙƒØ±ÙˆØ²' : 'Enter calories or macros';
+      next.macros = isRTL ? 'أدخل السعرات أو الماكروز' : 'Enter calories or macros';
     }
     setFieldErrors(next);
     return Object.keys(next).length === 0;
@@ -1036,19 +1036,19 @@ Respond ONLY with valid JSON with NO markdown fences:
       return {
         tone: 'error' as const,
         icon: <ShieldAlert size={15} />,
-        title: isRTL ? 'Ø§Ù„ÙƒØ§Ù…ÙŠØ±Ø§ Ù…Ø±ÙÙˆØ¶Ø©' : 'Camera access denied',
+        title: isRTL ? 'الكاميرا مرفوضة' : 'Camera access denied',
         body: isRTL
-          ? 'ÙØ¹Ù‘Ù„ Ø¥Ø°Ù† Ø§Ù„ÙƒØ§Ù…ÙŠØ±Ø§ Ù„Ù‡Ø°Ø§ Ø§Ù„Ù…ÙˆÙ‚Ø¹ Ù…Ù† Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ù…ØªØµÙØ­ØŒ Ø«Ù… Ø£Ø¹Ø¯ Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø©. ÙŠÙ…ÙƒÙ†Ùƒ Ø£ÙŠØ¶Ø§Ù‹ Ø±ÙØ¹ ØµÙˆØ±Ø© Ù…Ù† Ø§Ù„Ù…Ø¹Ø±Ø¶.'
-          : 'Enable the camera permission for this site in your browser settings, then try again â€” or pick a photo from your library instead.'
+          ? 'فعّل إذن الكاميرا لهذا الموقع من إعدادات المتصفح، ثم أعد المحاولة. يمكنك أيضاً رفع صورة من المعرض.'
+          : 'Enable the camera permission for this site in your browser settings, then try again — or pick a photo from your library instead.'
       };
     }
     if (failure === 'no-camera') {
       return {
         tone: 'error' as const,
         icon: <ImageOff size={15} />,
-        title: isRTL ? 'Ù„Ø§ ØªÙˆØ¬Ø¯ ÙƒØ§Ù…ÙŠØ±Ø§ Ù…ØªØ§Ø­Ø©' : 'No camera available',
+        title: isRTL ? 'لا توجد كاميرا متاحة' : 'No camera available',
         body: isRTL
-          ? 'Ù„Ù… ÙŠØªÙ… Ø§Ù„Ø¹Ø«ÙˆØ± Ø¹Ù„Ù‰ ÙƒØ§Ù…ÙŠØ±Ø§ Ø¹Ù„Ù‰ Ù‡Ø°Ø§ Ø§Ù„Ø¬Ù‡Ø§Ø²ØŒ Ø£Ùˆ Ø£Ù†Ù‡Ø§ Ù…Ø³ØªØ®Ø¯Ù…Ø© Ù…Ù† ØªØ·Ø¨ÙŠÙ‚ Ø¢Ø®Ø±. Ø§Ø±ÙØ¹ ØµÙˆØ±Ø© Ø¨Ø¯Ù„Ø§Ù‹ Ù…Ù† Ø°Ù„Ùƒ.'
+          ? 'لم يتم العثور على كاميرا على هذا الجهاز، أو أنها مستخدمة من تطبيق آخر. ارفع صورة بدلاً من ذلك.'
           : 'No camera was found on this device, or it is busy in another app. Upload a photo instead to keep going.'
       };
     }
@@ -1072,19 +1072,19 @@ Respond ONLY with valid JSON with NO markdown fences:
       return {
         tone: 'error' as const,
         icon: <WifiOff size={15} />,
-        title: isRTL ? 'ØªØ¹Ø°Ù‘Ø± Ø§Ù„ÙˆØµÙˆÙ„ Ø¥Ù„Ù‰ Ø§Ù„Ø°ÙƒØ§Ø¡ Ø§Ù„Ø§ØµØ·Ù†Ø§Ø¹ÙŠ' : 'Could not reach the AI service',
+        title: isRTL ? 'تعذّر الوصول إلى الذكاء الاصطناعي' : 'Could not reach the AI service',
         body: isRTL
-          ? 'ØªØ­Ù‚Ù‚ Ù…Ù† Ø§ØªØµØ§Ù„Ùƒ Ø¨Ø§Ù„Ø¥Ù†ØªØ±Ù†Øª Ø«Ù… Ø£Ø¹Ø¯ Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø©. ØµÙˆØ±ØªÙƒ Ù…Ø­ÙÙˆØ¸Ø©ØŒ ÙŠÙ…ÙƒÙ†Ùƒ Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„Ù…Ø³Ø­ Ø¨Ù†Ù‚Ø±Ø©.'
-          : 'Check your connection and try again. Your photo is kept â€” just rescan it.'
+          ? 'تحقق من اتصالك بالإنترنت ثم أعد المحاولة. صورتك محفوظة، يمكنك إعادة المسح بنقرة.'
+          : 'Check your connection and try again. Your photo is kept — just rescan it.'
       };
     }
     if (failure === 'decode') {
       return {
         tone: 'error' as const,
         icon: <ImageOff size={15} />,
-        title: isRTL ? 'ØªØ¹Ø°Ù‘Ø±Øª Ù‚Ø±Ø§Ø¡Ø© Ø§Ù„ØµÙˆØ±Ø©' : 'Could not read that image',
+        title: isRTL ? 'تعذّرت قراءة الصورة' : 'Could not read that image',
         body: isRTL
-          ? 'Ø§Ù„Ù…Ù„Ù Ù‚Ø¯ ÙŠÙƒÙˆÙ† ØªØ§Ù„ÙØ§Ù‹ Ø£Ùˆ Ø¨ØµÙŠØºØ© ØºÙŠØ± Ù…Ø¯Ø¹ÙˆÙ…Ø© (JPG Ø£Ùˆ PNG Ø£Ùˆ WebP Ø£Ùˆ HEIC).'
+          ? 'الملف قد يكون تالفاً أو بصيغة غير مدعومة (JPG أو PNG أو WebP أو HEIC).'
           : 'The file may be corrupted or in an unsupported format (JPG, PNG, WebP or HEIC).'
       };
     }
@@ -1103,8 +1103,8 @@ Respond ONLY with valid JSON with NO markdown fences:
         isOpen={isOpen}
         onClose={onClose}
         titleId="ai-meal-vision-title"
-        title={isRTL ? 'Ù…Ø§Ø³Ø­ Ø§Ù„ÙˆØ¬Ø¨Ø§Øª Ø¨Ø§Ù„Ø°ÙƒØ§Ø¡ Ø§Ù„Ø§ØµØ·Ù†Ø§Ø¹ÙŠ' : 'AI Meal Vision Scanner'}
-        subtitle={isRTL ? 'Ø§Ù„ØªÙ‚Ø· ØµÙˆØ±Ø© Ù„Ø·Ø¨Ù‚Ùƒ Ù„ØªÙ‚Ø¯ÙŠØ± Ø§Ù„Ø³Ø¹Ø±Ø§Øª ÙˆØ§Ù„Ù…Ø§ÙƒØ±ÙˆØ² ÙÙˆØ±Ø§Ù‹' : 'Snap a food photo to instantly estimate calories and macros'}
+        title={isRTL ? 'ماسح الوجبات بالذكاء الاصطناعي' : 'AI Meal Vision Scanner'}
+        subtitle={isRTL ? 'التقط صورة لطبقك لتقدير السعرات والماكروز فوراً' : 'Snap a food photo to instantly estimate calories and macros'}
         icon={<Camera size={19} />}
         accent="#38bdf8"
         maxWidth={560}
@@ -1120,43 +1120,43 @@ Respond ONLY with valid JSON with NO markdown fences:
           stage === 'review' ? (
             <>
               <SecondaryAction onClick={reset} icon={<RefreshCw size={15} />}>
-                {isRTL ? 'ØµÙˆØ±Ø© Ø¬Ø¯ÙŠØ¯Ø©' : 'New photo'}
+                {isRTL ? 'صورة جديدة' : 'New photo'}
               </SecondaryAction>
               <PrimaryAction onClick={handleSaveAndAdd} icon={<Check size={18} />}>
-                {isRTL ? 'Ø³Ø¬Ù‘Ù„ Ø§Ù„ÙˆØ¬Ø¨Ø©' : 'Log meal'}
+                {isRTL ? 'سجّل الوجبة' : 'Log meal'}
               </PrimaryAction>
             </>
           ) : stage === 'preview' ? (
             <>
               <SecondaryAction onClick={reset} icon={<RefreshCw size={15} />}>
-                {isRTL ? 'Ø¥Ù„ØºØ§Ø¡' : 'Cancel'}
+                {isRTL ? 'إلغاء' : 'Cancel'}
               </SecondaryAction>
               <PrimaryAction onClick={() => photo && void runScan(photo)} icon={<Sparkles size={17} />}>
-                {isRTL ? 'Ø­Ù„Ù„ Ù‡Ø°Ù‡ Ø§Ù„ØµÙˆØ±Ø©' : 'Analyse this photo'}
+                {isRTL ? 'حلل هذه الصورة' : 'Analyse this photo'}
               </PrimaryAction>
             </>
           ) : stage === 'scanning' ? (
             <PrimaryAction onClick={() => { abortRef.current = true; stopTimer(); setStage(photo ? 'preview' : 'intro'); }} fullWidth>
-              {isRTL ? 'Ø¥Ù„ØºØ§Ø¡ Ø§Ù„Ù…Ø³Ø­' : 'Cancel scan'}
+              {isRTL ? 'إلغاء المسح' : 'Cancel scan'}
             </PrimaryAction>
           ) : (
             <>
-              <SecondaryAction onClick={onClose}>{isRTL ? 'Ø¥Ù„ØºØ§Ø¡' : 'Cancel'}</SecondaryAction>
+              <SecondaryAction onClick={onClose}>{isRTL ? 'إلغاء' : 'Cancel'}</SecondaryAction>
               <PrimaryAction onClick={onManualEntry} icon={<Keyboard size={17} />}>
-                {isRTL ? 'Ø¥Ø¯Ø®Ø§Ù„ ÙŠØ¯ÙˆÙŠ' : 'Enter manually'}
+                {isRTL ? 'إدخال يدوي' : 'Enter manually'}
               </PrimaryAction>
             </>
           )
         }
       >
         <ol
-          aria-label={isRTL ? 'Ù…Ø±Ø§Ø­Ù„ Ø§Ù„Ù…Ø³Ø­' : 'Scan stages'}
+          aria-label={isRTL ? 'مراحل المسح' : 'Scan stages'}
           style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', gap: '0.3rem' }}
         >
           {([
-            { key: 'intro', label: isRTL ? 'Ø§Ù„ØªÙ‚Ø§Ø·' : 'Capture' },
-            { key: 'scanning', label: isRTL ? 'ØªØ­Ù„ÙŠÙ„' : 'Analyse' },
-            { key: 'review', label: isRTL ? 'Ù…Ø±Ø§Ø¬Ø¹Ø©' : 'Review' }
+            { key: 'intro', label: isRTL ? 'التقاط' : 'Capture' },
+            { key: 'scanning', label: isRTL ? 'تحليل' : 'Analyse' },
+            { key: 'review', label: isRTL ? 'مراجعة' : 'Review' }
           ] as const).map((step, index) => {
             const order = ['intro', 'scanning', 'review'];
             const currentIndex = stage === 'preview' ? 0 : order.indexOf(stage);
@@ -1208,16 +1208,16 @@ Respond ONLY with valid JSON with NO markdown fences:
               <>
                 {failure === 'too-large' || failure === 'decode' || failure === 'no-camera' ? (
                   <SecondaryAction onClick={() => fileInputRef.current?.click()} icon={<Upload size={15} />}>
-                    {isRTL ? 'Ø§Ø®ØªÙŠØ§Ø± ØµÙˆØ±Ø©' : 'Pick a photo'}
+                    {isRTL ? 'اختيار صورة' : 'Pick a photo'}
                   </SecondaryAction>
                 ) : (
                   <SecondaryAction onClick={() => void requestCamera()} icon={<Camera size={15} />}>
-                    {isRTL ? 'Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø©' : 'Try again'}
+                    {isRTL ? 'إعادة المحاولة' : 'Try again'}
                   </SecondaryAction>
                 )}
                 {onManualEntry && (
                   <SecondaryAction onClick={onManualEntry} icon={<Keyboard size={15} />}>
-                    {isRTL ? 'Ø¥Ø¯Ø®Ø§Ù„ ÙŠØ¯ÙˆÙŠ' : 'Enter manually'}
+                    {isRTL ? 'إدخال يدوي' : 'Enter manually'}
                   </SecondaryAction>
                 )}
               </>
@@ -1256,7 +1256,7 @@ Respond ONLY with valid JSON with NO markdown fences:
                     alignItems: 'center',
                     justifyContent: 'center'
                   }}
-                  aria-label={isRTL ? 'Ø§Ù„ØªÙ‚Ø· Ø§Ù„ØµÙˆØ±Ø©' : 'Capture photo'}
+                  aria-label={isRTL ? 'التقط الصورة' : 'Capture photo'}
                 >
                   <Camera size={24} color="#fff" />
                 </button>
@@ -1280,12 +1280,12 @@ Respond ONLY with valid JSON with NO markdown fences:
                 </span>
                 <div>
                   <h3 style={{ margin: '0 0 0.3rem', fontSize: '1.05rem', fontWeight: 800 }}>
-                    {isRTL ? 'Ø§Ù„ØªÙ‚Ø· ØµÙˆØ±Ø© Ù„Ø·Ø¨Ù‚ Ø§Ù„Ø·Ø¹Ø§Ù…' : 'Snap a photo of your plate'}
+                    {isRTL ? 'التقط صورة لطبق الطعام' : 'Snap a photo of your plate'}
                   </h3>
                   <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)', maxWidth: '330px' }}>
                     {isRTL
-                      ? 'Ø§Ù…Ù„Ø£ Ø§Ù„Ø¥Ø·Ø§Ø± Ø¨Ø§Ù„Ø·Ø¨Ù‚ ÙƒØ§Ù…Ù„Ø§Ù‹ Ù…Ø¹ Ø¥Ø¶Ø§Ø¡Ø© Ø¬ÙŠØ¯Ø© â€” ÙƒÙ„Ù…Ø§ Ø¸Ù‡Ø±Øª Ø§Ù„Ù…ÙƒÙˆÙ†Ø§Øª Ø¨ÙˆØ¶ÙˆØ­ØŒ ÙƒØ§Ù† Ø§Ù„ØªÙ‚Ø¯ÙŠØ± Ø£Ø¯Ù‚.'
-                      : 'Fill the frame with the whole plate under good light â€” the clearer the food, the sharper the estimate.'}
+                      ? 'املأ الإطار بالطبق كاملاً مع إضاءة جيدة — كلما ظهرت المكونات بوضوح، كان التقدير أدق.'
+                      : 'Fill the frame with the whole plate under good light — the clearer the food, the sharper the estimate.'}
                   </p>
                 </div>
                 <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -1295,16 +1295,16 @@ Respond ONLY with valid JSON with NO markdown fences:
                     icon={<Camera size={17} />}
                   >
                     {cameraState === 'requesting'
-                      ? isRTL ? 'Ø¨Ø§Ù†ØªØ¸Ø§Ø± Ø§Ù„Ø¥Ø°Ù†â€¦' : 'Waiting for permissionâ€¦'
-                      : isRTL ? 'ÙØªØ­ Ø§Ù„ÙƒØ§Ù…ÙŠØ±Ø§' : 'Open camera'}
+                      ? isRTL ? 'بانتظار الإذن…' : 'Waiting for permission…'
+                      : isRTL ? 'فتح الكاميرا' : 'Open camera'}
                   </PrimaryAction>
                   <SecondaryAction onClick={() => fileInputRef.current?.click()} icon={<Upload size={16} />}>
-                    {isRTL ? 'Ø±ÙØ¹ ØµÙˆØ±Ø©' : 'Upload photo'}
+                    {isRTL ? 'رفع صورة' : 'Upload photo'}
                   </SecondaryAction>
                 </div>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
                   <ShieldCheck size={12} />
-                  {isRTL ? 'ØªØªÙ… Ø§Ù„Ù…Ø¹Ø§Ù„Ø¬Ø© Ø¹Ù„Ù‰ Ø¬Ù‡Ø§Ø²Ùƒ Ø­ØªÙ‰ Ø¶ØºØ· Ø§Ù„ØµÙˆØ±Ø©' : 'Your photo is compressed on-device before upload'}
+                  {isRTL ? 'تتم المعالجة على جهازك حتى ضغط الصورة' : 'Your photo is compressed on-device before upload'}
                 </span>
               </div>
             )}
@@ -1313,7 +1313,7 @@ Respond ONLY with valid JSON with NO markdown fences:
 
         {stage === 'preview' && photo && (
           <div style={{ position: 'relative', borderRadius: '18px', overflow: 'hidden', border: '1px solid var(--border-color)', background: '#000' }}>
-            <img src={photo.dataUrl} alt={isRTL ? 'Ø§Ù„ØµÙˆØ±Ø© Ø§Ù„Ù…Ù„ØªÙ‚Ø·Ø©' : 'Captured meal'} style={{ width: '100%', height: '220px', objectFit: 'cover', display: 'block' }} />
+            <img src={photo.dataUrl} alt={isRTL ? 'الصورة الملتقطة' : 'Captured meal'} style={{ width: '100%', height: '220px', objectFit: 'cover', display: 'block' }} />
             <button
               type="button"
               onClick={reset}
@@ -1335,7 +1335,7 @@ Respond ONLY with valid JSON with NO markdown fences:
               }}
             >
               <Crop size={12} />
-              {isRTL ? 'Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„Ø§Ù„ØªÙ‚Ø§Ø·' : 'Retake'}
+              {isRTL ? 'إعادة الالتقاط' : 'Retake'}
             </button>
             <div style={{ position: 'absolute', bottom: '0.5rem', insetInlineStart: '0.6rem', background: 'rgba(0,0,0,0.72)', padding: '0.22rem 0.55rem', borderRadius: '6px', fontSize: '0.7rem', color: '#cbd5e1', display: 'flex', gap: '0.5rem' }}>
               <span>{(photo.originalBytes / 1048576).toFixed(1)} MB</span>
@@ -1351,7 +1351,7 @@ Respond ONLY with valid JSON with NO markdown fences:
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={Math.round(progressPercent)}
-              aria-label={isRTL ? 'ØªÙ‚Ø¯Ù‘Ù… ØªØ­Ù„ÙŠÙ„ Ø§Ù„ØµÙˆØ±Ø©' : 'Analysis progress'}
+              aria-label={isRTL ? 'تقدّم تحليل الصورة' : 'Analysis progress'}
               style={{ height: 8, borderRadius: '999px', background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}
             >
               <motion.div
@@ -1379,9 +1379,9 @@ Respond ONLY with valid JSON with NO markdown fences:
         {stage === 'review' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
             {needsCorrection && (
-              <StatusCallout tone="warning" title={isRTL ? 'Ø±Ø§Ø¬Ø¹ Ø§Ù„Ù†ØªÙŠØ¬Ø© Ù‚Ø¨Ù„ Ø§Ù„Ø­ÙØ¸' : 'Review before saving'} icon={<AlertCircle size={15} />}>
+              <StatusCallout tone="warning" title={isRTL ? 'راجع النتيجة قبل الحفظ' : 'Review before saving'} icon={<AlertCircle size={15} />}>
                 {isRTL
-                  ? 'Ø§Ù„Ø°ÙƒØ§Ø¡ Ø§Ù„Ø§ØµØ·Ù†Ø§Ø¹ÙŠ Ø£Ø¹Ø§Ø¯ Ù†ØªÙŠØ¬Ø© Ù†Ø§Ù‚ØµØ© Ø£Ùˆ ØºÙŠØ± ÙˆØ§Ø¶Ø­Ø©. ØµØ­Ù‘Ø­ Ø§Ù„Ø­Ù‚ÙˆÙ„ Ø§Ù„Ù…Ù…ÙŠØ²Ø© Ø¨Ø§Ù„Ø£Ø¯Ù†Ø§Ù‡ Ø«Ù… Ø³Ø¬Ù‘Ù„ Ø§Ù„ÙˆØ¬Ø¨Ø©.'
+                  ? 'الذكاء الاصطناعي أعاد نتيجة ناقصة أو غير واضحة. صحّح الحقول المميزة بالأدناه ثم سجّل الوجبة.'
                   : 'The AI returned an incomplete or unclear result. Fix the highlighted fields, then log the meal.'}
               </StatusCallout>
             )}
@@ -1392,7 +1392,7 @@ Respond ONLY with valid JSON with NO markdown fences:
 
             <div>
               <label htmlFor="ai-dish-title" style={{ display: 'block', fontSize: '0.74rem', color: 'var(--text-secondary)', marginBottom: '0.3rem', fontWeight: 700 }}>
-                {isRTL ? 'Ø§Ø³Ù… Ø§Ù„ÙˆØ¬Ø¨Ø© Ø§Ù„Ù…ÙƒØªØ´Ù' : 'Detected meal name'}
+                {isRTL ? 'اسم الوجبة المكتشف' : 'Detected meal name'}
               </label>
               <input
                 id="ai-dish-title"
@@ -1404,7 +1404,7 @@ Respond ONLY with valid JSON with NO markdown fences:
                 }}
                 aria-invalid={fieldErrors.title ? true : undefined}
                 aria-describedby={fieldErrors.title ? 'ai-dish-title-error' : undefined}
-                placeholder={isRTL ? 'Ù…Ø«Ø§Ù„: Ø£Ø±Ø² Ù…Ø¹ ØµØ¯ÙˆØ± Ø¯Ø¬Ø§Ø¬' : 'e.g., Grilled chicken & rice'}
+                placeholder={isRTL ? 'مثال: أرز مع صدور دجاج' : 'e.g., Grilled chicken & rice'}
                 style={{
                   width: '100%',
                   fontSize: '1rem',
@@ -1423,9 +1423,9 @@ Respond ONLY with valid JSON with NO markdown fences:
 
             <div>
               <span style={{ display: 'block', fontSize: '0.74rem', color: 'var(--text-secondary)', marginBottom: '0.3rem', fontWeight: 700 }}>
-                {isRTL ? 'Ù†ÙˆØ¹ Ø§Ù„ÙˆØ¬Ø¨Ø©' : 'Meal category'}
+                {isRTL ? 'نوع الوجبة' : 'Meal category'}
               </span>
-              <div role="radiogroup" aria-label={isRTL ? 'Ù†ÙˆØ¹ Ø§Ù„ÙˆØ¬Ø¨Ø©' : 'Meal category'} style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.4rem' }}>
+              <div role="radiogroup" aria-label={isRTL ? 'نوع الوجبة' : 'Meal category'} style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.4rem' }}>
                 {MEAL_TYPES.map(item => (
                   <button
                     key={item.type}
@@ -1458,7 +1458,7 @@ Respond ONLY with valid JSON with NO markdown fences:
             <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
               <UnitToggle
                 id="ai-energy-unit"
-                label={isRTL ? 'ÙˆØ­Ø¯Ø© Ø§Ù„Ø·Ø§Ù‚Ø©' : 'Energy unit'}
+                label={isRTL ? 'وحدة الطاقة' : 'Energy unit'}
                 value={energyUnit}
                 onChange={next => {
                   if (next === energyUnit) return;
@@ -1470,7 +1470,7 @@ Respond ONLY with valid JSON with NO markdown fences:
               />
               <UnitToggle
                 id="ai-mass-unit"
-                label={isRTL ? 'ÙˆØ­Ø¯Ø© Ø§Ù„ÙˆØ²Ù†' : 'Weight unit'}
+                label={isRTL ? 'وحدة الوزن' : 'Weight unit'}
                 value={massUnit}
                 onChange={next => {
                   if (next === massUnit) return;
@@ -1491,7 +1491,7 @@ Respond ONLY with valid JSON with NO markdown fences:
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               <InlineNumberField
                 id="ai-calories"
-                label={isRTL ? 'Ø§Ù„Ø³Ø¹Ø±Ø§Øª' : 'Calories'}
+                label={isRTL ? 'السعرات' : 'Calories'}
                 value={calories}
                 onChange={next => {
                   setCalories(next);
@@ -1507,8 +1507,8 @@ Respond ONLY with valid JSON with NO markdown fences:
               {derivedKcal > 0 && (
                 <p id="ai-calories-derived" style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-muted)', textAlign: 'center' }}>
                   {isRTL
-                    ? `Ø§Ù„Ù…Ø§ÙƒØ±ÙˆØ² Ø§Ù„Ø­Ø§Ù„ÙŠ ØªØ³Ø§ÙˆÙŠ ${derivedKcal} Ùƒ.Ø³Ø¹Ø±Ø© ${Math.abs(enteredKcal - derivedKcal) > 40 ? 'â€” ÙŠØ®ØªÙ„Ù ÙƒØ«ÙŠØ±Ø§Ù‹ Ø¹Ù† Ø§Ù„Ù…ÙØ¯Ø®Ù„' : ''}`
-                    : `Macros currently total ${derivedKcal} kcal${Math.abs(enteredKcal - derivedKcal) > 40 ? ' â€” that is far from the value above' : ''}`}
+                    ? `الماكروز الحالي تساوي ${derivedKcal} ك.سعرة ${Math.abs(enteredKcal - derivedKcal) > 40 ? '— يختلف كثيراً عن المُدخل' : ''}`
+                    : `Macros currently total ${derivedKcal} kcal${Math.abs(enteredKcal - derivedKcal) > 40 ? ' — that is far from the value above' : ''}`}
                 </p>
               )}
               {fieldErrors.calories && <FieldError id="ai-calories-error" message={fieldErrors.calories} />}
@@ -1516,7 +1516,7 @@ Respond ONLY with valid JSON with NO markdown fences:
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <InlineNumberField
                   id="ai-protein"
-                  label={isRTL ? 'Ø¨Ø±ÙˆØªÙŠÙ†' : 'Protein'}
+                  label={isRTL ? 'بروتين' : 'Protein'}
                   value={protein}
                   onChange={next => {
                     setProtein(next);
@@ -1532,7 +1532,7 @@ Respond ONLY with valid JSON with NO markdown fences:
                 />
                 <InlineNumberField
                   id="ai-carbs"
-                  label={isRTL ? 'ÙƒØ§Ø±Ø¨' : 'Carbs'}
+                  label={isRTL ? 'كارب' : 'Carbs'}
                   value={carbs}
                   onChange={next => {
                     setCarbs(next);
@@ -1548,7 +1548,7 @@ Respond ONLY with valid JSON with NO markdown fences:
                 />
                 <InlineNumberField
                   id="ai-fats"
-                  label={isRTL ? 'Ø¯Ù‡ÙˆÙ†' : 'Fats'}
+                  label={isRTL ? 'دهون' : 'Fats'}
                   value={fats}
                   onChange={next => {
                     setFats(next);
@@ -1567,7 +1567,7 @@ Respond ONLY with valid JSON with NO markdown fences:
 
               {healthScore !== undefined && (
                 <p style={{ margin: 0, fontSize: '0.76rem', color: '#10b981', fontWeight: 700 }}>
-                  â˜… {healthScore}/10 {isRTL ? 'Ø¯Ø±Ø¬Ø© Ø§Ù„ØµØ­Ø©' : 'health score'}
+                  â˜… {healthScore}/10 {isRTL ? 'درجة الصحة' : 'health score'}
                 </p>
               )}
             </div>
@@ -1575,7 +1575,7 @@ Respond ONLY with valid JSON with NO markdown fences:
             {ingredients.length > 0 && (
               <div>
                 <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: '0.3rem' }}>
-                  {isRTL ? 'Ø§Ù„Ù…ÙƒÙˆÙ†Ø§Øª Ø§Ù„Ù…Ù‚Ø¯Ø±Ø©:' : 'Estimated ingredients:'}
+                  {isRTL ? 'المكونات المقدرة:' : 'Estimated ingredients:'}
                 </span>
                 <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
                   {ingredients.map((ingredient, index) => (
@@ -1606,7 +1606,7 @@ Respond ONLY with valid JSON with NO markdown fences:
               style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
             >
               <ArrowRight size={12} style={{ transform: isRTL ? 'scaleX(-1)' : undefined }} />
-              {isRTL ? 'ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„Ø¨Ù‚Ø§Ø¡ ÙÙŠ Ø§Ù„ØµÙØ­Ø© â€” Ø§Ù„ØªØ­Ù„ÙŠÙ„ ÙŠØ¹Ù…Ù„ ÙÙŠ Ø§Ù„Ø®Ù„ÙÙŠØ©.' : 'Stay on this screen â€” analysis runs in the background.'}
+              {isRTL ? 'يمكنك البقاء في الصفحة — التحليل يعمل في الخلفية.' : 'Stay on this screen — analysis runs in the background.'}
             </motion.p>
           )}
         </AnimatePresence>

@@ -42,7 +42,7 @@ export function WeekRibbon({
             <li key={day.toISOString()} className="calendar-week-ribbon-item">
               <button
                 type="button"
-                className="ribbon-day-pill"
+                className={`ribbon-day-pill${isSelected ? ' is-selected' : ''}${isToday ? ' is-today' : ''}`}
                 aria-pressed={isSelected}
                 aria-current={isToday ? 'date' : undefined}
                 aria-label={label}

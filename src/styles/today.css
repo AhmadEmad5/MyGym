@@ -622,10 +622,6 @@
     box-shadow: 0 0 10px var(--accent-emerald);
   }
 
-  .today-mobile-hero-stack {
-    display: none;
-  }
-
   /* ==========================================================================
      Tier 1 — command surface ("what do I do right now")
      ========================================================================== */
@@ -1089,25 +1085,6 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .today-fuel-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: clamp(0.85rem, 1.8vw, 1.35rem);
-    align-items: stretch;
-  }
-
-  .today-fuel-column,
-.today-hydration-column {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    height: 100%;
-  }
-
-  .today-fuel-column > *,
-.today-hydration-column > * {
-    flex: 1;
-  }
 
   .today-widget-error {
     display: flex;
@@ -1599,20 +1576,8 @@
   }
 
   @media (max-width: 900px) {
-    .today-mobile-hero-stack {
-      display: flex;
-      flex-direction: column;
-      gap: 0.35rem;
-    }
-
     .today-dashboard-stack {
       gap: 1.15rem;
-    }
-  }
-
-  @media (max-width: 720px) {
-    .today-fuel-grid {
-      grid-template-columns: minmax(0, 1fr);
     }
   }
 

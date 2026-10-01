@@ -16,8 +16,9 @@ import { TDEECalculatorModal } from '../components/TDEECalculatorModal';
 import { AIMealVisionModal, InlineNumberField, UnitToggle, FieldError, PrimaryAction, SecondaryAction, massToGrams, gramsToMass, energyToKcal, kcalToEnergy, type MassUnit, type EnergyUnit } from '../components/AIMealVisionModal';
 import { BarcodeFoodScannerModal } from '../components/BarcodeFoodScannerModal';
 import { ManualMealModal } from '../components/ManualMealModal';
-import { InteractiveHydrationWaveCard } from '../components/InteractiveHydrationWaveCard';
 import { DailyNutritionTargetsCard } from '../components/DailyNutritionTargetsCard';
+import { InteractiveLiquidBottle } from '../components/nutrition/InteractiveLiquidBottle';
+import { CalorieBalanceDial } from '../components/nutrition/CalorieBalanceDial';
 import { notify } from '../lib/feedback';
 import { gymAudio } from '../lib/audio';
 
@@ -79,6 +80,7 @@ export function NutritionView() {
   const [draftMassUnit, setDraftMassUnit] = useState<MassUnit>('g');
   const [draftEnergyUnit, setDraftEnergyUnit] = useState<EnergyUnit>('kcal');
   const [savingMealId, setSavingMealId] = useState<string | null>(null);
+  const [nutritionCardMode, setNutritionCardMode] = useState<'balance' | 'budget'>('balance');
 
   const today = useMemo(() => new Date(), []);
   const todayKey = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
@@ -338,6 +340,63 @@ export function NutritionView() {
         </div>
       </div>
 
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.6rem' }}>
+        <div
+          role="group"
+          aria-label={isRTL ? 'طريقة عرض السعرات' : 'Calorie view mode'}
+          style={{
+            display: 'inline-flex',
+            padding: '0.2rem',
+            borderRadius: '999px',
+            background: 'var(--bg-secondary)',
+            border: '1px solid var(--premium-line)'
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              gymAudio.triggerSubtleHaptic([15]);
+              setNutritionCardMode('balance');
+            }}
+            className="touch-target"
+            style={{
+              padding: '0.35rem 0.85rem',
+              borderRadius: '999px',
+              border: 'none',
+              background: nutritionCardMode === 'balance' ? 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)' : 'transparent',
+              color: nutritionCardMode === 'balance' ? '#04121b' : 'var(--text-secondary)',
+              fontWeight: 800,
+              fontSize: '0.78rem',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            {isRTL ? 'مؤشر توازن الطاقة (Dial)' : 'Energy Balance Dial'}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              gymAudio.triggerSubtleHaptic([15]);
+              setNutritionCardMode('budget');
+            }}
+            className="touch-target"
+            style={{
+              padding: '0.35rem 0.85rem',
+              borderRadius: '999px',
+              border: 'none',
+              background: nutritionCardMode === 'budget' ? 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)' : 'transparent',
+              color: nutritionCardMode === 'budget' ? '#04121b' : 'var(--text-secondary)',
+              fontWeight: 800,
+              fontSize: '0.78rem',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            {isRTL ? 'ميزانية اليوم (Budget)' : "Today's Budget"}
+          </button>
+        </div>
+      </div>
+
       <div
         className="mobile-stack-grid nutrition-overview-grid"
         style={{
@@ -347,24 +406,43 @@ export function NutritionView() {
           marginBottom: '1.25rem'
         }}
       >
-        <DailyNutritionTargetsCard
-          todayCalories={totalCaloriesConsumed}
-          todayBurnedCalories={todayBurnedCalories}
-          dailyCaloriesTarget={nutritionGoals.dailyCalories || 2200}
-          todayProtein={totalProtein}
-          dailyProteinTarget={nutritionGoals.dailyProtein}
-          todayCarbs={totalCarbs}
-          dailyCarbsTarget={nutritionGoals.dailyCarbs}
-          todayFats={totalFats}
-          dailyFatsTarget={nutritionGoals.dailyFats}
-          onEdit={() => setIsTDEEModalOpen(true)}
-          onLogMeal={() => {
-            setEditingMeal(null);
-            setIsManualMealModalOpen(true);
-          }}
-        />
+        {nutritionCardMode === 'balance' ? (
+          <CalorieBalanceDial
+            todayCalories={totalCaloriesConsumed}
+            todayBurnedCalories={todayBurnedCalories}
+            dailyCaloriesTarget={nutritionGoals.dailyCalories || 2200}
+            todayProtein={totalProtein}
+            dailyProteinTarget={nutritionGoals.dailyProtein}
+            todayCarbs={totalCarbs}
+            dailyCarbsTarget={nutritionGoals.dailyCarbs}
+            todayFats={totalFats}
+            dailyFatsTarget={nutritionGoals.dailyFats}
+            onEditTargets={() => setIsTDEEModalOpen(true)}
+            onLogMeal={() => {
+              setEditingMeal(null);
+              setIsManualMealModalOpen(true);
+            }}
+          />
+        ) : (
+          <DailyNutritionTargetsCard
+            todayCalories={totalCaloriesConsumed}
+            todayBurnedCalories={todayBurnedCalories}
+            dailyCaloriesTarget={nutritionGoals.dailyCalories || 2200}
+            todayProtein={totalProtein}
+            dailyProteinTarget={nutritionGoals.dailyProtein}
+            todayCarbs={totalCarbs}
+            dailyCarbsTarget={nutritionGoals.dailyCarbs}
+            todayFats={totalFats}
+            dailyFatsTarget={nutritionGoals.dailyFats}
+            onEdit={() => setIsTDEEModalOpen(true)}
+            onLogMeal={() => {
+              setEditingMeal(null);
+              setIsManualMealModalOpen(true);
+            }}
+          />
+        )}
 
-        <InteractiveHydrationWaveCard
+        <InteractiveLiquidBottle
           todayWater={todayWater}
           waterGoal={waterGoal}
           onLogWater={amount => void logWater(amount, todayKey)}

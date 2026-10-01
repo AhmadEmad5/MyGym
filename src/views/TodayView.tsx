@@ -10,7 +10,6 @@ import {
   Dumbbell,
   Flame,
   History,
-  Lightbulb,
   Moon,
   Play,
   Plus,
@@ -32,26 +31,21 @@ import { Button } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
 import { MetricPair } from '../components/primitives/MetricPair';
 import { QuickWorkoutModal } from '../components/QuickWorkoutModal';
-import { DailyNutritionTargetsCard } from '../components/DailyNutritionTargetsCard';
 import { TodayBentoGrid, WidgetSkeleton, useFormaReducedMotion } from '../components/TodayBentoGrid';
 import { TodayTier } from '../components/TodayTier';
 import { RecoveryCard } from '../components/RecoveryCard';
 import { MuscleRecoveryHeatmapWidget } from '../components/MuscleRecoveryHeatmapWidget';
-import { InteractiveHydrationWaveCard } from '../components/InteractiveHydrationWaveCard';
-import { MobileHeroWorkoutCard } from '../components/mobile/MobileHeroWorkoutCard';
-import { MobileFloorVitals } from '../components/mobile/MobileFloorVitals';
 
 const MAX_VISIBLE_EXERCISES = 4;
 
 export function TodayView() {
-  const { data, loading, finishWorkoutSession, saveSession, logWater, resetWater, forceRefresh } = useData();
+  const { data, loading, finishWorkoutSession, saveSession, logWater, forceRefresh } = useData();
   const { formatDate, tExercise, tTitle, t, isRTL } = useTranslation();
   const navigate = useNavigate();
   const reduceMotion = useFormaReducedMotion();
   const [isQuickWorkoutOpen, setIsQuickWorkoutOpen] = useState(false);
   const [isFinishing, setIsFinishing] = useState(false);
   const [panelError, setPanelError] = useState<string | null>(null);
-  const [hydrationError, setHydrationError] = useState<string | null>(null);
   const [dashboardError, setDashboardError] = useState<string | null>(null);
 
   const locale = isRTL ? 'ar' : 'en-US';
@@ -72,13 +66,6 @@ export function TodayView() {
   const activeSession = todaySessions[0] || null;
   const isDayCompleted = todaySessions.length === 0 && todayHistory.length > 0;
 
-  const heroSession = useMemo(() => {
-    if (activeSession) return activeSession;
-    if (todayHistory[0]?.snapshot) return todayHistory[0].snapshot;
-    if (data?.sessions && data.sessions.length > 0) return data.sessions[0];
-    return null;
-  }, [activeSession, todayHistory, data?.sessions]);
-
   const todayBurnedCalories = useMemo(
     () => todayHistory.reduce((total, record) => total + (record.burnedCalories || 0), 0),
     [todayHistory],
@@ -96,18 +83,14 @@ export function TodayView() {
     [data?.history, data?.sessions],
   );
 
-  const { todayCalories, todayProtein, todayCarbs, todayFats } = useMemo(() => {
+  const { todayCalories, todayProtein } = useMemo(() => {
     let calories = 0;
     let protein = 0;
-    let carbs = 0;
-    let fats = 0;
     for (const meal of daily?.meals || []) {
       calories += meal.calories || 0;
       protein += meal.protein || 0;
-      carbs += meal.carbs || 0;
-      fats += meal.fats || 0;
     }
-    return { todayCalories: calories, todayProtein: protein, todayCarbs: carbs, todayFats: fats };
+    return { todayCalories: calories, todayProtein: protein };
   }, [daily]);
 
   const streakDays = useMemo(() => (data ? selectWorkoutStreak(data) : 0), [data]);
@@ -146,30 +129,15 @@ export function TodayView() {
     async (amount: number) => {
       try {
         setPanelError(null);
-        setHydrationError(null);
         await logWater(amount, todayKey);
         gymAudio.triggerVibration([15]);
       } catch {
         const message = isRTL ? 'تعذّر تسجيل الماء. حاول مرة أخرى.' : 'Could not log water. Try again.';
-        setHydrationError(message);
         setPanelError(message);
       }
     },
     [isRTL, logWater, todayKey],
   );
-
-  const handleResetWater = useCallback(async () => {
-    try {
-      setPanelError(null);
-      setHydrationError(null);
-      await resetWater(todayKey);
-      gymAudio.triggerVibration([10]);
-    } catch {
-      const message = isRTL ? 'تعذّر تصفير عداد الماء.' : 'Could not reset the hydration log.';
-      setHydrationError(message);
-      setPanelError(message);
-    }
-  }, [isRTL, resetWater, todayKey]);
 
   const handleCompleteSession = useCallback(
     async (session: WorkoutSession) => {
@@ -336,48 +304,6 @@ export function TodayView() {
       </a>
 
       <div className="today-dashboard-stack">
-        <div className="today-mobile-hero-stack">
-          <div className="mobile-athlete-header">
-            <div>
-              <div className="mobile-greeting-label">{isRTL ? 'مرحباً بعودتك،' : 'Welcome back,'}</div>
-              <div className="mobile-athlete-name">{data.user?.name || (isRTL ? 'البطل' : 'Athlete')}</div>
-            </div>
-            <div
-              className="mobile-streak-ring"
-              title={isRTL ? 'السلسلة الحالية' : 'Current streak'}
-              aria-describedby="today-streak-hint"
-            >
-              <Flame className="w-5 h-5 fill-amber-500 text-amber-500" aria-hidden="true" />
-              <span className="mobile-streak-text tabular-nums">{Math.max(1, streakDays)}d</span>
-              <span className="forma-sr-only">
-                {isRTL ? `${streakDays} يوم متتالي` : `${streakDays} day streak`}
-              </span>
-            </div>
-          </div>
-          <p id="today-streak-hint" className="ui-empty-description" style={{ display: 'flex', alignItems: 'flex-start', gap: '0.4rem', margin: '0.35rem 0 0', fontSize: '0.74rem' }}>
-            <Lightbulb size={13} aria-hidden="true" style={{ color: 'var(--color-warning)', flexShrink: 0, marginBlockStart: '0.15rem' }} />
-            <span>{t('todayStreakHint')}</span>
-          </p>
-
-          <MobileHeroWorkoutCard
-            session={heroSession}
-            isCompletedToday={isDayCompleted}
-            onQuickWorkout={openQuickWorkout}
-          />
-          <MobileFloorVitals
-            waterAmount={daily.waterMl}
-            waterGoal={daily.waterTargetMl}
-            onQuickWater={handleQuickWater}
-            calories={todayCalories}
-            calorieGoal={daily.nutritionGoals.dailyCalories}
-            protein={todayProtein}
-            proteinGoal={daily.nutritionGoals.dailyProtein}
-            onOpenNutrition={() => navigate('/nutrition')}
-            isBusy={isFinishing}
-            errorMessage={hydrationError || undefined}
-          />
-        </div>
-
         <section className="today-tier today-tier-training" aria-labelledby="today-command-title">
           <h2 className="forma-sr-only" id="today-command-title">
             {isRTL ? 'إجراء اليوم' : 'Today’s action'}
@@ -680,45 +606,6 @@ export function TodayView() {
                 </Button>
               </div>
             )}
-          </div>
-        </TodayTier>
-
-        <TodayTier
-          name="fuel"
-          tone="is-emerald"
-          titleId="today-fuel-title"
-          label={isRTL ? 'الوقود اليومي' : 'Daily fuel'}
-        >
-          <div className="today-fuel-grid">
-            <div className="today-fuel-column">
-              <DailyNutritionTargetsCard
-                todayCalories={todayCalories}
-                todayBurnedCalories={todayBurnedCalories}
-                dailyCaloriesTarget={targets.calories}
-                todayProtein={todayProtein}
-                dailyProteinTarget={targets.protein}
-                todayCarbs={todayCarbs}
-                dailyCarbsTarget={targets.carbs}
-                todayFats={todayFats}
-                dailyFatsTarget={targets.fats}
-                onEdit={() => navigate('/nutrition')}
-              />
-            </div>
-
-            <div className="today-hydration-column">
-              <InteractiveHydrationWaveCard
-                todayWater={daily.waterMl}
-                waterGoal={daily.waterTargetMl}
-                onLogWater={(amount) => void handleQuickWater(amount)}
-                onResetWater={() => void handleResetWater()}
-                status={hydrationError ? 'error' : 'ready'}
-                errorMessage={hydrationError || undefined}
-                onRetry={() => {
-                  setHydrationError(null);
-                  setPanelError(null);
-                }}
-              />
-            </div>
           </div>
         </TodayTier>
       </div>

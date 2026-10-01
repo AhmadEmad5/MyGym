@@ -32,6 +32,9 @@ import { SessionEditorModal } from '../components/routines/calendar/SessionEdito
 import { ClearPlannedModal } from '../components/routines/calendar/ClearPlannedModal';
 import type { ClearScope } from '../components/routines/calendar/ClearPlannedModal';
 import { buildTemplateExercises, ensureCardioWarmup } from '../components/routines/calendar/templates';
+import { WorkoutSplitLibraryModal } from '../components/routines/calendar/WorkoutSplitLibraryModal';
+import { WeeklyMuscleVolumeHeatmap } from '../components/routines/calendar/WeeklyMuscleVolumeHeatmap';
+import { buildSplitProgramSessions, type SplitProgram } from '../components/routines/calendar/splitPrograms';
 
 const VALID_TABS: DayTab[] = ['all', 'planned', 'workouts', 'nutrition'];
 
@@ -55,6 +58,8 @@ export function CalendarView() {
   const [isClearOpen, setIsClearOpen] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
+  const [isSplitsModalOpen, setIsSplitsModalOpen] = useState(false);
+  const [selectedHeatmapMuscle, setSelectedHeatmapMuscle] = useState<string | null>(null);
   const [isSavingSession, setIsSavingSession] = useState(false);
   const [sessionSaveFailed, setSessionSaveFailed] = useState(false);
   const addSessionTriggerRef = useRef<HTMLButtonElement>(null);
@@ -131,6 +136,11 @@ export function CalendarView() {
   const plannedSessions = useMemo(
     () => (data?.sessions || []).filter(session => !session.isCompleted),
     [data?.sessions]
+  );
+
+  const weekSessions = useMemo(
+    () => (data?.sessions || []).filter(session => isSameWeek(new Date(session.date), anchor, { weekStartsOn })),
+    [data?.sessions, anchor, weekStartsOn]
   );
 
   const weekPlannedCount = useMemo(
@@ -238,11 +248,21 @@ export function CalendarView() {
       type: 'Strength',
       date: toLocalDateTimeValue(target),
       duration: 60,
-      notes: ''
+      notes: '',
+      exercises: []
     });
     setSessionSaveFailed(false);
     setIsEditorOpen(true);
   }, [today]);
+
+  const openEditorForSession = useCallback((session: WorkoutSession) => {
+    setSessionDraft({
+      ...session,
+      exercises: session.exercises ? [...session.exercises] : []
+    });
+    setSessionSaveFailed(false);
+    setIsEditorOpen(true);
+  }, []);
 
   const handleEditorClose = useCallback(() => {
     setSessionSaveFailed(false);
@@ -362,7 +382,22 @@ export function CalendarView() {
     if (sessions.length === 0) return;
     await saveSessions(sessions);
     notify(isRTL ? `تم إنشاء ${sessions.length} جلسة` : `Generated ${sessions.length} PPL sessions`, 'success');
-  }, [saveSessions]);
+  }, [saveSessions, isRTL]);
+
+  const handleApplySplitProgram = useCallback(
+    async (program: SplitProgram) => {
+      const newSessions = buildSplitProgramSessions(program, weekStart);
+      if (newSessions.length === 0) return;
+      await saveSessions(newSessions);
+      notify(
+        isRTL
+          ? `تم تطبيق جدول "${program.nameAr}" بنجاح (${newSessions.length} جلسات)!`
+          : `Applied "${program.name}" successfully (${newSessions.length} sessions)!`,
+        'success'
+      );
+    },
+    [weekStart, saveSessions, isRTL]
+  );
 
   const repeatWorkout = useCallback((snapshot: WorkoutSession) => {
     let target = addDays(selectedDay, 1);
@@ -430,6 +465,7 @@ export function CalendarView() {
         onModeChange={setMode}
         onAddSession={() => openEditor(selectedDay)}
         onOpenAI={() => setIsAIModalOpen(true)}
+        onOpenSplits={() => setIsSplitsModalOpen(true)}
         onClearPlanned={() => {
           if (plannedSessions.length === 0) {
             notify(isRTL ? 'لا توجد تمارين مجدولة للمسح' : 'No planned workouts to clear', 'info');
@@ -487,6 +523,13 @@ export function CalendarView() {
         onSelectDay={setSelectedDay}
       />
 
+      <WeeklyMuscleVolumeHeatmap
+        sessions={weekSessions}
+        isRTL={isRTL}
+        selectedMuscle={selectedHeatmapMuscle}
+        onSelectMuscle={setSelectedHeatmapMuscle}
+      />
+
       {mode === 'month' && (
         <>
           <MonthLegend isRTL={isRTL} />
@@ -528,6 +571,7 @@ export function CalendarView() {
           formatDate={formatDate}
           onTabChange={setDayTab}
           onOpenSession={id => navigate(`/session/${id}`)}
+          onEditSession={openEditorForSession}
           onComplete={session => void handleComplete(session)}
           onDelete={id => void handleDelete(id)}
           onAddSession={openEditor}
@@ -555,6 +599,7 @@ export function CalendarView() {
           tMuscle={tMuscle}
           t={t}
           onOpenSession={id => navigate(`/session/${id}`)}
+          onEditSession={openEditorForSession}
           onComplete={session => void handleComplete(session)}
           onDelete={id => void handleDelete(id)}
           onAddSession={openEditor}
@@ -616,6 +661,12 @@ export function CalendarView() {
       />
 
       <AIWorkoutGeneratorModal isOpen={isAIModalOpen} onClose={() => setIsAIModalOpen(false)} />
+
+      <WorkoutSplitLibraryModal
+        isOpen={isSplitsModalOpen}
+        onClose={() => setIsSplitsModalOpen(false)}
+        onApplySplit={handleApplySplitProgram}
+      />
     </motion.div>
   );
 }

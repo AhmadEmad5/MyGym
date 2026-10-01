@@ -26,6 +26,7 @@ type DayDetailPanelProps = {
   formatDate: (date: Date | string | number, pattern: string) => string;
   onTabChange: (tab: DayTab) => void;
   onOpenSession: (id: string) => void;
+  onEditSession: (session: WorkoutSession) => void;
   onComplete: (session: WorkoutSession) => void;
   onDelete: (id: string) => void;
   onAddSession: (day: Date) => void;
@@ -56,6 +57,7 @@ export function DayDetailPanel(props: DayDetailPanelProps) {
     formatDate,
     onTabChange,
     onOpenSession,
+    onEditSession,
     onComplete,
     onDelete,
     onAddSession,
@@ -216,6 +218,7 @@ export function DayDetailPanel(props: DayDetailPanelProps) {
             tMuscle={tMuscle}
             formatDate={formatDate}
             onOpenSession={onOpenSession}
+            onEditSession={onEditSession}
             onComplete={onComplete}
             onDelete={onDelete}
             onAddSession={onAddSession}

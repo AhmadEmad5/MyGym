@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Check, Clock, Dumbbell, Plus, Trash2 } from 'lucide-react';
+import { Check, Clock, Dumbbell, Pencil, Plus, Trash2 } from 'lucide-react';
 import type { WorkoutSession } from '../../../lib/api';
 import { sessionAccent, targetMusclesText } from './calendarData';
 import { Stagger, StaggerItem } from '../../motion/Stagger';
@@ -15,6 +15,7 @@ type PlanListViewProps = {
   tMuscle: (muscle: string) => string;
   t: (key: any) => string;
   onOpenSession: (id: string) => void;
+  onEditSession: (session: WorkoutSession) => void;
   onComplete: (session: WorkoutSession) => void;
   onDelete: (id: string) => void;
   onAddSession: (day: Date) => void;
@@ -29,6 +30,7 @@ export function PlanListView({
   tMuscle,
   t,
   onOpenSession,
+  onEditSession,
   onComplete,
   onDelete,
   onAddSession
@@ -120,6 +122,14 @@ export function PlanListView({
                             </span>
                           </button>
                           <div className="calendar-plan-row-actions">
+                            <button
+                              type="button"
+                              className="btn-card-action edit-action"
+                              onClick={() => onEditSession(session)}
+                              aria-label={`${t('editSession') || t('edit')} — ${session.title}`}
+                            >
+                              <Pencil width={15} height={15} aria-hidden="true" />
+                            </button>
                             <button
                               type="button"
                               className="btn-card-action complete-action"

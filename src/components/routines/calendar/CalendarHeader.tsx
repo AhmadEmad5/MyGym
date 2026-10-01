@@ -1,4 +1,4 @@
-import { CalendarDays, ChevronLeft, ChevronRight, LayoutGrid, List, Plus, Rows3, Sparkles, Trash2 } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, LayoutGrid, Layers, List, Plus, Rows3, Sparkles, Trash2 } from 'lucide-react';
 
 export type CalendarMode = 'week' | 'month' | 'list';
 
@@ -23,6 +23,7 @@ type CalendarHeaderProps = {
   onAddSession: () => void;
   onOpenAI: () => void;
   onClearPlanned: () => void;
+  onOpenSplits?: () => void;
 };
 
 export function CalendarHeader({
@@ -39,7 +40,8 @@ export function CalendarHeader({
   onModeChange,
   onAddSession,
   onOpenAI,
-  onClearPlanned
+  onClearPlanned,
+  onOpenSplits
 }: CalendarHeaderProps) {
   return (
     <header className="calendar-page-header">
@@ -104,6 +106,22 @@ export function CalendarHeader({
       </div>
 
       <div className="calendar-page-header-actions">
+        {onOpenSplits && (
+          <button
+            type="button"
+            className="calendar-action-btn is-splits"
+            onClick={onOpenSplits}
+            style={{
+              background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.16) 0%, rgba(168, 85, 247, 0.14) 100%)',
+              border: '1px solid rgba(56, 189, 248, 0.4)',
+              color: '#38bdf8',
+              fontWeight: 700
+            }}
+          >
+            <Layers width={15} height={15} aria-hidden="true" />
+            <span>{isRTL ? 'مكتبة الجداول' : 'Split Templates'}</span>
+          </button>
+        )}
         <button
           type="button"
           className="calendar-action-btn is-danger"
