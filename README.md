@@ -49,9 +49,9 @@
       <img src="docs/screenshots/routines-3d-carousel.png" alt="Routines 3D Carousel" width="100%" />
     </td>
     <td width="50%" align="center">
-      <h3>✨ Interactive Glowing Bento Grid (RTL)</h3>
+      <h3>✨ Interactive Glowing Bento Grid</h3>
       <p><em>Cursor-following <code>GlowingEffect</code> lasers, fuel meters & recovery readiness.</em></p>
-      <img src="docs/screenshots/today-bento-glowing.png" alt="Interactive Bento Grid Arabic RTL" width="100%" />
+      <img src="docs/screenshots/today-bento-glowing.png" alt="Interactive Glowing Bento Grid" width="100%" />
     </td>
   </tr>
 </table>
