@@ -4,6 +4,11 @@
    `ui-empty-state-compact` and `ui-skeleton-*` names without touching the
    canonical token file.
 
+   Lives in @layer features. It was unlayered, and being unlayered was how it
+   outranked the base declarations of those same classes in design-tokens.css
+   (`@layer components`); `features` is declared after `components` in
+   src/index.css, so the precedence holds without relying on load order.
+
    Rules of this file:
    - Colour is always `var(--token)`. No literal hex, no rgba() of our own.
      Every theme in design-tokens.css therefore restyles this layer for free.
@@ -15,6 +20,8 @@
    - All positioning is logical (`inset-inline-*`), so `dir="rtl"` flips the
      anchor and the arrow without a second rule set.
    ========================================================================== */
+
+@layer features {
 
 /* --------------------------------------------------------------------------
    Hint — 44px thumb target, panel portalled to <body> so `.content-area`
@@ -393,4 +400,6 @@ html[data-motion="reduced"] .ui-card:focus-visible {
 html[data-motion="reduced"] .ui-skeleton {
   animation: none;
   background: var(--surface-card);
+}
+
 }

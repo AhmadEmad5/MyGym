@@ -4,6 +4,7 @@ import { Calculator, Check, Sparkles, Flame, Dumbbell, Target, Droplet } from 'l
 import { useData } from '../hooks/useData';
 import { useTranslation } from '../lib/i18n';
 import { calculateBMR, calculateTDEE, NutritionGoals } from '../lib/api';
+import { convertWeight, type WeightUnit } from '../lib/weights';
 import { ModalShell, InlineNumberField, FieldError, PrimaryAction, SecondaryAction } from './AIMealVisionModal';
 
 const GENDERS = ['male', 'female'] as const;
@@ -16,39 +17,63 @@ interface TDEECalculatorModalProps {
 
 const LIMITS = {
   age: { min: 12, max: 99 },
-  weightKg: { min: 25, max: 300 },
   heightCm: { min: 120, max: 240 }
 };
+
+/** Authored in kg and projected into the on-screen unit, so a single clamp range
+ *  governs either display unit instead of silently allowing 300 lb. */
+const WEIGHT_LIMIT_KG = { min: 25, max: 300 };
+const DEFAULT_WEIGHT_KG = 75;
 
 export function TDEECalculatorModal({ isOpen, onClose }: TDEECalculatorModalProps) {
   const { data, updateNutritionGoals } = useData();
   const { t, isRTL } = useTranslation();
 
-  const latestWeight = data?.bodyMetrics?.[0]?.weight || 75;
+  const weightUnit: WeightUnit = data?.settings?.weightUnit === 'lb' ? 'lb' : 'kg';
+
+  const latestMetric = data?.bodyMetrics?.[0];
+  /**
+   * A body metric carries its own unit: the settings migration rewrites session
+   * and routine sets but leaves `bodyMetrics` alone, so the newest entry can
+   * still be stored in the unit the user has since switched away from. Seed the
+   * field from the metric's own unit, not from `settings.weightUnit`.
+   */
+  const seedWeight = convertWeight(
+    latestMetric?.weight || DEFAULT_WEIGHT_KG,
+    latestMetric?.unit || weightUnit,
+    weightUnit,
+  );
 
   const [gender, setGender] = useState<'male' | 'female'>('male');
   const [age, setAge] = useState('26');
   const [heightCm, setHeightCm] = useState('175');
-  const [weightKg, setWeightKg] = useState(String(latestWeight));
+  const [weightInput, setWeightInput] = useState(String(seedWeight));
   const [activityMultiplier, setActivityMultiplier] = useState('1.55');
   const [goal, setGoal] = useState<'cut' | 'maintain' | 'bulk'>('maintain');
   const [isApplied, setIsApplied] = useState(false);
   const [errors, setErrors] = useState<{ age?: string; weight?: string; height?: string }>({});
 
+  const weightMin = convertWeight(WEIGHT_LIMIT_KG.min, 'kg', weightUnit);
+  const weightMax = convertWeight(WEIGHT_LIMIT_KG.max, 'kg', weightUnit);
+
   const ageNum = Math.min(LIMITS.age.max, Math.max(LIMITS.age.min, Number(age) || LIMITS.age.min));
-  const weightNum = Math.min(LIMITS.weightKg.max, Math.max(LIMITS.weightKg.min, Number(weightKg) || 70));
+  const weightNum = Math.min(weightMax, Math.max(weightMin, Number(weightInput) || seedWeight));
   const heightNum = Math.min(LIMITS.heightCm.max, Math.max(LIMITS.heightCm.min, Number(heightCm) || 170));
   const activityNum = Number(activityMultiplier) || 1.55;
 
+  // The field is edited in the user's unit; Mifflin-St Jeor and the water target
+  // are both defined per kilogram, so convert once at the boundary.
+  const weightKg = convertWeight(weightNum, weightUnit, 'kg');
+
   const calculation = useMemo(() => {
-    const bmr = calculateBMR(gender, weightNum, heightNum, ageNum);
+    const bmr = calculateBMR(gender, weightKg, heightNum, ageNum);
     const macroPlan = calculateTDEE(bmr, activityNum, goal);
     return {
       bmr,
       ...macroPlan,
-      water: Math.max(2000, Math.round(weightNum * 35))
+      water: Math.max(2000, Math.round(weightKg * 35))
     };
-  }, [gender, weightNum, heightNum, ageNum, activityNum, goal]);
+  }, [gender, weightKg, heightNum, ageNum, activityNum, goal]);
 
   const finalGoals: NutritionGoals = useMemo(() => ({
     dailyCalories: calculation.calories,
@@ -61,7 +86,7 @@ export function TDEECalculatorModal({ isOpen, onClose }: TDEECalculatorModalProp
   const handleApply = async () => {
     const next: typeof errors = {};
     if (!age) next.age = isRTL ? 'العمر مطلوب' : 'Age is required';
-    if (!weightKg) next.weight = isRTL ? 'الوزن مطلوب' : 'Weight is required';
+    if (!weightInput) next.weight = isRTL ? 'الوزن مطلوب' : 'Weight is required';
     if (!heightCm) next.height = isRTL ? 'الطول مطلوب' : 'Height is required';
     setErrors(next);
     if (Object.keys(next).length > 0) return;
@@ -182,15 +207,18 @@ export function TDEECalculatorModal({ isOpen, onClose }: TDEECalculatorModalProp
         </div>
 
         <div>
-          <label htmlFor="tdee-weight" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>{t('weightKg')}</label>
+          <label htmlFor="tdee-weight" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.3rem' }}>
+            {weightUnit === 'lb' ? t('weightLb') : t('weightKg')}
+          </label>
           <InlineNumberField
             id="tdee-weight"
             label=""
-            value={weightKg}
-            onChange={value => { setWeightKg(value); if (errors.weight) setErrors(prev => ({ ...prev, weight: undefined })); }}
+            value={weightInput}
+            onChange={value => { setWeightInput(value); if (errors.weight) setErrors(prev => ({ ...prev, weight: undefined })); }}
             inputMode="decimal"
-            min={LIMITS.weightKg.min}
-            max={LIMITS.weightKg.max}
+            suffix={weightUnit}
+            min={weightMin}
+            max={weightMax}
             accent="#43dcff"
             invalid={Boolean(errors.weight)}
             describedBy={errors.weight ? 'tdee-weight-error' : undefined}

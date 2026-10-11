@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Check, Clock, Dumbbell, Pencil, Plus, Trash2 } from 'lucide-react';
 import type { WorkoutSession } from '../../../lib/api';
+import { isRestDay, type RestDaySource } from '../../../lib/restDay';
 import { sessionAccent, targetMusclesText } from './calendarData';
 import { Stagger, StaggerItem } from '../../motion/Stagger';
 import { useReducedMotion } from '../../performance/useReducedMotion';
@@ -9,6 +10,7 @@ import { MOTION_DISTANCE, MOTION_DURATION, MOTION_SCALE, resolveTransition } fro
 type PlanListViewProps = {
   isRTL: boolean;
   today: Date;
+  restDaySettings?: RestDaySource;
   groups: { day: Date; sessions: WorkoutSession[] }[];
   formatDate: (date: Date | string | number, pattern: string) => string;
   tTitle: (name: string) => string;
@@ -24,6 +26,7 @@ type PlanListViewProps = {
 export function PlanListView({
   isRTL,
   today,
+  restDaySettings,
   groups,
   formatDate,
   tTitle,
@@ -51,7 +54,7 @@ export function PlanListView({
         {groups.map((group, groupIndex) => {
           const isToday = group.day.toDateString() === today.toDateString();
           const isPast = group.day < today && !isToday;
-          const isRest = group.day.getDay() === 5;
+          const isRest = isRestDay(group.day, restDaySettings);
 
           return (
             <StaggerItem

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import React, { useMemo, useState, useEffect, useRef, memo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Dumbbell, Clock, Plus } from 'lucide-react';
@@ -7,12 +7,13 @@ import { useData } from '../hooks/useData';
 import { useActiveCardio } from '../hooks/useActiveCardio';
 import { useTranslation } from '../lib/i18n';
 import { gymAudio } from '../lib/audio';
+import { isRestDay } from '../lib/restDay';
 import { useWorkoutTimer, workoutTimer } from '../lib/workoutTimer';
 import { useReducedMotion } from './performance/useReducedMotion';
 
 const BAR_INSET = 'max(0.75rem, var(--shell-safe-inline-start, 0px))';
 
-export function DynamicLiveWorkoutBar() {
+function DynamicLiveWorkoutBarBase() {
   const { data } = useData();
   const { activeCardio, remainingSeconds } = useActiveCardio();
   const { t, isRTL, tTitle, tExercise } = useTranslation();
@@ -23,10 +24,42 @@ export function DynamicLiveWorkoutBar() {
 
   const isInSession = location.pathname.startsWith('/session/');
 
+  const [isCompact, setIsCompact] = useState(false);
+  const lastScrollY = useRef(0);
+  const timeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const scroller = document.querySelector('.content-area');
+    if (!scroller) return;
+
+    const handleScroll = () => {
+      const currentY = scroller.scrollTop;
+      const diff = currentY - lastScrollY.current;
+
+      if (diff > 12 && currentY > 60) {
+        setIsCompact(true);
+      } else if (diff < -8 || currentY <= 30) {
+        setIsCompact(false);
+      }
+      lastScrollY.current = currentY;
+
+      if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current);
+      timeoutRef.current = window.setTimeout(() => {
+        setIsCompact(false);
+      }, 2000);
+    };
+
+    scroller.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      scroller.removeEventListener('scroll', handleScroll);
+      if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
   const activeSession = useMemo(() => {
     if (!data?.sessions) return null;
     const today = new Date();
-    if (today.getDay() === 5) return null;
+    if (isRestDay(today, { restDay: data?.settings?.restDay })) return null;
 
     const uncompletedToday = data.sessions.filter(
       s => isSameDay(new Date(s.date), today) && !s.isCompleted
@@ -39,7 +72,7 @@ export function DynamicLiveWorkoutBar() {
     );
 
     return inProgress || uncompletedToday[0];
-  }, [data?.sessions]);
+  }, [data?.sessions, data?.settings?.restDay]);
 
   // Both global bars claim the same fixed slot at the top of the viewport, so
   // they must never be on screen together: the cardio timer owns the slot while
@@ -138,7 +171,13 @@ export function DynamicLiveWorkoutBar() {
               willChange: 'transform, opacity',
               contain: 'layout paint'
             }}
-            onClick={handleResume}
+            onClick={() => {
+              if (isCompact) {
+                setIsCompact(false);
+              } else {
+                handleResume();
+              }
+            }}
             onKeyDown={(event) => {
               // The bar is tappable end-to-end, so it needs a keyboard
               // equivalent. Role stays `complementary` so the nested rest-timer
@@ -193,6 +232,16 @@ export function DynamicLiveWorkoutBar() {
                 </div>
               )}
 
+{isCompact ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', minWidth: 0, paddingInline: '0.15rem' }}>
+                <span className="tabular-nums" style={{ fontSize: '0.82rem', fontWeight: 800, color: isRestTimerActive ? 'var(--success)' : 'var(--accent-primary)' }}>
+                  {isRestTimerActive ? formattedRest : `${progressPercent}%`}
+                </span>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                  {isRestTimerActive ? (isRTL ? 'راحة' : 'Rest') : (isRTL ? 'تمرين' : 'Live')}
+                </span>
+              </div>
+            ) : (
               <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column' }}>
                 {isRestTimerActive ? (
                   <>
@@ -219,8 +268,8 @@ export function DynamicLiveWorkoutBar() {
                   </>
                 )}
               </div>
+            )}
             </div>
-
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
               {isRestTimerActive && (
                 <button
@@ -285,4 +334,5 @@ export function DynamicLiveWorkoutBar() {
   );
 }
 
+export const DynamicLiveWorkoutBar = memo(DynamicLiveWorkoutBarBase);
 export default DynamicLiveWorkoutBar;

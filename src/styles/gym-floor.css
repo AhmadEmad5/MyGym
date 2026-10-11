@@ -1,6 +1,18 @@
 /* ==========================================================================
    FORMA Mobile Gym Floor Mode & Athlete Ergonomics
+   ==========================================================================
+
+   Lives in @layer features. It was unlayered, which made it outrank every
+   `@layer components` block in index.css / design-tokens.css / today.css /
+   performance.css / routines.css. `features` sits above `components` and
+   `utilities` in the order declared at the top of src/index.css, so that
+   precedence is preserved deliberately rather than by accident of load order.
+
+   The dock rules in the block below that size `.modern-nav-wrapper` and
+   `.modern-navbar` moved to @layer shell - see src/styles/shell.css section 3.
    ========================================================================== */
+
+@layer features {
 
 button, input {
   touch-action: manipulation;
@@ -79,7 +91,7 @@ button, input {
 
 .gym-floor-check-circle.completed {
   background: linear-gradient(135deg, var(--accent-emerald) 0%, color-mix(in srgb, var(--accent-emerald) 72%, rgb(0 0 0)) 100%);
-  color: #ffffff;
+  color: var(--text-on-accent-deep);
   box-shadow: 0 0 20px rgba(16, 185, 129, 0.55);
   border: none;
 }
@@ -144,7 +156,7 @@ button, input {
 
 .gym-floor-set-row.is-complete .gym-floor-set-index {
   background: var(--color-success);
-  color: #ffffff;
+  color: var(--text-on-accent-deep);
 }
 
 .gym-floor-set-detail {
@@ -203,7 +215,7 @@ button, input {
   padding: 0.6rem 0.8rem;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  background: color-mix(in srgb, #000 28%, transparent);
+  background: color-mix(in srgb, rgb(0 0 0) 28%, transparent);
 }
 
 .gym-floor-input-value {
@@ -290,6 +302,16 @@ button, input {
 
   .forma-route-today .forma-page-frame {
     padding-top: 0.5rem !important;
+  }
+
+  .today-desktop-section {
+    display: none !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .today-mobile-section {
+    display: none !important;
   }
 }
 
@@ -443,7 +465,7 @@ button, input {
   border: 0;
   border-radius: 16px;
   background: linear-gradient(135deg, var(--accent-emerald) 0%, color-mix(in srgb, var(--accent-emerald) 72%, rgb(0 0 0)) 100%);
-  color: #ffffff;
+  color: var(--text-on-accent-deep);
   font: inherit;
   font-size: 1rem;
   font-weight: 900;
@@ -502,7 +524,7 @@ button, input {
   padding: 0.7rem;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
-  background: color-mix(in srgb, #000 22%, transparent);
+  background: color-mix(in srgb, rgb(0 0 0) 22%, transparent);
   list-style: none;
 }
 
@@ -751,33 +773,8 @@ button.mobile-vital-tile:disabled {
    Mobile-First Header & Today View Modernization
    ========================================================================== */
 @media (max-width: 900px) {
-  .modern-nav-wrapper {
-    position: fixed !important;
-    bottom: max(14px, env(safe-area-inset-bottom, 0px)) !important;
-    inset-inline: 0 !important;
-    padding: 0 1rem !important;
-    display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-    z-index: 1050 !important;
-    pointer-events: none !important;
-  }
-
-  .modern-navbar {
-    pointer-events: auto !important;
-    width: 100% !important;
-    max-width: 410px !important;
-    height: 64px !important;
-    min-height: 64px !important;
-    border-radius: 9999px !important;
-    background: rgba(14, 22, 34, 0.78) !important;
-    backdrop-filter: blur(28px) saturate(190%) !important;
-    -webkit-backdrop-filter: blur(28px) saturate(190%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
-    padding: 0.25rem 0.5rem !important;
-    margin: 0 auto !important;
-  }
+  /* `.modern-nav-wrapper` and `.modern-navbar` moved to @layer shell -
+     see src/styles/shell.css section 3. */
 
   .modern-nav-links.mobile-only-nav {
     display: grid !important;
@@ -820,16 +817,16 @@ button.mobile-vital-tile:disabled {
   /* Active Tab Aura Glow (Exact match to Today in Mockup) */
   .modern-nav-item.is-active {
     background: radial-gradient(circle at center, rgba(56, 189, 248, 0.28) 0%, rgba(16, 185, 129, 0.14) 55%, transparent 80%) !important;
-    color: #38bdf8 !important;
+    color: var(--accent-cyan) !important;
   }
 
   .modern-nav-item.is-active .nav-icon {
-    color: #38bdf8 !important;
+    color: var(--accent-cyan) !important;
     filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.65)) !important;
   }
 
   .modern-nav-item.is-active .nav-short-label {
-    color: #38bdf8 !important;
+    color: var(--accent-cyan) !important;
     font-weight: 700 !important;
   }
 
@@ -873,7 +870,7 @@ button.mobile-vital-tile:disabled {
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #fbbf24;
+  color: var(--color-warning-ink);
   background: rgba(245, 158, 11, 0.2);
   padding: 0.18rem 0.45rem;
   border-radius: 6px;
@@ -882,11 +879,11 @@ button.mobile-vital-tile:disabled {
 .gym-floor-ghost-stat {
   font-size: 0.88rem;
   font-weight: 700;
-  color: #fef3c7;
+  color: var(--text-primary);
 }
 
 .gym-floor-ghost-stat strong {
-  color: #fbbf24;
+  color: var(--color-warning-ink);
   font-size: 0.95rem;
 }
 
@@ -896,8 +893,8 @@ button.mobile-vital-tile:disabled {
   gap: 0.35rem;
   padding: 0.35rem 0.75rem;
   border-radius: 8px;
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-  color: #1a0f00;
+  background: linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-amber-deep) 100%);
+  color: var(--text-on-accent);
   border: none;
   font-size: 0.76rem;
   font-weight: 800;
@@ -914,8 +911,8 @@ button.mobile-vital-tile:disabled {
 }
 
 .gym-floor-ghost-copy-btn.is-copied {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: #ffffff;
+  background: linear-gradient(135deg, var(--accent-emerald) 0%, var(--accent-emerald-deep) 100%);
+  color: var(--text-on-accent-deep);
   box-shadow: 0 2px 12px rgba(16, 185, 129, 0.45);
 }
 
@@ -927,7 +924,7 @@ button.mobile-vital-tile:disabled {
   border-radius: 6px;
   background: rgba(245, 158, 11, 0.14);
   border: 1px dashed rgba(245, 158, 11, 0.45);
-  color: #fbbf24;
+  color: var(--color-warning-ink);
   font-size: 0.72rem;
   font-weight: 700;
   margin-top: 0.35rem;
@@ -947,7 +944,7 @@ button.mobile-vital-tile:disabled {
   gap: 0.25rem;
   font-size: 0.74rem;
   font-weight: 700;
-  color: #f59e0b;
+  color: var(--accent-amber);
   background: rgba(245, 158, 11, 0.14);
   border: 1px solid rgba(245, 158, 11, 0.3);
   padding: 0.18rem 0.45rem;
@@ -964,15 +961,140 @@ button.mobile-vital-tile:disabled {
   justify-content: center;
   background: rgba(245, 158, 11, 0.15);
   border: 1px solid rgba(245, 158, 11, 0.35);
-  color: #fbbf24;
+  color: var(--color-warning-ink);
   cursor: pointer;
   flex-shrink: 0;
   transition: all 0.15s ease;
 }
 
+/* ==========================================================================
+   Gym Floor — Muscle filter ribbon and exercise stepper classes
+   ========================================================================== */
+.muscle-filter-pill {
+  min-height: 48px;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  font-weight: 700;
+  border: 1px solid var(--premium-line);
+  background: transparent;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  cursor: pointer;
+  flex-shrink: 0;
+  scroll-snap-align: start;
+  touch-action: manipulation;
+  transition: border-color var(--motion-fast) var(--ease-standard),
+              background-color var(--motion-fast) var(--ease-standard),
+              color var(--motion-fast) var(--ease-standard);
+}
+
+.muscle-filter-pill:hover {
+  border-color: var(--border-highlight);
+  color: var(--text-primary);
+}
+
+.muscle-filter-pill[aria-pressed="true"],
+.muscle-filter-pill.is-active {
+  border-color: var(--accent-primary);
+  background: color-mix(in srgb, var(--accent-primary) 18%, transparent);
+  color: var(--accent-primary);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent-primary) 22%, transparent);
+}
+
+.exercise-stepper-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 56px;
+  padding: 0.6rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--premium-line);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+  scroll-snap-align: start;
+  touch-action: manipulation;
+  transition: transform var(--motion-fast) var(--ease-standard),
+              border-color var(--motion-fast) var(--ease-standard),
+              background var(--motion-fast) var(--ease-standard),
+              color var(--motion-fast) var(--ease-standard);
+}
+
+.exercise-stepper-item:hover {
+  border-color: var(--border-highlight);
+  color: var(--text-primary);
+}
+
+.exercise-stepper-item.is-selected {
+  border: 1.5px solid var(--accent-primary);
+  background: color-mix(in srgb, var(--accent-primary) 22%, transparent);
+  color: var(--text-primary);
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--accent-primary) 20%, transparent);
+}
+
+.exercise-stepper-item.is-done {
+  border: 1px solid color-mix(in srgb, var(--success) 40%, transparent);
+  background: color-mix(in srgb, var(--success) 10%, transparent);
+  color: var(--success);
+}
+
+.exercise-stepper-badge {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  transition: background var(--motion-fast) var(--ease-standard),
+              color var(--motion-fast) var(--ease-standard);
+}
+
+.exercise-stepper-badge.is-selected {
+  background: var(--accent-primary);
+  color: #04121b;
+}
+
+.exercise-stepper-badge.is-done {
+  background: var(--success);
+  color: #04121b;
+}
+
+
 .gym-floor-compact-copy-btn:active {
   transform: scale(0.9);
   background: rgba(245, 158, 11, 0.3);
+}
+
+@keyframes meteor {
+  0% {
+    transform: rotate(215deg) translateX(0);
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(215deg) translateX(-500px);
+    opacity: 0;
+  }
+}
+.animate-meteor-effect {
+  animation: meteor 5s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-meteor-effect {
+    animation: none;
+    display: none;
+  }
+}
+
 }
 
 

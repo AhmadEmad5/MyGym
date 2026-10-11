@@ -1,11 +1,10 @@
 import { motion } from 'framer-motion';
 import {
   Flame,
-  TrendingDown,
   TrendingUp,
   Calculator,
   Plus,
-  Scale
+  CheckCircle2
 } from 'lucide-react';
 import { useTranslation } from '../../lib/i18n';
 import { DEFAULT_NUTRITION_TARGETS } from '../../lib/api';
@@ -40,67 +39,54 @@ export function CalorieBalanceDial({
   const { isRTL } = useTranslation();
 
   const safeTarget = dailyCaloriesTarget > 0 ? dailyCaloriesTarget : DEFAULT_NUTRITION_TARGETS.calories;
-  // Total Expended = Base metabolic budget + workout calories burned
   const totalExpended = safeTarget + todayBurnedCalories;
-  // Net Balance = Consumed - Expended
-  const netBalance = Math.round(todayCalories - totalExpended);
-  // Remaining to target budget
   const remainingBudget = Math.round(safeTarget - todayCalories);
+  const isOverTarget = remainingBudget < 0;
 
-  // States
-  const isDeficit = netBalance < -80;
-  const isSurplus = netBalance > 80;
+  // Progress from 0 (0 kcal) to 1.0 (100% of target at right end of dial)
+  const progressRatio = safeTarget > 0 ? Math.max(0, todayCalories / safeTarget) : 0;
+  const clampedProgress = Math.min(1, progressRatio);
 
-  const statusTheme = isDeficit
-    ? {
-        label: isRTL ? 'عجز سعرات (حرق دهون)' : 'Caloric Deficit (Fat Loss)',
-        color: '#10b981',
-        glow: 'rgba(16, 185, 129, 0.35)',
-        icon: TrendingDown,
-        badgeBg: 'rgba(16, 185, 129, 0.16)',
-        badgeBorder: 'rgba(16, 185, 129, 0.35)'
-      }
-    : isSurplus
-      ? {
-          label: isRTL ? 'فائض سعرات (بناء عضلي)' : 'Caloric Surplus (Muscle Mass)',
-          color: '#f59e0b',
-          glow: 'rgba(245, 158, 11, 0.35)',
-          icon: TrendingUp,
-          badgeBg: 'rgba(245, 158, 11, 0.16)',
-          badgeBorder: 'rgba(245, 158, 11, 0.35)'
-        }
-      : {
-          label: isRTL ? 'توازن وثبات وزني' : 'Energy Equilibrium',
-          color: '#38bdf8',
-          glow: 'rgba(56, 189, 248, 0.35)',
-          icon: Scale,
-          badgeBg: 'rgba(56, 189, 248, 0.16)',
-          badgeBorder: 'rgba(56, 189, 248, 0.35)'
-        };
+  // SVG Gauge Geometry:
+  // Radius: 95, Center: (120, 130)
+  // Arc spans 160°: from -80° (Left, 0%) to +80° (Right, 100% / End of count)
+  // Start: (26.44, 113.5), End: (213.56, 113.5)
+  const radius = 95;
+  const arcLength = radius * (160 * Math.PI / 180); // ~265.29
 
-  // Dial calculations for semi-circular gauge (180 degrees)
-  // Radius: 85, Arc length: PI * 85 ~= 267
-  const radius = 80;
-  const circumference = Math.PI * radius;
-  // Intake ratio (0 to 1)
-  const intakeRatio = Math.min(1.5, Math.max(0, todayCalories / safeTarget));
-  // Stroke dash offset
-  const strokeOffset = circumference - Math.min(1, intakeRatio) * circumference;
+  // Needle angle sweeps from -80° to +80°:
+  // At 0 kcal => -80°
+  // At 50% => 0° (top center)
+  // At 100% (target) => +80° (right end - نهاية العد!)
+  const needleAngle = -80 + (clampedProgress * 160);
 
-  // Pointer needle angle (-90 deg to +90 deg, 0 is center balance)
-  // Mapping net balance from -800 to +800 into -75 to +75 degrees
-  const clampedNet = Math.max(-800, Math.min(800, netBalance));
-  const needleAngle = (clampedNet / 800) * 75;
+  // Stroke offset: 0% = arcLength, 100% = 0
+  const strokeOffset = arcLength * (1 - clampedProgress);
+
+  // Palette & Status
+  const statusColor = isOverTarget
+    ? '#f43f5e'
+    : progressRatio >= 0.95
+      ? '#10b981'
+      : progressRatio >= 0.5
+        ? '#06b6d4'
+        : '#38bdf8';
+
+  const statusGlow = isOverTarget
+    ? 'rgba(244, 63, 94, 0.4)'
+    : progressRatio >= 0.95
+      ? 'rgba(16, 185, 129, 0.4)'
+      : 'rgba(56, 189, 248, 0.4)';
 
   return (
     <section
       className="calorie-balance-dial-card"
       style={{
         background: 'linear-gradient(145deg, rgba(16, 24, 42, 0.95) 0%, rgba(10, 15, 26, 0.98) 100%)',
-        border: `1.5px solid ${statusTheme.color}40`,
+        border: `1.5px solid ${statusColor}40`,
         borderRadius: '24px',
         padding: '1.25rem 1.45rem',
-        boxShadow: `0 16px 36px -10px rgba(0, 0, 0, 0.6), 0 0 35px -18px ${statusTheme.glow}`,
+        boxShadow: `0 16px 36px -10px rgba(0, 0, 0, 0.6), 0 0 35px -18px ${statusGlow}`,
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
         display: 'flex',
@@ -108,33 +94,33 @@ export function CalorieBalanceDial({
         gap: '1rem',
         boxSizing: 'border-box'
       }}
-      aria-label={isRTL ? 'مؤشر توازن السعرات والطاقة' : 'Calorie and energy balance dial'}
+      aria-label={isRTL ? 'مؤشر السعرات والهدف اليومي' : 'Daily Calorie and Goal Dial'}
     >
       {/* Header */}
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
           <span
             style={{
-              width: 34,
-              height: 34,
-              borderRadius: '10px',
-              background: `${statusTheme.color}22`,
-              border: `1px solid ${statusTheme.color}55`,
+              width: 36,
+              height: 36,
+              borderRadius: '11px',
+              background: `${statusColor}22`,
+              border: `1px solid ${statusColor}55`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: statusTheme.color,
+              color: statusColor,
               flexShrink: 0
             }}
           >
-            <Flame size={17} aria-hidden="true" />
+            <Flame size={18} aria-hidden="true" />
           </span>
           <div>
-            <h3 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-              {isRTL ? 'مؤشر توازن الطاقة والسعرات' : 'Energy Balance Dial'}
+            <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+              {isRTL ? 'مؤشر السعرات والهدف اليومي' : 'Daily Calorie Dial'}
             </h3>
             <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-              {isRTL ? 'المتناول مقابل المستهلك مع التمارين' : 'Intake vs Total Energy Expenditure'}
+              {isRTL ? 'تتبع تقدم الوجبات نحو هدف اليوم' : 'Track intake progression toward daily goal'}
             </span>
           </div>
         </div>
@@ -149,7 +135,7 @@ export function CalorieBalanceDial({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.25rem',
-                padding: '0.35rem 0.65rem',
+                padding: '0.35rem 0.7rem',
                 borderRadius: '8px',
                 background: 'rgba(16, 185, 129, 0.14)',
                 border: '1px solid rgba(16, 185, 129, 0.35)',
@@ -173,7 +159,7 @@ export function CalorieBalanceDial({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.25rem',
-                padding: '0.35rem 0.65rem',
+                padding: '0.35rem 0.7rem',
                 borderRadius: '8px',
                 background: 'rgba(56, 189, 248, 0.1)',
                 border: '1px solid rgba(56, 189, 248, 0.3)',
@@ -190,99 +176,164 @@ export function CalorieBalanceDial({
         </div>
       </header>
 
-      {/* Main Gauge Visual + Net Number */}
+      {/* Main Gauge Visual + Center Number */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
-        <div style={{ position: 'relative', width: '220px', height: '125px', overflow: 'hidden' }}>
+        <div style={{ position: 'relative', width: '260px', height: '150px', overflow: 'hidden' }}>
           <svg
-            viewBox="0 0 200 115"
+            viewBox="0 0 240 145"
             style={{ width: '100%', height: '100%' }}
             aria-hidden="true"
           >
             <defs>
-              <linearGradient id="dialTrackGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <linearGradient id="calorieDialGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                 <stop offset="0%" stopColor="#10b981" />
-                <stop offset="50%" stopColor="#38bdf8" />
-                <stop offset="100%" stopColor="#f59e0b" />
+                <stop offset="50%" stopColor="#06b6d4" />
+                <stop offset="85%" stopColor="#38bdf8" />
+                <stop offset="100%" stopColor={isOverTarget ? '#f43f5e' : '#10b981'} />
               </linearGradient>
 
-              <filter id="dialGlow" x="-20%" y="-20%" width="140%" height="140%">
-                <feGaussianBlur stdDeviation="3" result="blur" />
+              <filter id="dialGlowFilter" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="3.5" result="blur" />
                 <feComposite in="SourceGraphic" in2="blur" operator="over" />
               </filter>
             </defs>
 
             {/* Background semi-circular track */}
             <path
-              d="M 20,105 A 80,80 0 0,1 180,105"
+              d="M 26.44,113.5 A 95,95 0 0,1 213.56,113.5"
               fill="none"
-              stroke="rgba(255, 255, 255, 0.1)"
-              strokeWidth="12"
+              stroke="rgba(255, 255, 255, 0.08)"
+              strokeWidth="14"
               strokeLinecap="round"
             />
 
-            {/* Active filled arc */}
-            <path
-              d="M 20,105 A 80,80 0 0,1 180,105"
-              fill="none"
-              stroke="url(#dialTrackGrad)"
-              strokeWidth="12"
-              strokeLinecap="round"
-              strokeDasharray={circumference}
-              strokeDashoffset={strokeOffset}
-              filter="url(#dialGlow)"
-              style={{ transition: 'stroke-dashoffset 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+            {/* Scale Markers: 0 at start, 50% at top, 100% Goal at the end */}
+            <text x="24" y="132" textAnchor="middle" fill="#64748b" fontSize="8" fontWeight="700">0%</text>
+            <text x="120" y="24" textAnchor="middle" fill="#64748b" fontSize="7.5" fontWeight="700">50%</text>
+            <text x="214" y="132" textAnchor="middle" fill={clampedProgress >= 1 ? '#10b981' : '#64748b'} fontSize="8" fontWeight="800">
+              100%
+            </text>
+            <text x="214" y="142" textAnchor="middle" fill={clampedProgress >= 1 ? '#10b981' : '#38bdf8'} fontSize="7" fontWeight="800">
+              {isRTL ? 'الهدف' : 'GOAL'}
+            </text>
+
+            {/* Start point dot */}
+            <circle cx="26.44" cy="113.5" r="3.5" fill="rgba(255, 255, 255, 0.2)" />
+
+            {/* Target indicator pip at 100% (right end) */}
+            <circle
+              cx="213.56"
+              cy="113.5"
+              r={clampedProgress >= 1 ? 5.5 : 4.5}
+              fill={clampedProgress >= 1 ? '#10b981' : '#0f172a'}
+              stroke={clampedProgress >= 1 ? '#ffffff' : '#38bdf8'}
+              strokeWidth="1.8"
             />
 
-            {/* Target indicator pip at 100% */}
-            <circle cx="100" cy="25" r="4" fill="#38bdf8" stroke="#ffffff" strokeWidth="1.5" />
+            {/* Active filled arc with Framer Motion spring */}
+            <motion.path
+              d="M 26.44,113.5 A 95,95 0 0,1 213.56,113.5"
+              fill="none"
+              stroke="url(#calorieDialGrad)"
+              strokeWidth="14"
+              strokeLinecap="round"
+              strokeDasharray={arcLength}
+              initial={false}
+              animate={{ strokeDashoffset: strokeOffset }}
+              transition={{ type: 'spring', stiffness: 120, damping: 18, mass: 0.8 }}
+              filter="url(#dialGlowFilter)"
+            />
 
-            {/* Center Pivot & Needle */}
-            <g transform={`rotate(${needleAngle}, 100, 105)`} style={{ transition: 'transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)' }}>
-              <line x1="100" y1="105" x2="100" y2="35" stroke={statusTheme.color} strokeWidth="3" strokeLinecap="round" />
-              <polygon points="100,28 96,38 104,38" fill={statusTheme.color} />
-            </g>
-            <circle cx="100" cy="105" r="7" fill="#0f172a" stroke={statusTheme.color} strokeWidth="2.5" />
-          </svg>
-        </div>
-
-        {/* Center Net Value Display */}
-        <div style={{ textAlign: 'center', marginTop: '-1.25rem', zIndex: 2 }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '0.35rem' }}>
-            <motion.span
-              key={netBalance}
-              initial={{ scale: 0.9, opacity: 0.7 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="font-mono tabular-nums font-display-black"
-              style={{
-                fontSize: 'clamp(2.1rem, 7vw, 2.7rem)',
-                fontWeight: 900,
-                color: statusTheme.color,
-                textShadow: `0 0 20px ${statusTheme.glow}`,
-                lineHeight: 1
-              }}
+            {/* Center Pivot & Needle with Framer Motion spring */}
+            <motion.g
+              initial={false}
+              animate={{ rotate: needleAngle }}
+              transition={{ type: 'spring', stiffness: 120, damping: 18, mass: 0.8 }}
+              style={{ transformOrigin: '120px 130px' }}
             >
-              {netBalance > 0 ? `+${netBalance}` : netBalance}
-            </motion.span>
-            <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-muted)' }}>kcal</span>
-          </div>
+              <line x1="120" y1="130" x2="120" y2="44" stroke={statusColor} strokeWidth="3" strokeLinecap="round" />
+              <polygon points="120,36 116,46 124,46" fill={statusColor} />
+            </motion.g>
+            <circle cx="120" cy="130" r="7.5" fill="#0f172a" stroke={statusColor} strokeWidth="2.5" />
+            <circle cx="120" cy="130" r="3" fill={statusColor} />
+          </svg>
 
+          {/* Clean, spacious center display */}
           <div
             style={{
-              display: 'inline-flex',
+              position: 'absolute',
+              top: '42px',
+              left: 0,
+              right: 0,
+              display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
-              gap: '0.35rem',
-              padding: '0.25rem 0.65rem',
-              borderRadius: '999px',
-              background: statusTheme.badgeBg,
-              border: `1px solid ${statusTheme.badgeBorder}`,
-              color: statusTheme.color,
-              fontSize: '0.74rem',
-              fontWeight: 800,
-              marginTop: '0.35rem'
+              textAlign: 'center',
+              pointerEvents: 'none'
             }}
           >
-            <statusTheme.icon size={13} />
-            <span>{statusTheme.label}</span>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '0.35rem' }}>
+              <motion.span
+                key={todayCalories}
+                initial={{ scale: 0.92, opacity: 0.75 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: 'spring', stiffness: 240, damping: 18 }}
+                className="font-mono tabular-nums font-display-black"
+                style={{
+                  fontSize: 'clamp(2.1rem, 7vw, 2.7rem)',
+                  fontWeight: 900,
+                  color: statusColor,
+                  textShadow: `0 0 25px ${statusGlow}`,
+                  lineHeight: 1
+                }}
+              >
+                {Math.round(todayCalories).toLocaleString()}
+              </motion.span>
+              <span style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-muted)' }}>
+                / {safeTarget.toLocaleString()} <small style={{ fontSize: '0.72rem', fontWeight: 600 }}>kcal</small>
+              </span>
+            </div>
+
+            <div
+              style={{
+                marginTop: '0.45rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                padding: '0.22rem 0.75rem',
+                borderRadius: '999px',
+                background: isOverTarget ? 'rgba(244, 63, 94, 0.16)' : 'rgba(16, 185, 129, 0.16)',
+                border: `1px solid ${isOverTarget ? 'rgba(244, 63, 94, 0.35)' : 'rgba(16, 185, 129, 0.35)'}`,
+                color: isOverTarget ? '#f43f5e' : '#10b981',
+                fontSize: '0.75rem',
+                fontWeight: 800
+              }}
+            >
+              {isOverTarget ? (
+                <>
+                  <TrendingUp size={13} />
+                  <span>
+                    {isRTL
+                      ? `تجاوزت الهدف بـ ${Math.abs(remainingBudget).toLocaleString()} kcal`
+                      : `${Math.abs(remainingBudget).toLocaleString()} kcal over target`}
+                  </span>
+                </>
+              ) : remainingBudget === 0 ? (
+                <>
+                  <CheckCircle2 size={13} />
+                  <span>{isRTL ? 'حققت الهدف اليومي تماماً! 🎉' : 'Daily goal achieved! 🎉'}</span>
+                </>
+              ) : (
+                <>
+                  <Flame size={13} />
+                  <span>
+                    {isRTL
+                      ? `متبقٍ ${remainingBudget.toLocaleString()} kcal للهدف (${Math.round(clampedProgress * 100)}%)`
+                      : `${remainingBudget.toLocaleString()} kcal left (${Math.round(clampedProgress * 100)}%)`}
+                  </span>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -294,7 +345,7 @@ export function CalorieBalanceDial({
           display: 'grid',
           gridTemplateColumns: '1fr 1fr',
           gap: '0.75rem',
-          padding: '0.75rem',
+          padding: '0.75rem 0.9rem',
           borderRadius: '16px',
           background: 'rgba(255, 255, 255, 0.03)',
           border: '1px solid rgba(255, 255, 255, 0.08)'
@@ -309,9 +360,9 @@ export function CalorieBalanceDial({
             {Math.round(todayCalories).toLocaleString()} <small style={{ fontSize: '0.7rem' }}>kcal</small>
           </span>
           <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
-            {remainingBudget >= 0
-              ? (isRTL ? `متبقٍ ${remainingBudget} من الهدف` : `${remainingBudget} left of target`)
-              : (isRTL ? `تجاوزت الهدف بـ ${Math.abs(remainingBudget)}` : `${Math.abs(remainingBudget)} over target`)}
+            {isRTL
+              ? `نسبة الإنجاز: ${Math.round(clampedProgress * 100)}% من الهدف`
+              : `${Math.round(clampedProgress * 100)}% of daily target`}
           </span>
         </div>
 
@@ -332,7 +383,7 @@ export function CalorieBalanceDial({
       </div>
 
       {/* Compact Macro Trackers */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', marginTop: '0.2rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', marginTop: '0.1rem' }}>
         {/* Protein */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem' }}>
@@ -346,7 +397,8 @@ export function CalorieBalanceDial({
               style={{
                 width: `${Math.min(100, (todayProtein / (dailyProteinTarget || 160)) * 100)}%`,
                 height: '100%',
-                background: '#06b6d4'
+                background: '#06b6d4',
+                transition: 'width 0.4s ease'
               }}
             />
           </div>
@@ -365,7 +417,8 @@ export function CalorieBalanceDial({
               style={{
                 width: `${Math.min(100, (todayCarbs / (dailyCarbsTarget || 250)) * 100)}%`,
                 height: '100%',
-                background: '#f59e0b'
+                background: '#f59e0b',
+                transition: 'width 0.4s ease'
               }}
             />
           </div>
@@ -384,7 +437,8 @@ export function CalorieBalanceDial({
               style={{
                 width: `${Math.min(100, (todayFats / (dailyFatsTarget || 70)) * 100)}%`,
                 height: '100%',
-                background: '#ec4899'
+                background: '#ec4899',
+                transition: 'width 0.4s ease'
               }}
             />
           </div>

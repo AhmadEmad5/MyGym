@@ -18,9 +18,9 @@ import { Button } from '../components/ui/Button';
 import {
   buildPPLPlan,
   resolveWeekStartsOn,
-  REST_DAY,
   toLocalDateTimeValue
 } from '../components/routines/calendar/calendarData';
+import { isRestDay, restDayName } from '../lib/restDay';
 import { CalendarHeader, MonthLegend } from '../components/routines/calendar/CalendarHeader';
 import type { CalendarMode } from '../components/routines/calendar/CalendarHeader';
 import { MonthGrid } from '../components/routines/calendar/MonthGrid';
@@ -76,6 +76,9 @@ export function CalendarView() {
 
   const today = useMemo(() => startOfToday(), []);
   const weekStartsOn = resolveWeekStartsOn(data?.settings?.weekStartsOn);
+  const restDaySettings = useMemo(() => ({ restDay: data?.settings?.restDay }), [data?.settings?.restDay]);
+  const isClosedDay = useCallback((day: Date) => isRestDay(day, restDaySettings), [restDaySettings]);
+  const restDayLabel = restDayName(restDaySettings, isRTL);
 
   const weekStart = useMemo(
     () => startOfWeek(anchor, { weekStartsOn }),
@@ -240,10 +243,9 @@ export function CalendarView() {
   }, []);
 
   const openEditor = useCallback((day?: Date) => {
-    let target = day ? new Date(day) : new Date();
-    if (target < today) target = new Date();
-    if (target.getDay() === REST_DAY) target = addDays(target, 1);
-    target.setHours(18, 0, 0, 0);
+    const target = day ? new Date(day) : new Date();
+    const now = new Date();
+    target.setHours(now.getHours(), now.getMinutes(), 0, 0);
     setSessionDraft({
       title: '',
       type: 'Strength',
@@ -254,7 +256,7 @@ export function CalendarView() {
     });
     setSessionSaveFailed(false);
     setIsEditorOpen(true);
-  }, [today]);
+  }, []);
 
   const openEditorForSession = useCallback((session: WorkoutSession) => {
     setSessionDraft({
@@ -290,14 +292,15 @@ export function CalendarView() {
 
   const handleDelete = useCallback(
     async (id: string) => {
-      if (!confirm(t('deleteSessionConfirm'))) return;
+      gymAudio.triggerSubtleHaptic([30, 20]);
       try {
         await deleteSession(id);
+        notify(isRTL ? '✓ تم حذف الجلسة بنجاح' : '✓ Workout session deleted', 'success');
       } catch {
         notify(isRTL ? 'تعذر حذف الجلسة.' : 'Could not delete the session.', 'error');
       }
     },
-    [deleteSession, isRTL, t]
+    [deleteSession, isRTL]
   );
 
   const handleClear = useCallback(
@@ -332,9 +335,13 @@ export function CalendarView() {
     async (event: FormEvent) => {
       event.preventDefault();
       if (!sessionDraft || isSavingSession) return;
-      if (sessionDraft.date && new Date(sessionDraft.date).getDay() === REST_DAY) {
-        notify(t('restDayAlert'), 'warning');
-        return;
+      if (sessionDraft.date && isClosedDay(new Date(sessionDraft.date))) {
+        notify(
+          isRTL
+            ? `تنبيه: تم حفظ الجلسة في يوم عطلة مجدول (${restDayLabel}).`
+            : `Notice: Session scheduled on an off-day (${restDayLabel}).`,
+          'info'
+        );
       }
       const next: WorkoutSession = {
         id: sessionDraft.id || Date.now().toString(),
@@ -359,7 +366,7 @@ export function CalendarView() {
         setIsSavingSession(false);
       }
     },
-    [saveSession, sessionDraft, t, isSavingSession]
+    [isClosedDay, isRTL, restDayLabel, saveSession, sessionDraft, t, isSavingSession]
   );
 
   const applyTemplate = useCallback((name: string) => {
@@ -369,25 +376,25 @@ export function CalendarView() {
 
   const moveRestDaySessionsToSaturday = useCallback(async () => {
     const updated = daySessions.map(session => {
-      const saturday = addDays(new Date(session.date), 1);
-      saturday.setHours(18, 0, 0, 0);
-      return { ...session, date: toLocalDateTimeValue(saturday) };
+      const next = addDays(new Date(session.date), 1);
+      next.setHours(18, 0, 0, 0);
+      return { ...session, date: toLocalDateTimeValue(next) };
     });
     if (updated.length === 0) return;
     await saveSessions(updated);
-    notify(isRTL ? 'تم نقل جميع الجلسات إلى السبت!' : 'All sessions moved to Saturday!', 'success');
-  }, [daySessions, saveSessions]);
+    notify(isRTL ? 'تم نقل جميع الجلسات إلى اليوم التالي!' : 'All sessions moved to the next day!', 'success');
+  }, [daySessions, saveSessions, isRTL]);
 
   const generatePPL = useCallback(async () => {
-    const sessions = buildPPLPlan();
+    const sessions = buildPPLPlan(28, new Date(), restDaySettings);
     if (sessions.length === 0) return;
     await saveSessions(sessions);
     notify(isRTL ? `تم إنشاء ${sessions.length} جلسة` : `Generated ${sessions.length} PPL sessions`, 'success');
-  }, [saveSessions, isRTL]);
+  }, [restDaySettings, saveSessions, isRTL]);
 
   const handleApplySplitProgram = useCallback(
     async (program: SplitProgram) => {
-      const newSessions = buildSplitProgramSessions(program, weekStart);
+      const newSessions = buildSplitProgramSessions(program, weekStart, restDaySettings);
       if (newSessions.length === 0) return;
       await saveSessions(newSessions);
       notify(
@@ -397,12 +404,12 @@ export function CalendarView() {
         'success'
       );
     },
-    [weekStart, saveSessions, isRTL]
+    [restDaySettings, weekStart, saveSessions, isRTL]
   );
 
   const repeatWorkout = useCallback((snapshot: WorkoutSession) => {
     let target = addDays(selectedDay, 1);
-    if (target.getDay() === REST_DAY) target = addDays(target, 1);
+    if (isClosedDay(target)) target = addDays(target, 1);
     target.setHours(18, 0, 0, 0);
     setSessionDraft({
       title: snapshot.title,
@@ -423,7 +430,7 @@ export function CalendarView() {
     });
     setSessionSaveFailed(false);
     setIsEditorOpen(true);
-  }, [selectedDay]);
+  }, [isClosedDay, selectedDay]);
 
   const rangeLabel =
     mode === 'month'
@@ -451,6 +458,7 @@ export function CalendarView() {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
       className="zen-page-container calendar-page"
+      data-tour="plan-calendar"
     >
       <CalendarHeader
         isRTL={isRTL}
@@ -485,9 +493,10 @@ export function CalendarView() {
           </span>
           <span className="calendar-cleanup-actions">
             {duplicateIds.length > 0 && (
-              <button
+              <Button
                 type="button"
-                className="btn btn-secondary"
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (confirm(`${t('removeDuplicatesConfirm')} (${duplicateIds.length})`)) {
                     void deleteSessions(duplicateIds);
@@ -495,12 +504,13 @@ export function CalendarView() {
                 }}
               >
                 {t('cleanUpDuplicates')}
-              </button>
+              </Button>
             )}
             {pastIncompleteIds.length > 0 && (
-              <button
+              <Button
                 type="button"
-                className="btn btn-secondary"
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (confirm(`${t('cleanUpPastIncomplete')} (${pastIncompleteIds.length})?`)) {
                     void deleteSessions(pastIncompleteIds);
@@ -508,7 +518,7 @@ export function CalendarView() {
                 }}
               >
                 {t('cleanUpPastIncomplete')}
-              </button>
+              </Button>
             )}
           </span>
         </div>
@@ -519,9 +529,12 @@ export function CalendarView() {
         selectedDay={selectedDay}
         today={today}
         isRTL={isRTL}
+        restDaySettings={restDaySettings}
         loadFor={loadFor}
         formatDate={formatDate}
         onSelectDay={setSelectedDay}
+        onPrevWeek={() => step(-1)}
+        onNextWeek={() => step(1)}
       />
 
       <WeeklyMuscleVolumeHeatmap
@@ -562,6 +575,7 @@ export function CalendarView() {
           }}
           isRTL={isRTL}
           isClearing={isClearing}
+          restDaySettings={restDaySettings}
           t={t}
           tTitle={tTitle}
           tExercise={tExercise}
@@ -577,9 +591,10 @@ export function CalendarView() {
           onGeneratePPL={() => void generatePPL()}
           onMoveToSaturday={() => void moveRestDaySessionsToSaturday()}
           onClearDay={() => {
-            if (dayPlannedCount > 0) {
-              setDayTab('planned');
+            if (daySessions.length > 0) {
               setIsClearOpen(true);
+            } else {
+              notify(isRTL ? 'لا توجد تمارين للمسح في هذا اليوم' : 'No workouts to clear for this day', 'info');
             }
           }}
           onRepeatWorkout={repeatWorkout}
@@ -591,6 +606,7 @@ export function CalendarView() {
         <PlanListView
           isRTL={isRTL}
           today={today}
+          restDaySettings={restDaySettings}
           groups={listGroups}
           formatDate={formatDate}
           tTitle={tTitle}
@@ -631,6 +647,7 @@ export function CalendarView() {
         isOpen={isEditorOpen}
         draft={sessionDraft}
         isRTL={isRTL}
+        restDaySettings={restDaySettings}
         t={t}
         tTitle={tTitle}
         tMuscle={tMuscle}
@@ -664,6 +681,7 @@ export function CalendarView() {
         isOpen={isSplitsModalOpen}
         onClose={() => setIsSplitsModalOpen(false)}
         onApplySplit={handleApplySplitProgram}
+        restDaySettings={restDaySettings}
       />
     </motion.div>
   );

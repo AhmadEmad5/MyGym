@@ -1,5 +1,20 @@
 /* Mobile-first finishing layer. Keep this last in main.tsx so it can refine
-   the legacy responsive rules without changing their desktop behavior. */
+   the legacy responsive rules without changing their desktop behavior.
+
+   The unlayered regions live in @layer features, which is declared above
+   `components` and `utilities` in src/index.css: unlayered author
+   declarations outrank every layer, and this file relied on that to refine
+   the `@layer components` blocks without `!important`. `features` keeps that
+   precedence and makes it explicit.
+
+   The app-frame rules - `.app-layout*`, `.main-content`, `.content-area`,
+   `.modern-nav-wrapper`, `.modern-navbar`, `.mobile-top-bar` - moved to
+   @layer shell, because `shell` has to rank above `features` for the dock
+   geometry to resolve the way it does here. See src/styles/shell.css
+   section 4. They are listed out of this file's order, so the layer holds
+   them in load order instead. */
+
+@layer features {
 
 @media (max-width: 900px) {
   :root {
@@ -23,52 +38,9 @@
     --page-actionbar-band: calc(var(--page-actionbar-inset) + var(--page-actionbar-block));
   }
 
-  .app-layout { min-height: 100dvh; }
-  .app-layout .main-content { min-height: 0; }
-
-  /* :not(.in-workout-session-main) for the same reason the landscape block
-     further down carries it: the workout screen floats its own dock, and
-     reserving the global dock's height here on top of .session-hud's is what
-     stacked the three reservations. */
-  .app-layout .main-content:not(.in-workout-session-main) .content-area {
-    padding-inline: var(--mobile-page-gutter);
-    padding-block: calc(var(--shell-topbar-inset) + 0.75rem) calc(max(var(--shell-dock-inset), var(--hud-bottom-offset)) + 1.25rem);
-    scroll-padding-block: 1rem calc(var(--shell-dock-inset) + 1rem);
-  }
-
-  .app-layout.has-live-bar .mobile-top-bar {
-    border-color: color-mix(in srgb, var(--border-highlight) 72%, transparent);
-  }
-
-  .app-layout.has-live-bar aside[aria-label="Floating Dynamic Island HUD"] {
-    inset-block-start: calc(var(--shell-topbar-height) + var(--shell-safe-top) + 0.35rem) !important;
-  }
-
-  .app-layout.has-live-bar .content-area {
-    padding-block-start: calc(var(--shell-livebar-inset) + 0.5rem) !important;
-    padding-block-end: calc(max(var(--hud-bottom-offset), 148px) + 0.75rem) !important;
-    /* Padding reserves the band so the LAST row can be scrolled clear of the
-       chrome; scroll-padding is what a `scrollIntoView()` / focus restore
-       aligns against, and it was left at the no-live-bar values above. Without
-       it a focused row in a long session lands under the floating HUD at the
-       top and under the dock/HUD band at the bottom. Both are derived from the
-       same tokens the padding uses, so they cannot drift. */
-    scroll-padding-block-start: calc(
-      1rem + (var(--shell-livebar-inset) - var(--shell-topbar-inset))
-    );
-    scroll-padding-block-end: calc(max(var(--hud-bottom-offset), 148px) + 1rem);
-  }
-
-  .mobile-top-bar {
-    inset-block-start: 0 !important;
-    background: color-mix(in srgb, var(--bg-primary) 88%, transparent) !important;
-    border-color: var(--border-color) !important;
-    box-shadow: 0 8px 24px color-mix(in srgb, var(--bg-primary) 24%, transparent) !important;
-  }
-
-  .mobile-top-bar > * {
-    min-width: 0;
-  }
+/* `.app-layout`, `.app-layout .main-content*`, `.content-area`,
+     `.mobile-top-bar*` and `.modern-nav-wrapper` / `.modern-navbar` for this
+     breakpoint moved to @layer shell - see src/styles/shell.css section 4. */
 
   .mobile-top-brand {
     flex: 0 1 auto;
@@ -107,31 +79,10 @@
     position: relative;
   }
 
-  .mobile-top-btn .theme-dot-indicator {
+.mobile-top-btn .theme-dot-indicator {
     position: absolute;
     inset-block-end: 8px;
     inset-inline-end: 8px;
-  }
-
-  .modern-nav-wrapper {
-    inset-block-end: 0 !important;
-    padding-block: 0 calc(0.5rem + var(--shell-safe-bottom)) !important;
-    padding-inline:
-      max(0.65rem, var(--shell-safe-inline-start))
-      max(0.65rem, var(--shell-safe-inline-end)) !important;
-  }
-
-  .modern-navbar {
-    width: 100% !important;
-    max-width: 520px !important;
-    height: 74px !important;
-    min-height: 74px !important;
-    padding-block: 0.35rem !important;
-    padding-inline: 0.4rem !important;
-    border: 1px solid var(--border-highlight) !important;
-    border-radius: 24px !important;
-    background: color-mix(in srgb, var(--bg-secondary) 96%, transparent) !important;
-    box-shadow: 0 10px 30px color-mix(in srgb, var(--bg-primary) 42%, transparent), inset 0 1px 0 color-mix(in srgb, white 7%, transparent) !important;
   }
 
   .modern-nav-links.mobile-only-nav {
@@ -438,37 +389,8 @@
     --tablet-rail-width: 4.5rem;
   }
 
-  .modern-nav-wrapper {
-    position: fixed !important;
-    inset-block: 0 auto !important;
-    inset-inline: 0 auto !important;
-    inset-inline-end: auto !important;
-    z-index: 1000 !important;
-    display: flex !important;
-    width: var(--tablet-rail-width) !important;
-    padding-block: max(0.6rem, var(--shell-safe-top)) max(0.6rem, var(--shell-safe-bottom)) !important;
-    padding-inline: 0.45rem !important;
-    justify-content: flex-start !important;
-    pointer-events: none !important;
-  }
-
-  .modern-navbar {
-    pointer-events: auto;
-    width: 100% !important;
-    max-width: none !important;
-    height: auto !important;
-    max-height: none !important;
-    flex-direction: column !important;
-    justify-content: center !important;
-    gap: 0.5rem !important;
-    padding-block: 0.6rem !important;
-    padding-inline: 0.3rem !important;
-    border-radius: 0 !important;
-    border-start-start-radius: 0 !important;
-    border-end-start-radius: 0 !important;
-    border-start-end-radius: 22px !important;
-    border-end-end-radius: 22px !important;
-  }
+  /* `.modern-nav-wrapper`, `.modern-navbar` and `.app-layout .main-content`
+     moved to @layer shell - see src/styles/shell.css section 4. */
 
   .modern-nav-brand {
     display: flex !important;
@@ -510,36 +432,30 @@
     display: none !important;
   }
 
-  .nav-action-pill,
+.nav-action-pill,
   .nav-streak-pill {
     padding-block: 0.5rem !important;
     padding-inline: 0.6rem !important;
-  }
-
-  .app-layout .main-content {
-    margin-inline-start: var(--tablet-rail-width);
   }
 }
 
 @media (max-width: 380px) {
   :root { --mobile-page-gutter: var(--space-sm); }
 
-  .app-layout .content-area {
-    padding-inline: var(--mobile-page-gutter);
-  }
+  /* `.app-layout .content-area` and `.modern-navbar` moved to @layer shell -
+     see src/styles/shell.css section 4. */
 
   .mobile-brand-badge { display: none; }
   .mobile-top-center { padding-inline: 0.15rem; }
   .mobile-top-actions { gap: 0.5rem !important; }
 
   .mobile-top-btn,
-  .mobile-top-avatar {
+.mobile-top-avatar {
     width: 44px !important;
     height: 44px !important;
     min-height: 44px !important;
   }
 
-  .modern-navbar { padding-inline: 0.25rem !important; }
   .modern-nav-links.mobile-only-nav { gap: 0.4rem !important; }
   .modern-nav-item .nav-short-label { font-size: 0.69rem !important; }
   .modern-nav-item .nav-icon-wrap { width: 36px !important; }
@@ -589,32 +505,8 @@
    selectors below are guarded with :not().
    -------------------------------------------------------------------------- */
 @media (max-width: 900px) and (orientation: landscape) and (max-height: 540px) {
-  .modern-nav-wrapper {
-    inset-block: 0 auto !important;
-    inset-inline: 0 auto !important;
-    z-index: 1050 !important;
-    display: flex !important;
-    width: 68px !important;
-    height: 100dvh !important;
-    padding-block: max(6px, var(--shell-safe-top)) max(6px, var(--shell-safe-bottom)) !important;
-    padding-inline: max(6px, var(--shell-safe-inline-start)) 0.35rem !important;
-    justify-content: center !important;
-    align-items: center !important;
-    pointer-events: none !important;
-  }
-
-  .modern-navbar {
-    pointer-events: auto !important;
-    width: 58px !important;
-    max-width: none !important;
-    height: calc(100dvh - 12px) !important;
-    min-height: 0 !important;
-    flex-direction: column !important;
-    justify-content: center !important;
-    padding-block: 0.5rem !important;
-    padding-inline: 0.2rem !important;
-    border-radius: 18px !important;
-  }
+  /* `.modern-nav-wrapper`, `.modern-navbar` and the `.content-area` reserve
+     moved to @layer shell - see src/styles/shell.css section 4. */
 
   .modern-nav-links.mobile-only-nav {
     display: flex !important;
@@ -640,12 +532,7 @@
     height: 30px !important;
   }
 
-  .modern-nav-item .nav-short-label { font-size: 0.6rem !important; }
-
-  .app-layout:not(.has-live-bar) .main-content:not(.in-workout-session-main) .content-area {
-    padding-block: max(0.5rem, var(--shell-safe-top)) max(0.5rem, var(--shell-safe-bottom)) !important;
-    scroll-padding-block: var(--space-xs);
-  }
+.modern-nav-item .nav-short-label { font-size: 0.6rem !important; }
 
   .forma-page-frame { padding-block-end: 1.5rem !important; }
   .nutrition-page,
@@ -969,7 +856,37 @@
    unlayered above never takes effect. Re-declaring it inside that same layer
    wins on source order, because this file is imported after index.css.
    -------------------------------------------------------------------------- */
+}
+
 @layer components {
+  /* StartWorkoutSheet's log action row. Folded in from
+     src/styles/mobile-log.css, which existed for this one class. The 48px
+     floor on the buttons is also declared in `@layer features` above — the
+     layered copy is the one that has to survive, so it is restated here. */
+  .mobile-log-actions {
+    display: grid;
+    gap: 0.65rem;
+    padding-bottom: 0.6rem;
+  }
+
+  .mobile-log-actions p {
+    margin: 0 0 0.35rem;
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+
+  .mobile-log-actions > button {
+    width: 100%;
+    min-height: 48px;
+    justify-content: flex-start;
+    padding-inline: 0.9rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mobile-log-actions > button { transition: none; }
+  }
+
   @media (max-width: 900px) {
     .mobile-top-btn,
     .mobile-top-avatar {
@@ -1007,16 +924,14 @@
   }
 }
 
+@layer features {
+
 /* data-floor-input hides the thumb dock and the rest HUD, so the scroller must
    stop reserving room for them: 100dvh does not shrink on iOS when the
    software keyboard opens, and the reserve is what parks the last sets
-   underneath it. */
-@media (max-width: 900px) {
-  :root[data-floor-input='true'] .app-layout .content-area {
-    padding-block-end: 0.75rem;
-    scroll-padding-block-end: 1rem;
-  }
-}
+   underneath it. The rule itself moved to @layer shell - see src/styles/shell.css
+   section 4 - because it has to outrank section 1's scroller padding, and
+   `shell` is the only layer that does. */
 
 /* The nav press-scale is a compound :active selector, so the bare reduced-motion
    rule above cannot reach it. Both gates are listed explicitly. */
@@ -1079,4 +994,6 @@
   :root {
     --shell-scroll-offset: calc(var(--shell-topbar-inset) + 0.5rem);
   }
+}
+
 }

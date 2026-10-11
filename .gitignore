@@ -73,4 +73,11 @@ __pycache__/
 
 # Local agent tooling state (worktrees, per-machine manager state)
 .kilo/
+.agents/
+.ui-craft/
 
+# Databases & Local data
+*.db
+*.sqlite
+*.sqlite3
+dev.db

@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import {
   Utensils, Camera, Sparkles, Trash2, CheckCircle2,
   Clock, Calculator, Plus, Edit3, Barcode, Copy, CopyPlus,
-  ChevronDown, Wand2
+  ChevronDown, Wand2, Zap, ShieldCheck
 } from 'lucide-react';
 import { isSameDay, format, parse } from 'date-fns';
 import { useData } from '../hooks/useData';
@@ -284,61 +284,36 @@ export function NutritionView() {
         </div>
 
         <div className="nutrition-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', flexWrap: 'wrap' }}>
-          <button
-            type="button"
+          <Button
+            variant="primary"
+            size="sm"
             onClick={() => setIsAIMealVisionOpen(true)}
-            className="zen-pill-btn nutrition-scan-btn"
-            style={{
-              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(6, 182, 212, 0.25))',
-              border: '1px solid rgba(16, 185, 129, 0.45)',
-              color: '#10b981',
-              padding: '0.6rem 0.95rem',
-              fontWeight: 800,
-              boxShadow: '0 4px 16px rgba(16, 185, 129, 0.2)',
-              display: 'inline-flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap', minHeight: 44
-            }}
+            leftIcon={<Camera size={16} />}
+            rightIcon={<Sparkles size={13} />}
           >
-            <Camera size={16} />
-            <span>{isRTL ? 'مسح بالكاميرا (AI)' : 'AI Camera'}</span>
-            <Sparkles size={13} style={{ color: '#06b6d4' }} />
-          </button>
+            {isRTL ? 'مسح بالكاميرا (AI)' : 'AI Camera'}
+          </Button>
 
-          <button
-            type="button"
+          <Button
+            variant="cyan"
+            size="sm"
             onClick={() => {
               setEditingMeal(null);
               setIsManualMealModalOpen(true);
             }}
-            className="zen-pill-btn"
-            style={{
-              background: 'rgba(16, 185, 129, 0.12)',
-              border: '1px solid rgba(16, 185, 129, 0.35)',
-              color: '#10b981',
-              padding: '0.6rem 0.95rem',
-              fontWeight: 700,
-              display: 'inline-flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap', minHeight: 44
-            }}
+            leftIcon={<Plus size={16} />}
           >
-            <Plus size={16} />
-            <span>{isRTL ? 'إدخال وجبة' : 'Log Meal'}</span>
-          </button>
+            {isRTL ? 'إدخال وجبة' : 'Log Meal'}
+          </Button>
 
-          <button
-            type="button"
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={() => setIsTDEEModalOpen(true)}
-            className="zen-pill-btn"
-            style={{
-              background: 'rgba(70, 217, 255, 0.08)',
-              border: '1px solid rgba(70, 217, 255, 0.25)',
-              color: '#46d9ff',
-              padding: '0.6rem 0.9rem',
-              fontWeight: 700,
-              display: 'inline-flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap', minHeight: 44
-            }}
+            leftIcon={<Calculator size={15} />}
           >
-            <Calculator size={15} />
-            <span>{isRTL ? 'حاسبة TDEE' : 'TDEE'}</span>
-          </button>
+            {isRTL ? 'حاسبة TDEE' : 'TDEE'}
+          </Button>
         </div>
       </div>
 
@@ -373,7 +348,7 @@ export function NutritionView() {
               transition: 'all 0.15s ease'
             }}
           >
-            {isRTL ? 'مؤشر توازن الطاقة (Dial)' : 'Energy Balance Dial'}
+            {isRTL ? 'عداد السعرات الدائري (Dial)' : 'Calorie Dial'}
           </button>
           <button
             type="button"
@@ -504,7 +479,9 @@ export function NutritionView() {
       <section aria-label={isRTL ? 'نصائح التغذية' : 'Nutrition coaching'}>
         <div className="gym-lifestyle-advice-grid">
           <div className="gym-advice-card">
-            <div className="gym-advice-icon" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b' }}>⚡</div>
+            <div className="gym-advice-icon" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Zap size={18} aria-hidden="true" />
+            </div>
             <div>
               <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                 {isRTL ? 'وجبة ما قبل التمرين' : 'Pre-Workout Fuel'}
@@ -518,7 +495,9 @@ export function NutritionView() {
           </div>
 
           <div className="gym-advice-card">
-            <div className="gym-advice-icon" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981' }}>🛡️</div>
+            <div className="gym-advice-icon" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <ShieldCheck size={18} aria-hidden="true" />
+            </div>
             <div>
               <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                 {isRTL ? 'استشفاء ما بعد التمرين' : 'Post-Workout Anabolism'}

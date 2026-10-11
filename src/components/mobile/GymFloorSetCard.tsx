@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check, Trash2, Zap, Copy } from 'lucide-react';
 import type { SetRecord } from '../../lib/api';
@@ -6,6 +6,19 @@ import type { PreviousSetReference } from '../../types/ui';
 import { useTranslation } from '../../lib/i18n';
 import { useFormaReducedMotion } from '../TodayBentoGrid';
 import { GYM_FLOOR_HAPTICS, pulseHaptic } from './gymFloorHaptics';
+import {
+  COMMIT_DEBOUNCE_MS,
+  DEFAULT_REPS,
+  REPS_FIELD,
+  WEIGHT_FIELD,
+  caretAfterSanitize,
+  clampFieldValue,
+  formatFieldValue,
+  isFieldDraftInvalid,
+  parseFieldDraft,
+  sanitizeFieldDraft,
+  type NumberFieldConfig
+} from './setNumberField';
 
 interface GymFloorSetCardProps {
   set: SetRecord;
@@ -52,6 +65,231 @@ function setFloorInputActive() {
       delete document.documentElement.dataset.floorInput;
     }
   }, 250);
+}
+
+const inputLineStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.3rem',
+  minWidth: 0
+};
+
+const numberInputStyle: React.CSSProperties = {
+  ...inputStyle,
+  inlineSize: '100%',
+  minInlineSize: 0,
+  fontSize: 'clamp(1.5rem, 7vw, 1.9rem)',
+  fontWeight: 800,
+  fontFamily: 'var(--font-display)',
+  textAlign: 'center'
+};
+
+interface GymFloorNumberInputProps {
+  id: string;
+  /** Value the store currently holds; the source of truth once the field is idle. */
+  value: number;
+  config: NumberFieldConfig;
+  /** What a cleared field resolves to on blur (weight 0, reps target). */
+  emptyFallback: number;
+  /** Nudge size for the arrow keys, matching the thumb steppers. */
+  step: number;
+  inputMode: 'decimal' | 'numeric';
+  placeholder: string;
+  onCommit: (value: number) => void;
+  onFocus: () => void;
+  onBlur: () => void;
+  /** Trailing unit toggle / suffix rendered inside the field box. */
+  children?: React.ReactNode;
+}
+
+/**
+ * A set field that can actually be edited.
+ *
+ * It keeps its own string draft and pushes a parsed number up on a 300ms
+ * debounce plus on blur. Two things made the previous version impossible to
+ * type into:
+ *
+ * 1. `value` was bound straight to the saved number and rendered `''` whenever
+ *    that number was `0`, so typing `0` saved a `0` and the field blanked
+ *    again under the athlete's finger, caret and all.
+ * 2. Every keystroke wrote the whole session, so the value came back through an
+ *    async save round-trip (and a failed save rolled the field back mid-word).
+ *
+ * The draft is now the source of truth while the field is dirty, the store echo
+ * is recognised instead of overwriting it, and external edits (steppers, ghost
+ * chip, 1-tap copy) are still picked up the moment they land.
+ */
+function GymFloorNumberInput({
+  id,
+  value,
+  config,
+  emptyFallback,
+  step,
+  inputMode,
+  placeholder,
+  onCommit,
+  onFocus,
+  onBlur,
+  children
+}: GymFloorNumberInputProps) {
+  const [draft, setDraft] = useState(() => formatFieldValue(value, config));
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  /** Last value this field pushed up, so its own echo is not read as an edit. */
+  const committedRef = useRef(value);
+  const draftRef = useRef(draft);
+  /** True from the first keystroke until the field settles, so a bare focus and
+   * blur never turns a displayed default into a logged value. */
+  const dirtyRef = useRef(false);
+  const commitTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const caretRef = useRef<number | null>(null);
+  const latestRef = useRef({ config, emptyFallback, onCommit });
+
+  useEffect(() => {
+    latestRef.current = { config, emptyFallback, onCommit };
+  });
+
+  const cancelPendingCommit = useCallback(() => {
+    if (commitTimerRef.current) {
+      clearTimeout(commitTimerRef.current);
+      commitTimerRef.current = undefined;
+    }
+  }, []);
+
+  const commit = useCallback((next: number) => {
+    committedRef.current = next;
+    latestRef.current.onCommit(next);
+  }, []);
+
+  // Adopt an external edit (thumb stepper, ghost chip, 1-tap copy). A value that
+  // merely matches what we already pushed up is our own write coming back and
+  // must not touch the draft - that rewrite mid-keystroke was the flicker.
+  useEffect(() => {
+    if (value === committedRef.current) return;
+    committedRef.current = value;
+    cancelPendingCommit();
+    dirtyRef.current = false;
+    caretRef.current = null;
+    const next = formatFieldValue(value, config);
+    draftRef.current = next;
+    setDraft(next);
+  }, [value, config, cancelPendingCommit]);
+
+  // Runs after the sanitised draft is in the DOM, so a rejected character can
+  // be dropped from the text without dragging the caret along with it.
+  useLayoutEffect(() => {
+    const caret = caretRef.current;
+    if (caret === null) return;
+    caretRef.current = null;
+    const input = inputRef.current;
+    if (!input) return;
+    const position = Math.min(caret, input.value.length);
+    input.setSelectionRange(position, position);
+  });
+
+  const applyDraft = useCallback((nextDraft: string, caret: number | null) => {
+    draftRef.current = nextDraft;
+    caretRef.current = caret;
+    setDraft(nextDraft);
+  }, []);
+
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = event.target.value;
+    const caret = event.target.selectionStart ?? raw.length;
+    const sanitized = sanitizeFieldDraft(raw, config);
+
+    applyDraft(sanitized, sanitized === raw ? null : caretAfterSanitize(raw, caret, config));
+    dirtyRef.current = true;
+
+    const { status, value: parsed } = parseFieldDraft(sanitized, config, emptyFallback);
+    cancelPendingCommit();
+    // Empty is a legal waypoint ("zero weight", "back to the target reps") and
+    // an out-of-range value has to be corrected first: committing either now
+    // would save something the athlete never finished typing.
+    if (status !== 'valid' || parsed === committedRef.current) return;
+
+    commitTimerRef.current = setTimeout(() => {
+      commitTimerRef.current = undefined;
+      commit(parsed);
+    }, COMMIT_DEBOUNCE_MS);
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+    event.preventDefault();
+    const base = parseFieldDraft(draftRef.current, config, emptyFallback).value;
+    const next = clampFieldValue(base + (event.key === 'ArrowUp' ? step : -step), config);
+    cancelPendingCommit();
+    dirtyRef.current = true;
+    const text = formatFieldValue(next, config);
+    applyDraft(text, text.length);
+    commit(next);
+  };
+
+  const settle = () => {
+    cancelPendingCommit();
+    if (!dirtyRef.current) return;
+    dirtyRef.current = false;
+    const { value: parsed } = parseFieldDraft(draftRef.current, config, emptyFallback);
+    // Leaving the field always resolves what is in the box: an empty or
+    // out-of-range draft is replaced by the nearest legal value rather than
+    // staying on screen unsaved and flagged.
+    const next = clampFieldValue(parsed, config);
+    applyDraft(formatFieldValue(next, config), null);
+    if (next !== committedRef.current) commit(next);
+  };
+
+  const handleBlur = () => {
+    settle();
+    onBlur();
+  };
+
+  // The card can unmount mid-edit - ticking the set done swaps it for the next
+  // one - so a debounced draft is written out instead of dropped on the floor.
+  // Deps are stable (module-level config, empty-dep callback) so this only runs
+  // on a real unmount.
+  useEffect(() => () => {
+    if (!dirtyRef.current) return;
+    dirtyRef.current = false;
+    cancelPendingCommit();
+    const { config: activeConfig, emptyFallback: fallback, onCommit: push } = latestRef.current;
+    const { value: parsed } = parseFieldDraft(draftRef.current, activeConfig, fallback);
+    const next = clampFieldValue(parsed, activeConfig);
+    if (next === committedRef.current) return;
+    committedRef.current = next;
+    push(next);
+  }, [cancelPendingCommit]);
+
+  const invalid = isFieldDraftInvalid(draft, config);
+  const { value: displayValue } = parseFieldDraft(draft, config, emptyFallback);
+
+  return (
+    <div className={`gym-floor-input-line ui-input-box${invalid ? ' has-error' : ''}`} style={inputLineStyle}>
+      <input
+        ref={inputRef}
+        id={id}
+        className="gym-floor-number-input ui-input-field"
+        type="text"
+        inputMode={inputMode}
+        role="spinbutton"
+        autoComplete="off"
+        autoCorrect="off"
+        autoCapitalize="off"
+        spellCheck={false}
+        value={draft}
+        placeholder={placeholder}
+        aria-valuenow={Number.isFinite(displayValue) ? displayValue : undefined}
+        aria-valuemin={config.min}
+        aria-valuemax={config.max}
+        aria-invalid={invalid || undefined}
+        onFocus={onFocus}
+        onBlur={handleBlur}
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        style={numberInputStyle}
+      />
+      {children}
+    </div>
+  );
 }
 
 export function GymFloorSetCard({
@@ -238,11 +476,11 @@ export function GymFloorSetCard({
 
       <div className="gym-floor-inputs" style={{ display: 'grid', gap: '0.5rem' }}>
         {/* Weight row: four controls that must all fit a ~300px card.
-            A number input keeps a large intrinsic minimum, so the centre
-            column is `minmax(64px, 1fr)` and the input itself is given
-            `minWidth: 0` - without both, the input refuses to shrink, its
-            content overflows the column, and the +5 button is pushed past the
-            card edge and clipped. */}
+            The field keeps an intrinsic minimum (4.5rem from
+            `.gym-floor-number-input`), so the centre column is
+            `minmax(64px, 1fr)` and the input itself is given `minWidth: 0` -
+            without both, the input refuses to shrink, its content overflows the
+            column, and the +5 button is pushed past the card edge and clipped. */}
         <div
           className="gym-floor-input-row"
           style={{
@@ -266,28 +504,18 @@ export function GymFloorSetCard({
             <label className="gym-floor-input-label ui-input-label" htmlFor={weightId} style={{ display: 'block' }}>
               {isRTL ? 'الوزن' : 'Weight'}
             </label>
-            <div className="gym-floor-input-line ui-input-box" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', minWidth: 0 }}>
-              <input
-                id={weightId}
-                className="gym-floor-number-input ui-input-field"
-                type="number"
-                inputMode="decimal"
-                step="0.5"
-                value={set.weight === 0 ? '' : set.weight}
-                placeholder={previousRecord && previousRecord.weight > 0 ? String(previousRecord.weight) : "0"}
-                onFocus={setFloorInputActive}
-                onBlur={setFloorInputActive}
-                onChange={(event) => onUpdateSet('weight', parseFloat(event.target.value) || 0)}
-                style={{
-                  ...inputStyle,
-                  inlineSize: '100%',
-                  minInlineSize: 0,
-                  fontSize: 'clamp(1.5rem, 7vw, 1.9rem)',
-                  fontWeight: 800,
-                  fontFamily: 'var(--font-display)',
-                  textAlign: 'center'
-                }}
-              />
+            <GymFloorNumberInput
+              id={weightId}
+              value={Number.isFinite(set.weight) ? set.weight : 0}
+              config={WEIGHT_FIELD}
+              emptyFallback={0}
+              step={0.5}
+              inputMode="decimal"
+              placeholder={previousRecord && previousRecord.weight > 0 ? String(previousRecord.weight) : "0"}
+              onCommit={(next) => onUpdateSet('weight', next)}
+              onFocus={setFloorInputActive}
+              onBlur={setFloorInputActive}
+            >
               <button
                 type="button"
                 className="gym-floor-unit-toggle"
@@ -297,7 +525,7 @@ export function GymFloorSetCard({
               >
                 {set.unit}
               </button>
-            </div>
+            </GymFloorNumberInput>
             {previousRecord && previousRecord.weight > 0 && set.weight === 0 && (
               <button
                 type="button"
@@ -358,31 +586,22 @@ export function GymFloorSetCard({
             <label className="gym-floor-input-label ui-input-label" htmlFor={repsId} style={{ display: 'block' }}>
               {isRTL ? 'التكرار' : 'Reps'}
             </label>
-            <div className="gym-floor-input-line ui-input-box" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', minWidth: 0 }}>
-              <input
-                id={repsId}
-                className="gym-floor-number-input ui-input-field"
-                type="number"
-                inputMode="numeric"
-                value={set.repsActual || set.repsTarget || ''}
-                placeholder={previousRecord && previousRecord.reps > 0 ? String(previousRecord.reps) : "10"}
-                onFocus={setFloorInputActive}
-                onBlur={setFloorInputActive}
-                onChange={(event) => onUpdateSet('repsActual', parseInt(event.target.value) || 0)}
-                style={{
-                  ...inputStyle,
-                  inlineSize: '100%',
-                  minInlineSize: 0,
-                  fontSize: 'clamp(1.5rem, 7vw, 1.9rem)',
-                  fontWeight: 800,
-                  fontFamily: 'var(--font-display)',
-                  textAlign: 'center'
-                }}
-              />
+            <GymFloorNumberInput
+              id={repsId}
+              value={set.repsActual > 0 ? set.repsActual : set.repsTarget > 0 ? set.repsTarget : DEFAULT_REPS}
+              config={REPS_FIELD}
+              emptyFallback={set.repsTarget > 0 ? set.repsTarget : DEFAULT_REPS}
+              step={1}
+              inputMode="numeric"
+              placeholder={previousRecord && previousRecord.reps > 0 ? String(previousRecord.reps) : "10"}
+              onCommit={(next) => onUpdateSet('repsActual', next)}
+              onFocus={setFloorInputActive}
+              onBlur={setFloorInputActive}
+            >
               <span className="gym-floor-input-suffix" style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', flexShrink: 0 }}>
                 {isRTL ? 'عدة' : 'reps'}
               </span>
-            </div>
+            </GymFloorNumberInput>
             {previousRecord && previousRecord.reps > 0 && !set.repsActual && (
               <button
                 type="button"

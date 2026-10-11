@@ -5,14 +5,14 @@ import { describe, it, expect } from 'vitest';
  * Design-system contract guard.
  *
  * The project has two token files. `src/styles/design-tokens.css` is the
- * canonical one; `src/index.css` predates it and still declares 55 tokens
- * that design-tokens.css overrides. Nothing but the import order in
- * `src/main.tsx` decides which wins.
+ * canonical one; `src/index.css` predates it and no longer declares any custom
+ * property of its own - the 55 tokens it used to shadow (plus the 14 homeless
+ * ones it was the last owner of) all moved into the canonical file.
  *
  * This test freezes that arrangement. Without it, a harmless-looking import
- * reorder would resurrect every one of those 55 declarations and change the
- * app's appearance in all seven themes, with the type checker, the unit
- * suite and the production build all still green.
+ * reorder would resurrect every one of those declarations and change the app's
+ * appearance in all seven themes, with the type checker, the unit suite and the
+ * production build all still green.
  */
 
 const ROOT = new URL('../../../', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
@@ -27,10 +27,9 @@ const MAIN_TSX = 'src/main.tsx';
  * Collects `--token: value` pairs for every block opened by `selector`.
  *
  * It must MERGE across repeat openings, not return the first match. Several
- * selectors open more than once in the same file - `[data-theme="midnight"]`
- * opens at index.css L92 and again at L95 - and returning only the first made
- * the second block's declarations permanently invisible to the counter. That
- * is how 24 genuinely dead declarations survived a cleanup that reported
+ * selectors open more than once in the same file, and returning only the first
+ * made the later block's declarations permanently invisible to the counter.
+ * That is how 24 genuinely dead declarations survived a cleanup that reported
  * zero remaining.
  */
 function blockTokens(file: string, selector: string): Map<string, string> {
@@ -83,7 +82,7 @@ describe('design-token contract', () => {
       expect(
         tok,
         'design-tokens.css must be imported after index.css; the reverse silently ' +
-          'resurrects 55 dead declarations in src/index.css and changes all 7 themes'
+          'resurrects every token in src/index.css and changes all 7 themes'
       ).toBeGreaterThan(idx);
     });
   });
@@ -140,9 +139,11 @@ describe('design-token contract', () => {
     /**
      * Recorded so the migration can be measured. This number may only go DOWN.
      * Each entry is a token design-tokens.css also declares with a different
-     * value, so the index.css copy is dead CSS.
+     * value, so the index.css copy is dead CSS. The baseline is 0: the last
+     * shadowed and homeless declarations were folded into design-tokens.css, so
+     * any reappearance is a regression, not progress.
      */
-    const DEAD_DECLARATION_COUNT = 55;
+    const DEAD_DECLARATION_COUNT = 0;
 
     it('does not gain new dead declarations', () => {
       let dead = 0;
@@ -162,7 +163,7 @@ describe('design-token contract', () => {
       ).toBeLessThanOrEqual(DEAD_DECLARATION_COUNT);
     });
 
-    it('declares only the documented legacy-owned tokens', () => {
+    it('declares no tokens of its own', () => {
       const canonicalOnly = new Set<string>();
       for (const selector of [':root', ...THEMES.map((t) => `[data-theme="${t}"]`)]) {
         const canonical = blockTokens(TOKENS_CSS, selector);
@@ -170,36 +171,11 @@ describe('design-token contract', () => {
           if (!canonical.has(t)) canonicalOnly.add(t);
         }
       }
-      // These are declared in index.css and consumed today, so they are the
-      // migration backlog rather than dead code. They come from a SECOND
-      // `:root` block in index.css that the first version of this helper
-      // never read, which is why the list was once recorded as 6.
-      //
-      //   --premium-*  the session HUD and the gym-floor set card read
-      //                --premium-surface / -line / -soft.
-      //   --gym-*      the gym-floor stylesheets read --gym-cyan, --gym-flame,
-      //                --gym-emerald, --gym-purple and their -glow variants.
-      //   --theme-shadow / --gym-lime  single-value stragglers.
-      //
-      // Note that design-tokens.css does define --premium-line and
-      // --premium-soft, but only inside [data-high-contrast], so they are
-      // still homeless with respect to the normal themes.
-      expect([...canonicalOnly].sort()).toEqual([
-        '--gym-cyan',
-        '--gym-cyan-glow',
-        '--gym-emerald',
-        '--gym-flame',
-        '--gym-flame-glow',
-        '--gym-lime',
-        '--gym-lime-glow',
-        '--gym-purple',
-        '--premium-ink',
-        '--premium-line',
-        '--premium-panel',
-        '--premium-soft',
-        '--premium-surface',
-        '--theme-shadow'
-      ]);
+      // Every token this file used to own has moved into design-tokens.css:
+      // the 55 it shadowed, and the 14 it was the last owner of
+      // (--premium-surface / -panel / -line / -soft, --theme-shadow and the
+      // --gym-* ramp that gym-floor.css and gym-ergonomics.css read).
+      expect([...canonicalOnly].sort()).toEqual([]);
     });
   });
 

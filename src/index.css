@@ -1,8 +1,27 @@
 @import "tailwindcss";
 
+/* Canonical layer order for the whole app. Declared once, here, before any
+   stylesheet that uses a layer name, so the precedence is a property of the
+   design rather than of import order. Layers added to this list later in the
+   project would be appended after `overrides`, so extend this line instead.
+
+   reset < tokens < base < layout < components < utilities < features < shell
+   < overrides
+
+   `features` and `shell` sit deliberately late: they hold the product-surface
+   refinements and the app frame, and both need to outrank the generic
+   `components` layer without resorting to `!important`. `utilities` stays
+   below them so a hand-written utility in `features` still wins over a
+   Tailwind utility class.
+
+   Nothing in `src/` may declare a style outside a layer any more; unlayered
+   author declarations outrank every layer and would silently defeat the
+   ordering below. */
+@layer reset, tokens, base, layout, components, utilities, features, shell, overrides;
+
 /* ==========================================================================
    FORMA Global Stylesheet
-   Layer order: @layer base (1-*) -> @layer components (2-*) -> unlayered (3-*)
+   Layer order is declared above; see that comment for the rationale.
 
    TOKEN SCALE (canonical definitions live in src/styles/design-tokens.css,
    which loads after this file and therefore wins for every theme):
@@ -44,29 +63,14 @@
   --color-forma-lime: var(--gym-lime);
 }
 
-:root {
-  /* High-end Obsidian Athletic Dark Theme */
-
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
-
-  /* Vibrant accents based on workout type */
-  --accent-cyan: #38bdf8;
-  --accent-purple: #8b5cf6;
-  --gym-lime: #bef264;
-
-  --accent-gradient: linear-gradient(135deg, #10b981, #06b6d4);
-
-  --border-highlight: rgba(255, 255, 255, 0.16);
-
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 18px 50px rgba(0, 0, 0, 0.28), 0 2px 6px rgba(0, 0, 0, 0.2);
-
-  --theme-shadow: 0 18px 50px rgba(0, 0, 0, .28);
-
-  color-scheme: dark;
-}
+/* Every custom property this file used to declare under `:root` and
+   `[data-theme="..."]` now lives in src/styles/design-tokens.css, which is the
+   canonical token file and is imported after this one. Keeping a second copy
+   here meant the app's colours were decided by import order rather than by the
+   design: a harmless reorder in src/main.tsx would have changed all seven
+   themes with the type checker, the unit suite and the production build all
+   still green. The only thing this file still owns is the Tailwind `@theme`
+   bridge above. */
 
 [data-font-scale="large"] { font-size: 112.5%; }
 [data-high-contrast] { --text-secondary: #d5dfeb; --text-muted: #b8c6d8; --border-color: #64748b; --border-highlight: #94a3b8; }
@@ -74,70 +78,6 @@
 html[dir="rtl"], [dir="rtl"] {
   --theme-font: 'Cairo', 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
-
-[data-theme="light"] {
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #64748b;
-
-  --border-highlight: rgba(0, 0, 0, 0.2);
-
-  color-scheme: light;
-}
-
-/* Theme-aware premium surfaces. These variables are deliberately used by the
-   enhanced UI, so every preference is visually distinct—not just the body. */
-:root { --premium-surface: linear-gradient(145deg, rgba(17, 26, 44, .9), rgba(10, 16, 28, .96)); --premium-panel: linear-gradient(105deg, rgba(20, 31, 52, .86), rgba(12, 18, 32, .9)); --premium-line: rgba(56, 189, 248, .18); --premium-soft: rgba(56, 189, 248, .1); --premium-ink: #f0f9ff; }
-[data-theme="light"] { --premium-surface: linear-gradient(145deg, rgba(255,255,255,.98), rgba(240,246,255,.94)); --premium-panel: linear-gradient(105deg, rgba(230,246,255,.96), rgba(247,242,255,.96)); --premium-line: rgba(40, 104, 155, .16); --premium-soft: rgba(30, 155, 211, .1); --premium-ink: #12233d; }
-[data-theme="midnight"] { --premium-surface: linear-gradient(145deg, rgba(14, 32, 67, .9), rgba(5, 13, 31, .96)); --premium-panel: linear-gradient(105deg, rgba(19, 46, 93, .86), rgba(7, 18, 42, .91)); --premium-line: rgba(72, 147, 255, .22); --premium-soft: rgba(55, 125, 255, .12); }
-[data-theme="neon"] { --premium-surface: linear-gradient(145deg, rgba(36, 22, 49, .9), rgba(15, 16, 27, .97)); --premium-panel: linear-gradient(105deg, rgba(47, 24, 57, .89), rgba(18, 21, 31, .94)); --premium-line: rgba(228, 86, 243, .24); --premium-soft: rgba(228, 86, 243, .12); }
-
-[data-theme="midnight"] {
-  --bg-primary: #040914;
-  --bg-secondary: #0A1325;
-  --bg-tertiary: #111D36;
-  --bg-input: #0A1325;
-
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
-
-  --accent-primary: #3b82f6;
-  --accent-hover: #60a5fa;
-  --accent-gradient: linear-gradient(135deg, #3b82f6, #8b5cf6);
-
-  --border-color: rgba(59, 130, 246, 0.15);
-  --border-highlight: rgba(59, 130, 246, 0.3);
-
-  color-scheme: dark;
-}
-
-[data-theme="neon"] {
-  --bg-primary: #09090b;
-  --bg-secondary: #18181b;
-  --bg-tertiary: #27272a;
-  --bg-input: #18181b;
-
-  --text-primary: #ffffff;
-  --text-secondary: #a1a1aa;
-  --text-muted: #71717a;
-
-  --accent-primary: #d946ef;
-  --accent-hover: #e879f9;
-  --accent-gradient: linear-gradient(135deg, #d946ef, #06b6d4);
-
-  --border-color: rgba(217, 70, 239, 0.15);
-  --border-highlight: rgba(217, 70, 239, 0.3);
-
-  color-scheme: dark;
-}
-
-/* Each appearance preset changes spatial character as well as color: radius,
-   texture, font flavor, shadow depth, and surface treatment. */
-[data-theme="ocean"] { --text-primary:#e5fbff; --text-secondary:#9ac4ce; --text-muted:#668d99; --accent-primary:#4ce4e7; --accent-hover:#8df8ee; --accent-gradient:linear-gradient(135deg,#43dcd3,#3686e9); --premium-surface:linear-gradient(145deg,rgba(11,55,70,.92),rgba(4,27,40,.96)); --premium-panel:linear-gradient(105deg,rgba(13,68,84,.9),rgba(4,31,47,.94)); --premium-line:rgba(103,239,231,.19); --premium-soft:rgba(84,229,225,.11); --theme-shadow:0 22px 55px rgba(0,12,22,.34); color-scheme:dark; }
-[data-theme="forest"] { --text-primary:#f0fae9; --text-secondary:#acc3ae; --text-muted:#758e79; --accent-primary:#9edc72; --accent-hover:#c2ee9c; --accent-gradient:linear-gradient(135deg,#b9e875,#38a974); --premium-surface:linear-gradient(145deg,rgba(34,67,43,.93),rgba(12,30,19,.96)); --premium-panel:linear-gradient(105deg,rgba(44,82,46,.9),rgba(13,34,22,.95)); --premium-line:rgba(180,232,117,.16); --premium-soft:rgba(169,226,116,.1); --theme-shadow:0 17px 38px rgba(0,18,7,.33); color-scheme:dark; }
-[data-theme="sunset"] { --text-primary:#fff2e9; --text-secondary:#e2b8ab; --text-muted:#a97b78; --accent-primary:#ffb265; --accent-hover:#ffd18d; --accent-gradient:linear-gradient(135deg,#ffbd67,#f06081); --premium-surface:linear-gradient(145deg,rgba(77,37,46,.92),rgba(36,17,28,.97)); --premium-panel:linear-gradient(105deg,rgba(104,46,53,.88),rgba(43,19,32,.96)); --premium-line:rgba(255,190,118,.18); --premium-soft:rgba(255,158,99,.12); --theme-shadow:0 24px 58px rgba(31,6,14,.4); color-scheme:dark; }
-[data-theme="paper"] { --text-primary:#2d2925; --text-secondary:#625b52; --text-muted:#8a8177; --accent-primary:#9a493d; --accent-hover:#bd6351; --accent-gradient:linear-gradient(135deg,#ad5546,#ce8054); --premium-surface:linear-gradient(145deg,rgba(255,253,248,.98),rgba(237,230,218,.96)); --premium-panel:linear-gradient(105deg,rgba(255,250,242,.98),rgba(240,230,217,.97)); --premium-line:rgba(93,69,50,.16); --premium-soft:rgba(165,83,65,.09); --theme-shadow:0 10px 22px rgba(79,55,36,.12); color-scheme:light; }
 
 @layer base {
   * {
@@ -340,6 +280,10 @@ p { margin-bottom: 1rem; line-height: 1.6; color: var(--text-secondary); }
   box-shadow: 0 0 0 var(--focus-ring-width) var(--focus-ring-halo), 0 0 0 1px var(--focus-ring-color);
 }
 
+.btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
 /* Universal High-Performance Touch & Input Responsiveness */
 button, input, select, textarea, a {
   touch-action: manipulation;
@@ -378,35 +322,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
   opacity: .55;
 }
 
-.toast-viewport {
-  position: fixed;
-  inset-inline-end: max(1rem, env(safe-area-inset-right, 0px));
-  bottom: calc(80px + max(0.85rem, env(safe-area-inset-bottom, 0px)));
-  z-index: var(--z-toast);
-  display: grid;
-  gap: .65rem;
-  width: min(25rem, calc(100vw - 2rem));
-  pointer-events: none;
-}
-@media (max-width: 640px) {
-  .toast-viewport {
-    /* Logical centring: `left: 50%` + `translateX(-50%)` had to be re-asserted
-       per direction because `inset-inline-end` resolves to the left edge in RTL.
-       Auto inline margins centre it in both directions with no RTL rule. */
-    inset-inline: 0;
-    margin-inline: auto;
-    width: calc(100vw - 1.5rem);
-    max-width: 420px;
-  }
-}
-.toast { align-items: center; animation: toast-enter .22s ease-out; background: color-mix(in srgb, var(--surface-elevated) 96%, transparent); border: 1px solid var(--border-highlight); border-radius: var(--radius-md); box-shadow: var(--shadow-md); color: var(--text-primary); display: grid; font-size: .9rem; gap: .7rem; grid-template-columns: auto 1fr auto; min-height: 52px; padding: .75rem .8rem; pointer-events: auto; }
-.toast-dismiss { align-items: center; background: transparent; border: 0; border-radius: var(--radius-sm); color: currentColor; cursor: pointer; display: inline-flex; height: 44px; width: 44px; justify-content: center; }
-.toast-dismiss:hover { background: color-mix(in srgb, currentColor 14%, transparent); }
-.toast-success { border-color: color-mix(in srgb, var(--color-success) 60%, transparent); color: color-mix(in srgb, var(--color-success) 72%, var(--text-primary)); }
-.toast-error { border-color: color-mix(in srgb, var(--color-danger) 66%, transparent); color: color-mix(in srgb, var(--color-danger) 72%, var(--text-primary)); }
-.toast-warning { border-color: color-mix(in srgb, var(--color-warning) 66%, transparent); color: color-mix(in srgb, var(--color-warning) 72%, var(--text-primary)); }
-.toast-info { border-color: color-mix(in srgb, var(--color-info) 66%, transparent); color: color-mix(in srgb, var(--color-info) 72%, var(--text-primary)); }
-@keyframes toast-enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+/* Toast surface moved to @layer shell - see src/styles/shell.css section 1. */
 
 .btn:active {
   transform: scale(0.96);
@@ -557,48 +473,9 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
 
 /* In-App YouTube Player Component Styles */
 
-/* Modern Cyber Navigation Bar (Desktop & Tablet) */
-.modern-nav-wrapper {
-  width: 100%;
-  padding: 1rem clamp(1rem, 3.5vw, 3rem) 0;
-  z-index: 100;
-  display: flex;
-  justify-content: center;
-}
-
-.modern-navbar {
-  width: 100%;
-  max-width: min(1440px, calc(100vw - 2.5rem));
-  height: 66px;
-  background: linear-gradient(135deg, rgba(14, 20, 36, 0.88), rgba(9, 13, 24, 0.94));
-  backdrop-filter: blur(26px) saturate(190%);
-  -webkit-backdrop-filter: blur(26px) saturate(190%);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 20px;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 clamp(0.75rem, 1.25vw, 1.25rem);
-  z-index: 50;
-  box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.5), 0 0 24px -6px rgba(110, 232, 255, 0.12);
-  position: relative;
-  transition: all 0.3s cubic-bezier(0.2, 0.9, 0.3, 1);
-}
-
-.modern-nav-wrapper.is-scrolled {
-  padding-top: var(--space-xs);
-  transition: padding 0.3s ease;
-}
-
-.modern-navbar.is-scrolled {
-  height: 58px;
-  background: linear-gradient(135deg, rgba(10, 15, 28, 0.94), rgba(7, 10, 20, 0.97));
-  backdrop-filter: blur(32px) saturate(210%);
-  -webkit-backdrop-filter: blur(32px) saturate(210%);
-  border-color: rgba(56, 189, 248, 0.28);
-  box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.65), 0 0 25px -6px rgba(56, 189, 248, 0.2);
-}
+/* The desktop nav, the app frame and `.content-area` moved to @layer shell -
+   see src/styles/shell.css section 1. Their relative order against the
+   <=900px dock in sections 3-5 is load order, so they are not reproduced here. */
 
 .navbar-magnetic-spotlight {
   position: absolute;
@@ -1056,10 +933,10 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
   display: none !important;
 }
 
-/* Mobile Top Bar (Hidden on desktop) */
-.mobile-top-bar {
-  display: none;
-}
+/* App Layout */
+/* `.app-layout`, `.main-content`, `.content-area`, `.modern-nav-wrapper`,
+   `.modern-navbar` and `.mobile-top-bar` moved to @layer shell - see
+   src/styles/shell.css. */
 
 /* More Bottom Sheet (Mobile) */
 .more-sheet-backdrop {
@@ -1206,59 +1083,6 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
   }
 }
 
-/* ===================================================
-   ZEN WORKOUT FOCUS MODE FULLSCREEN OVERLAY
-   =================================================== */
-
-.main-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  overflow-x: clip;
-  position: relative;
-  min-height: 0;
-  min-width: 0;
-  width: 100%;
-  max-width: 100%;
-  overscroll-behavior: none;
-}
-
-/* The app scroller. Every other box in the shell is `overflow: hidden`, so this
-   is the only element in the tree a vertical finger can move, and the only
-   place scroll memory is ever written. */
-.content-area {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: clip;
-  padding: clamp(1.5rem, 3.2vw, 3.5rem);
-  position: relative;
-  min-height: 0;
-  min-width: 0;
-  width: 100%;
-  max-width: 100%;
-  /* Scroller overscroll policy: absorb vertical overscroll here (no rubber band,
-     no pull-to-refresh), never let it chain, never allow horizontal chaining. */
-  overscroll-behavior-y: contain;
-  overscroll-behavior-x: none;
-  /* Route restores are hard writes, not animated "flying" scrolls. Smooth
-     scrolling is opt-in per element and is forced back to `auto` by the
-     reduced-motion block in @layer base. */
-  scroll-behavior: auto;
-  /* `scroll-padding` belongs on the real scroller - the `html` copy never
-     applied because the document itself cannot scroll. Deliberately small: the
-     fixed top bar and the dock are already reserved by this element's own
-     padding, and scroll-padding is additive to padding, so repeating the full
-     chrome heights here would push focused elements twice as far down. This
-     only clears the sticky in-page bars that overlay the scrollport. */
-  scroll-padding-block-start: var(--shell-scroll-offset, 1.5rem);
-  scroll-padding-block-end: var(--shell-scroll-offset, 1.5rem);
-  /* No `touch-action` here on purpose. `pan-y` on the app scroller would
-     intersect with the horizontal rails nested inside it (exercise carousel,
-     calendar ribbon) and leave them unable to pan at all. `overflow-x: clip`
-     already means a sideways finger has nothing to move. */
-}
-
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
@@ -1295,7 +1119,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.2; }
 }
-@media (max-width: 768px) { .content-area { padding: 1.25rem 1rem; } }
+@media (max-width: 768px) { /* .content-area padding moved to @layer shell */ }
 
 /* Shared treatment for the remaining product surfaces */
 .page-surface { width: min(1180px, 100%); margin: 0 auto; padding-bottom: 2rem; }
@@ -1396,31 +1220,8 @@ button, .btn, .btn-icon { -webkit-tap-highlight-color: transparent; }
     padding-bottom: 2rem !important;
   }
 
-  .app-layout {
-    flex-direction: column;
-    min-height: 100vh;
-    min-height: 100dvh;
-    padding-bottom: 0;
-  }
-
-  /* Mobile Top Glass Header */
-  .mobile-top-bar {
-    display: flex !important;
-    position: fixed;
-    inset-block-start: 0;
-    inset-inline: 0;
-    height: calc(52px + max(0px, env(safe-area-inset-top, 0px)));
-    padding-top: max(0px, env(safe-area-inset-top, 0px));
-    padding-inline: clamp(0.65rem, 3vw, 1rem);
-    z-index: 980;
-    align-items: center;
-    justify-content: space-between;
-    background: rgba(11, 16, 28, 0.88);
-    backdrop-filter: blur(28px) saturate(190%);
-    -webkit-backdrop-filter: blur(28px) saturate(190%);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.09);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
-  }
+  /* `.app-layout`, `.mobile-top-bar` and the `.content-area` gutters for this
+     breakpoint moved to @layer shell - see src/styles/shell.css section 1. */
 
   .mobile-top-brand {
     display: flex;
@@ -1616,38 +1417,6 @@ button, .btn, .btn-icon { -webkit-tap-highlight-color: transparent; }
     z-index: 1260 !important;
   }
 
-  .modern-nav-wrapper {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 1000;
-    padding: 0 0.5rem max(8px, env(safe-area-inset-bottom, 0px));
-    width: 100%;
-    background: transparent;
-    pointer-events: none;
-  }
-
-  .modern-navbar {
-    pointer-events: auto;
-    width: 100%;
-    max-width: 480px;
-    margin: 0 auto;
-    height: 60px;
-    min-height: 60px;
-    padding: 0.2rem 0.35rem;
-    border-radius: 22px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    background: rgba(11, 16, 28, 0.95);
-    backdrop-filter: blur(30px) saturate(190%);
-    -webkit-backdrop-filter: blur(30px) saturate(190%);
-    box-shadow: 0 18px 45px -8px rgba(0, 0, 0, 0.8), 0 0 24px -4px rgba(56, 189, 248, 0.2);
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-  }
-
   .modern-nav-brand, .modern-nav-actions {
     display: none;
   }
@@ -1753,19 +1522,6 @@ button, .btn, .btn-icon { -webkit-tap-highlight-color: transparent; }
 
   .modern-nav-item .nav-active-dot.is-visible {
     opacity: 1;
-  }
-
-  .content-area {
-    padding: 0.75rem 0.65rem;
-    /* Extra headroom so content doesn't hide under the fixed top bar */
-    padding-top: calc(60px + max(0.65rem, env(safe-area-inset-top, 0px)));
-    /* Extra breathing room: nav (60px) + safe-area */
-    padding-bottom: calc(88px + max(16px, env(safe-area-inset-bottom, 0px)));
-  }
-
-  /* When a live workout bar is floating, expand bottom clearance so content is never covered */
-  .app-layout.has-live-bar .content-area {
-    padding-bottom: calc(160px + max(20px, env(safe-area-inset-bottom, 0px))) !important;
   }
 
   .ai-fab {
@@ -2224,17 +1980,7 @@ body:has(.modal-card) .ai-fab {
 
 /* Very small phones (< 380px) */
 @media (max-width: 380px) {
-  .content-area {
-    padding: 0.65rem !important;
-    padding-bottom: calc(95px + max(16px, env(safe-area-inset-bottom, 0px))) !important;
-  }
-
-  /* Correct content padding for small phones */
-  .content-area {
-    padding: 0.65rem !important;
-    padding-top: calc(58px + max(0.65rem, env(safe-area-inset-top, 0px))) !important;
-    padding-bottom: calc(100px + max(16px, env(safe-area-inset-bottom, 0px))) !important;
-  }
+  /* `.content-area` gutters moved to @layer shell - see src/styles/shell.css. */
 
   /* Login card on iPhone SE */
 
@@ -2340,22 +2086,6 @@ html.warm-night-filter {
   filter: sepia(0.18) hue-rotate(-8deg) brightness(0.97);
   transition: filter 0.6s ease;
 }
-
-/* 2. Micro Steppers for Weights & Reps */
-
-/* 3. Collapsed Finished Exercise Card */
-
-/* 4. Screen Wake Lock Pill */
-
-/* ==========================================================================
-   Eye-Comfort Workout Enhancements (Features 2, 4, 5)
-   ========================================================================== */
-
-/* 1. Focus Dimming for Finished Sets & Active Next-Set Glow */
-
-/* 2. Smart Stepper Bar (Without Virtual Keyboard) */
-
-/* 3. Celebration Modal Overlay & Confetti Wrap */
 
 /* ==========================================================================
    Comprehensive Mobile Experience & Native Feel Optimizations
@@ -3054,17 +2784,10 @@ button, a, input, select, textarea, .btn, .theme-popover-item, .modern-nav-item 
 
 /* ==========================================================================
    MODERN GYM & HEALTHY LIFESTYLE DESIGN SYSTEM
+   The `--gym-*` accent ramp this section used to open with moved to
+   src/styles/design-tokens.css - see the "Gym-floor athletic accents" block in
+   that file's `:root`.
    ========================================================================== */
-:root {
-  --gym-lime: #c6f432;
-  --gym-lime-glow: rgba(198, 244, 50, 0.25);
-  --gym-cyan: #06b6d4;
-  --gym-cyan-glow: rgba(6, 182, 212, 0.25);
-  --gym-flame: #f97316;
-  --gym-flame-glow: rgba(249, 115, 22, 0.25);
-  --gym-emerald: #10b981;
-  --gym-purple: #a855f7;
-}
 
 /* 1. Live Athletic Workout HUD */
 
@@ -3596,74 +3319,12 @@ button, a, input, select, textarea, .btn, .theme-popover-item, .modern-nav-item 
 
 /* ==========================================================================
    Landscape Mode Optimizations for SessionDetailView
-   ========================================================================== */
-@media (orientation: landscape) and (max-height: 500px) {
-  /* Keep the sticky hud but make it much thinner */
-
-  /* Center the single column to avoid excessive stretching */
-  .session-detail-container {
-    max-width: 800px;
-    margin: 0 auto;
-  }
-
-  /* Ensure video player expands inline but doesn't take too much vertical height */
-  .in-app-youtube-wrapper {
-    max-height: 60vh;
-  }
-}
-
-/* Adaptive Ergonomic Layout: Mobile Landscape Side Rail */
-@media (orientation: landscape) and (max-height: 540px) {
-  .modern-nav-wrapper {
-    position: fixed !important;
-    top: 0 !important;
-    bottom: 0 !important;
-    inset-inline-start: 0 !important;
-    inset-inline-end: auto !important;
-    width: 68px !important;
-    height: 100dvh !important;
-    padding: max(6px, env(safe-area-inset-top, 0px)) 0.35rem max(6px, env(safe-area-inset-bottom, 0px)) max(6px, env(safe-area-inset-left, 0px)) !important;
-    pointer-events: none !important;
-    z-index: 1000 !important;
-  }
-  .modern-navbar {
-    width: 58px !important;
-    height: calc(100dvh - 16px) !important;
-    max-height: none !important;
-    flex-direction: column !important;
-    justify-content: center !important;
-    padding: 0.5rem 0.2rem !important;
-    border-radius: 18px !important;
-  }
-  .modern-nav-links {
-    flex-direction: column !important;
-    justify-content: space-around !important;
-    height: 100% !important;
-    width: 100% !important;
-    gap: 0.4rem !important;
-  }
-  .modern-nav-item {
-    min-height: 44px !important;
-    max-height: 52px !important;
-    padding: 0.2rem !important;
-  }
-  .modern-nav-item .nav-short-label {
-    font-size: 0.62rem !important;
-    transform: scale(0.9);
-  }
-  .app-layout .main-content {
-    margin-inline-start: 72px !important;
-    padding-bottom: 1rem !important;
-  }
-  .mobile-top-bar {
-    display: none !important;
-  }
-  .content-area, .session-detail-container, .today-dashboard-stack {
-    max-width: 900px;
-    margin: 0 auto;
-  }
-
-}
+   and the Adaptive Ergonomic mobile side rail
+   ==========================================================================
+   Moved to @layer shell - see src/styles/shell.css section 1. These were the
+   last unlayered rules in this file; left here they would outrank every rule
+   in the `shell` layer and silently undo the <=900px dock refinements in
+   sections 4 and 5. */
 
 /* ==========================================================================
    SCROLL POLICY

@@ -132,7 +132,7 @@ export function ModernNavigationBar() {
         onToggleLanguage={toggleLanguage}
       />
 
-      <div className={`modern-nav-wrapper${isScrolled ? ' is-scrolled' : ''}`}>
+      <div className={`modern-nav-wrapper${isScrolled ? ' is-scrolled' : ''}`} id="forma-nav-dock" data-tour="nav-dock">
         <nav
           className={`modern-navbar${isScrolled ? ' is-scrolled' : ''}`}
           aria-label={navLabel}
@@ -235,6 +235,7 @@ export function ModernNavigationBar() {
         onAdd={handleQuickWorkoutAdd}
         weightUnit={data?.settings?.weightUnit || 'kg'}
         restSeconds={data?.settings?.restTimerSeconds || 90}
+        restDaySettings={{ restDay: data?.settings?.restDay }}
       />
     </>
   );

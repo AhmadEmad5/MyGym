@@ -1,0 +1,1031 @@
+/* ==========================================================================
+   FORMA — App Shell
+   ==========================================================================
+
+   `@layer shell` is declared in src/index.css, after `features` and before
+   `overrides`. It is the last layer that describes the *frame* itself: the
+   column, the single scroller, the desktop nav, the mobile top bar and the
+   fixed overlays that are portalled to <body>.
+
+   Section order below is load order, and it is load order on purpose. The
+   rules were pulled out of four files that are imported in this sequence:
+
+     1. src/index.css                 (app frame, scroller, desktop chrome)
+     2. src/styles/forma-shell.css    (shell tokens, skip link, nav detail)
+     3. src/styles/gym-floor.css      (<=900px dock)
+     4. src/styles/mobile-refinement.css (<=900px dock refinements)
+     5. src/styles/gym-ergonomics.css (safe-area insets on the top bar)
+
+   Section 3 refines section 1 at the same specificity and section 4 refines
+   section 3, which is what those four files did when they were all unlayered
+   and ordered by their import position. Keeping the sections in that order is
+   what keeps the resolved values identical; reordering them silently changes
+   the dock geometry.
+   ========================================================================== */
+
+@layer shell {
+
+/* ==========================================================================
+   1. App frame and scroller (moved from src/index.css)
+   ========================================================================== */
+
+/* Toast surface. Portalled to <body>, above every portalled overlay except
+   the tooltip band. */
+.toast-viewport {
+  position: fixed;
+  inset-inline-end: max(1rem, env(safe-area-inset-right, 0px));
+  bottom: calc(80px + max(0.85rem, env(safe-area-inset-bottom, 0px)));
+  z-index: var(--z-toast);
+  display: grid;
+  gap: .65rem;
+  width: min(25rem, calc(100vw - 2rem));
+  pointer-events: none;
+}
+@media (max-width: 640px) {
+  .toast-viewport {
+    /* Logical centring: `left: 50%` + `translateX(-50%)` had to be re-asserted
+       per direction because `inset-inline-end` resolves to the left edge in RTL.
+       Auto inline margins centre it in both directions with no RTL rule. */
+    inset-inline: 0;
+    margin-inline: auto;
+    width: calc(100vw - 1.5rem);
+    max-width: 420px;
+  }
+}
+.toast { align-items: center; animation: toast-enter .22s ease-out; background: color-mix(in srgb, var(--surface-elevated) 96%, transparent); border: 1px solid var(--border-highlight); border-radius: var(--radius-md); box-shadow: var(--shadow-md); color: var(--text-primary); display: grid; font-size: .9rem; gap: .7rem; grid-template-columns: auto 1fr auto; min-height: 52px; padding: .75rem .8rem; pointer-events: auto; }
+.toast-dismiss { align-items: center; background: transparent; border: 0; border-radius: var(--radius-sm); color: currentColor; cursor: pointer; display: inline-flex; height: 44px; width: 44px; justify-content: center; }
+.toast-dismiss:hover { background: color-mix(in srgb, currentColor 14%, transparent); }
+.toast-success { border-color: color-mix(in srgb, var(--color-success) 60%, transparent); color: color-mix(in srgb, var(--color-success) 72%, var(--text-primary)); }
+.toast-error { border-color: color-mix(in srgb, var(--color-danger) 66%, transparent); color: color-mix(in srgb, var(--color-danger) 72%, var(--text-primary)); }
+.toast-warning { border-color: color-mix(in srgb, var(--color-warning) 66%, transparent); color: color-mix(in srgb, var(--color-warning) 72%, var(--text-primary)); }
+.toast-info { border-color: color-mix(in srgb, var(--color-info) 66%, transparent); color: color-mix(in srgb, var(--color-info) 72%, var(--text-primary)); }
+@keyframes toast-enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Workout Reminder Floating Toast / Banner
+   Positioned cleanly below desktop navbar (top: 92px) and mobile top bar (top: 60px).
+   Elevated to z-index: 1200 above top chrome so it is never obscured or trapped in scroller contexts. */
+.forma-reminder-toast {
+  position: fixed;
+  inset-block-start: calc(92px + max(0px, env(safe-area-inset-top, 0px)));
+  inset-inline: 0;
+  margin-inline: auto;
+  z-index: 1200;
+  width: calc(100% - 2rem);
+  max-width: 520px;
+  padding: 0.85rem 1.15rem;
+  border-radius: var(--radius-lg, 18px);
+  background: linear-gradient(135deg, rgba(20, 26, 38, 0.96), rgba(12, 18, 30, 0.98));
+  border: 1px solid rgba(234, 179, 8, 0.45);
+  box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.75), 0 0 25px rgba(234, 179, 8, 0.2);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+}
+
+.forma-reminder-body {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.forma-reminder-icon-box {
+  padding: 0.5rem;
+  border-radius: 12px;
+  background: rgba(234, 179, 8, 0.2);
+  color: #eab308;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.forma-reminder-text {
+  min-width: 0;
+}
+
+.forma-reminder-title {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.forma-reminder-desc {
+  margin: 0.15rem 0 0;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
+.forma-reminder-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.forma-reminder-btn {
+  padding: 0.45rem 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+  border-radius: var(--radius-md, 12px);
+  box-shadow: 0 4px 14px rgba(234, 179, 8, 0.3);
+}
+
+.forma-reminder-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.forma-reminder-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+@media (max-width: 900px) {
+  .forma-reminder-toast {
+    inset-block-start: calc(60px + max(0px, env(safe-area-inset-top, 0px)));
+    width: calc(100% - 1.25rem);
+    padding: 0.75rem 0.9rem;
+    gap: 0.65rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .forma-reminder-toast {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+  .forma-reminder-actions {
+    justify-content: flex-end;
+  }
+}
+
+/* App Layout */
+.app-layout {
+  display: flex;
+  min-height: 100svh;
+  height: 100vh;
+  height: 100dvh;
+  width: 100%;
+  max-width: 100%;
+  flex-direction: column;
+  overflow-x: clip;
+  overscroll-behavior: none;
+}
+
+/* Active Workout Full Immersion Mode (Edges to Edges, No Distractions) */
+.app-layout.in-workout-session {
+  padding-bottom: 0 !important;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.main-content.in-workout-session-main {
+  padding: 0 !important;
+  max-width: 100% !important;
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* In an active workout `.content-area` is still the same single scroller - it
+   only loses the nav/dock padding. `overflow-y: auto` is intentionally NOT
+   repeated here; it is declared once, on `.content-area` itself. */
+.main-content.in-workout-session-main .content-area {
+  padding: clamp(0.75rem, 2vw, 1.5rem);
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  height: 100%;
+  scroll-padding-block-end: calc(var(--shell-scroll-offset, 1.5rem) + var(--shell-safe-bottom, 0px));
+}
+
+/* In-session scroller: the top gutter, and nothing else.
+
+   A session mounts no fixed top bar. AppShell omits ModernNavigationBar when
+   isInSession is set, and that is the only thing that mounts ShellMobileTopBar, so
+   the generic mobile blocks further down reserve 58-60px under a bar that is not
+   there. The block end is handled separately, below.
+
+   The selector is long on purpose: the generic blocks target the bare
+   `.content-area` and are `!important`, so outranking them needs `!important` AND a
+   higher specificity - hence `.app-layout.in-workout-session` in front of
+   `.main-content.in-workout-session-main`. */
+.app-layout.in-workout-session .main-content.in-workout-session-main .content-area {
+  padding-top: clamp(0.75rem, 2vw, 1.5rem) !important;
+}
+
+/* No bottom reservation is declared on .content-area, and none should be.
+
+   .content-area and .session-hud are NESTED - .session-hud is the first child of
+   .session-detail-container and wraps the whole session, dock included - so a
+   padding-bottom here ADDS to the band .session-hud already derives from
+   --session-chrome / --session-chrome-rest in performance.css instead of replacing
+   it: 169.2 + 177.2 = 346.4px reserved for a 169.2px dock, and 253.2 + 261.2 =
+   514.4px for 253.2px with a rest timer running. The 115px + safe-area this file
+   used to hard-code here was one of three such reservations; the surviving one
+   belongs to .session-hud alone, which is the only element that can see the dock.
+
+   The band cannot move up here instead. At >=900px performance.css makes
+   .session-thumb-dock position:sticky (in flow) while .session-hud-rest stays
+   position:fixed at inset-block-end: 1.5rem, and that desktop clearance is declared
+   only on .session-hud.
+
+   The generic mobile blocks in this same file are scoped to the bare
+   `.content-area` and two of them set `padding-bottom` with `!important`, so
+   without an explicit opt-out the session scroller still carries 88px (<=768px)
+   or 100px (<=380px) of a band that nothing renders. `:not([data-floor-input])`
+   hands the scroller back to the keyboard collapse in mobile-refinement.css while
+   the software keyboard is up, and the query stops at 900px because above that the
+   dock is `position: sticky` and in flow. */
+@media (max-width: 900px) {
+  :root:not([data-floor-input='true']) .app-layout.in-workout-session .main-content.in-workout-session-main .content-area {
+    padding-bottom: 0 !important;
+  }
+}
+
+/* Modern Cyber Navigation Bar (Desktop & Tablet) */
+
+/* The wrapper is a flex item of `.app-layout` - a fixed-height column whose one
+   scroller, `.content-area`, is a DESCENDANT of <main> and not of this box
+   (AppShell.tsx:68-72). A sticky element offsets against its nearest ancestor
+   scrollport, and that is the document, which `body { overflow: hidden;
+   height: 100dvh }` (index.css) locks shut. There is nothing to stick to,
+   so `position: sticky` here is inert: the chrome cannot scroll away because
+   it is not inside the scroller in the first place.
+
+   A stacking context IS needed. `z-index` on a `position: static` box is
+   ignored, so the `100` this rule used to declare did nothing at all, and the
+   pill's own `z-index: 50` (`.modern-navbar`, below) lost to anything
+   positioned inside `.content-area` that asked for more: `.ai-fab` is 90 and
+   `.ai-panel` is 100 (inline, AIAssistant.tsx:525/562), and both are fixed
+   boxes rendered inside the scroller (App.tsx:320-323). `position: relative`
+   makes the declared index live.
+
+   1000 is the shell-chrome band - the same value `.mobile-top-bar` carries.
+   It clears every in-content layer (the highest in the tree is 960,
+   `.session-hud-rest`) and stays below the bottom dock (1050), the fixed page
+   action bar (1040) and every portalled overlay (10000+, all of which are
+   portalled to <body> and so sit outside this context regardless).
+
+   Below 900px this box is `position: fixed !important` (section 3) and at
+   901-1023px a fixed side rail (section 4), so `relative` and the 1000 only
+   ever apply on desktop. */
+.modern-nav-wrapper {
+  position: relative;
+  width: 100%;
+  padding: 1rem clamp(1rem, 3.5vw, 3rem) 0;
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+}
+
+.modern-navbar {
+  width: 100%;
+  max-width: min(1440px, calc(100vw - 2.5rem));
+  height: 66px;
+  background: linear-gradient(135deg, rgba(14, 20, 36, 0.88), rgba(9, 13, 24, 0.94));
+  backdrop-filter: blur(26px) saturate(190%);
+  -webkit-backdrop-filter: blur(26px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 20px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 clamp(0.75rem, 1.25vw, 1.25rem);
+  z-index: 50;
+  box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.5), 0 0 24px -6px rgba(110, 232, 255, 0.12);
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+.modern-nav-wrapper.is-scrolled {
+  padding-top: var(--space-xs);
+  transition: padding 0.3s ease;
+}
+
+.modern-navbar.is-scrolled {
+  height: 58px;
+  background: linear-gradient(135deg, rgba(10, 15, 28, 0.94), rgba(7, 10, 20, 0.97));
+  backdrop-filter: blur(32px) saturate(210%);
+  -webkit-backdrop-filter: blur(32px) saturate(210%);
+  border-color: rgba(56, 189, 248, 0.28);
+  box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.65), 0 0 25px -6px rgba(56, 189, 248, 0.2);
+}
+
+/* Mobile Top Bar (Hidden on desktop) */
+.mobile-top-bar {
+  display: none;
+}
+
+/* Fluid desktop navbar adapters for intermediate viewports (769px - 1260px) */
+@media (min-width: 769px) and (max-width: 1260px) {
+  .modern-navbar {
+    padding: 0 0.85rem;
+  }
+}
+
+/* ZEN WORKOUT FOCUS MODE FULLSCREEN OVERLAY */
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  overflow-x: clip;
+  position: relative;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  overscroll-behavior: none;
+}
+
+/* The app scroller. Every other box in the shell is `overflow: hidden`, so this
+   is the only element in the tree a vertical finger can move, and the only
+   place scroll memory is ever written. */
+.content-area {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: clip;
+  padding: clamp(1.5rem, 3.2vw, 3.5rem);
+  position: relative;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  /* Scroller overscroll policy: absorb vertical overscroll here (no rubber band,
+     no pull-to-refresh), never let it chain, never allow horizontal chaining. */
+  overscroll-behavior-y: contain;
+  overscroll-behavior-x: none;
+  /* Route restores are hard writes, not animated "flying" scrolls. Smooth
+     scrolling is opt-in per element and is forced back to `auto` by the
+     reduced-motion block in @layer base. */
+  scroll-behavior: auto;
+  /* `scroll-padding` belongs on the real scroller - the `html` copy never
+     applied because the document itself cannot scroll. Deliberately small: the
+     fixed top bar and the dock are already reserved by this element's own
+     padding, and scroll-padding is additive to padding, so repeating the full
+     chrome heights here would push focused elements twice as far down. This
+     only clears the sticky in-page bars that overlay the scrollport. */
+  scroll-padding-block-start: var(--shell-scroll-offset, 1.5rem);
+  scroll-padding-block-end: var(--shell-scroll-offset, 1.5rem);
+  /* No `touch-action` here on purpose. `pan-y` on the app scroller would
+     intersect with the horizontal rails nested inside it (exercise carousel,
+     calendar ribbon) and leave them unable to pan at all. `overflow-x: clip`
+     already means a sideways finger has nothing to move. */
+}
+
+/* Legacy <=768px gutters, refined below by section 4. */
+@media (max-width: 768px) {
+  .content-area { padding: 1.25rem 1rem; }
+}
+
+@media (max-width: 768px) {
+  .app-layout {
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding-bottom: 0;
+  }
+
+  /* Mobile Top Glass Header */
+  .mobile-top-bar {
+    display: flex !important;
+    position: fixed;
+    inset-block-start: 0;
+    inset-inline: 0;
+    height: calc(52px + max(0px, env(safe-area-inset-top, 0px)));
+    padding-top: max(0px, env(safe-area-inset-top, 0px));
+    padding-inline: clamp(0.65rem, 3vw, 1rem);
+    /* 980 -> 1000, the same chrome band `.modern-nav-wrapper` uses, so the two
+       pieces of top chrome can no longer be split by an in-content layer. Not a
+       fix for anything visible: the highest z-index inside `.content-area` is
+       100, so the bar was already above all of them - this only removes the
+       20px of headroom that a new in-content layer could have eaten. Still
+       below the bottom dock (1050), the action bar (1040) and overlays. */
+    z-index: 1000;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(11, 16, 28, 0.88);
+    backdrop-filter: blur(28px) saturate(190%);
+    -webkit-backdrop-filter: blur(28px) saturate(190%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  }
+
+  .modern-nav-wrapper {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    padding: 0 0.5rem max(8px, env(safe-area-inset-bottom, 0px));
+    width: 100%;
+    background: transparent;
+    pointer-events: none;
+  }
+
+  .modern-navbar {
+    pointer-events: auto;
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+    height: 60px;
+    min-height: 60px;
+    padding: 0.2rem 0.35rem;
+    border-radius: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(11, 16, 28, 0.95);
+    backdrop-filter: blur(30px) saturate(190%);
+    -webkit-backdrop-filter: blur(30px) saturate(190%);
+    box-shadow: 0 18px 45px -8px rgba(0, 0, 0, 0.8), 0 0 24px -4px rgba(56, 189, 248, 0.2);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .content-area {
+    padding: 0.75rem 0.65rem;
+    /* Extra headroom so content doesn't hide under the fixed top bar */
+    padding-top: calc(60px + max(0.65rem, env(safe-area-inset-top, 0px)));
+    /* Extra breathing room: nav (60px) + safe-area */
+    padding-bottom: calc(88px + max(16px, env(safe-area-inset-bottom, 0px)));
+  }
+
+  /* When a live workout bar is floating, expand bottom clearance so content is never covered */
+  .app-layout.has-live-bar .content-area {
+    padding-bottom: calc(160px + max(20px, env(safe-area-inset-bottom, 0px))) !important;
+  }
+}
+
+/* Very small phones (<=380px) */
+@media (max-width: 380px) {
+  .content-area {
+    padding: 0.65rem !important;
+    padding-bottom: calc(95px + max(16px, env(safe-area-inset-bottom, 0px))) !important;
+  }
+
+  /* Correct content padding for small phones */
+  .content-area {
+    padding: 0.65rem !important;
+    padding-top: calc(58px + max(0.65rem, env(safe-area-inset-top, 0px))) !important;
+    padding-bottom: calc(100px + max(16px, env(safe-area-inset-bottom, 0px))) !important;
+  }
+}
+
+/* ==========================================================================
+   Landscape side rails and the scroller cap below the folded shell.
+   Moved from the tail of src/index.css, which was the only unlayered block
+   left in that file; leaving it unlayered would have lifted it above every
+   rule in this layer and silently undo section 4.
+   ========================================================================== */
+@media (orientation: landscape) and (max-height: 500px) {
+  /* Keep the sticky hud but make it much thinner */
+
+  /* Center the single column to avoid excessive stretching */
+  .session-detail-container {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  /* Ensure video player expands inline but doesn't take too much vertical height */
+  .in-app-youtube-wrapper {
+    max-height: 60vh;
+  }
+}
+
+/* Adaptive Ergonomic Layout: Mobile Landscape Side Rail */
+@media (orientation: landscape) and (max-height: 540px) {
+  .modern-nav-wrapper {
+    position: fixed !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    inset-inline-start: 0 !important;
+    inset-inline-end: auto !important;
+    width: 68px !important;
+    height: 100dvh !important;
+    padding: max(6px, env(safe-area-inset-top, 0px)) 0.35rem max(6px, env(safe-area-inset-bottom, 0px)) max(6px, env(safe-area-inset-left, 0px)) !important;
+    pointer-events: none !important;
+    z-index: 1000 !important;
+  }
+  .modern-navbar {
+    width: 58px !important;
+    height: calc(100dvh - 16px) !important;
+    max-height: none !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    padding: 0.5rem 0.2rem !important;
+    border-radius: 18px !important;
+  }
+  .modern-nav-links {
+    flex-direction: column !important;
+    justify-content: space-around !important;
+    height: 100% !important;
+    width: 100% !important;
+    gap: 0.4rem !important;
+  }
+  .modern-nav-item {
+    min-height: 44px !important;
+    max-height: 52px !important;
+    padding: 0.2rem !important;
+  }
+  .modern-nav-item .nav-short-label {
+    font-size: 0.62rem !important;
+    transform: scale(0.9);
+  }
+  .app-layout .main-content {
+    margin-inline-start: 72px !important;
+    padding-bottom: 1rem !important;
+  }
+  .mobile-top-bar {
+    display: none !important;
+  }
+  .content-area, .session-detail-container, .today-dashboard-stack {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+}
+
+/* ==========================================================================
+   2. Shell tokens, skip link and nav detail
+   Moved from the unlayered prefix of src/styles/forma-shell.css.
+   ========================================================================== */
+
+:root {
+  --shell-nav-active: color-mix(in srgb, var(--accent-cyan, #38bdf8) 60%, var(--text-primary, #f8fafc));
+  --shell-nav-active-soft: color-mix(in srgb, var(--accent-cyan, #38bdf8) 16%, transparent);
+  --shell-focus-ring: 2px solid var(--border-focus, #38bdf8);
+  --shell-safe-top: env(safe-area-inset-top, 0px);
+  --shell-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --shell-safe-inline-start: env(safe-area-inset-left, 0px);
+  --shell-safe-inline-end: env(safe-area-inset-right, 0px);
+  --shell-topbar-height: 52px;
+  --shell-dock-height: 74px;
+  --shell-topbar-inset: calc(var(--shell-topbar-height) + max(0.75rem, var(--shell-safe-top)));
+  --shell-dock-inset: calc(var(--shell-dock-height) + max(0.75rem, var(--shell-safe-bottom)));
+  --shell-livebar-inset: calc(var(--shell-topbar-inset) + 3.25rem);
+  --shell-scroll-offset: 1.5rem;
+}
+
+.forma-skip-link {
+  position: fixed;
+  z-index: 100001;
+  inset-block-start: calc(var(--shell-navbar-height, 66px) + max(1rem, var(--shell-safe-top, 0px)));
+  inset-inline: 0;
+  margin-inline: auto;
+  width: fit-content;
+  max-width: calc(100% - 2rem);
+  padding: 0.7rem 1.25rem;
+  border: 1px solid var(--border-focus, var(--accent-cyan));
+  border-radius: 12px;
+  color: var(--text-primary);
+  background: var(--bg-secondary, #0d1524);
+  box-shadow: 0 16px 36px -10px rgba(0, 0, 0, 0.75);
+  font-size: 0.85rem;
+  font-weight: 750;
+  text-decoration: none;
+  white-space: nowrap;
+  transform: translateY(-9999px);
+  opacity: 0;
+  pointer-events: none;
+  clip: rect(0, 0, 0, 0);
+  transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1), opacity 160ms ease;
+}
+
+.forma-skip-link:focus,
+.forma-skip-link:focus-visible {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+  clip: auto;
+  outline: var(--shell-focus-ring);
+  outline-offset: 2px;
+}
+
+.main-content:focus,
+.main-content:focus-visible {
+  outline: var(--shell-focus-ring);
+  outline-offset: -2px;
+}
+
+.admin-app-layout {
+  min-height: 100dvh;
+  width: 100%;
+  max-width: 100%;
+}
+
+.navbar-magnetic-spotlight {
+  background: radial-gradient(
+    280px circle at var(--spotlight-x, 50%) var(--spotlight-y, 50%),
+    color-mix(in srgb, var(--accent-cyan) 16%, transparent),
+    transparent 75%
+  );
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+
+.navbar-magnetic-spotlight[data-visible='true'] {
+  opacity: 1;
+}
+
+.theme-popover-anchor {
+  position: relative;
+}
+
+.brand-icon,
+.brand-glow-halo {
+  display: block;
+}
+
+.brand-text-col {
+  display: grid;
+  min-width: 0;
+}
+
+.avatar-letter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.nav-action-pill .action-icon {
+  flex: 0 0 auto;
+}
+
+.nav-action-pill .lang-text {
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.nav-action-pill.theme-cycler {
+  gap: 0.42rem;
+}
+
+.nav-action-pill .theme-dot-indicator {
+  flex: 0 0 auto;
+  margin-inline-start: 0;
+}
+
+.theme-popover-check {
+  margin-inline-start: auto;
+  flex: 0 0 auto;
+}
+
+.modern-nav-item {
+  color: var(--text-secondary);
+}
+
+.modern-nav-item:hover,
+.modern-nav-item:focus-visible {
+  color: var(--text-primary);
+}
+
+.modern-nav-item.is-active {
+  color: var(--shell-nav-active);
+  font-weight: 800;
+}
+
+.modern-nav-item.is-active .nav-label {
+  color: var(--shell-nav-active);
+}
+
+.modern-nav-active-bg {
+  background: linear-gradient(
+    135deg,
+    var(--shell-nav-active-soft),
+    color-mix(in srgb, var(--accent-primary, var(--accent-emerald)) 14%, transparent)
+  );
+  border-color: color-mix(in srgb, var(--shell-nav-active) 42%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--shell-nav-active) 20%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 10%, transparent);
+}
+
+.active-top-beam {
+  inset-inline-start: 20%;
+  inset-inline-end: 20%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--shell-nav-active),
+    color-mix(in srgb, var(--accent-primary, var(--accent-emerald)) 70%, var(--shell-nav-active)),
+    transparent
+  );
+  box-shadow: 0 0 8px color-mix(in srgb, var(--shell-nav-active) 70%, transparent);
+}
+
+.nav-active-dot {
+  background: var(--shell-nav-active);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--shell-nav-active) 70%, transparent);
+}
+
+.more-sheet-item-copy {
+  display: grid;
+  gap: 0.1rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: start;
+}
+
+.more-sheet-item-copy strong {
+  overflow: hidden;
+  color: inherit;
+  font-size: 0.86rem;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.more-sheet-item-copy small {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 0.73rem;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.more-sheet-item-chevron {
+  flex: 0 0 auto;
+  color: var(--text-muted);
+}
+
+[dir='rtl'] .more-sheet-item-chevron {
+  transform: scaleX(-1);
+}
+
+.more-sheet-item.is-active .more-sheet-item-copy strong {
+  font-weight: 800;
+}
+
+.theme-popover-item.is-selected {
+  color: var(--shell-nav-active);
+  border-color: color-mix(in srgb, var(--shell-nav-active) 45%, transparent);
+  background: var(--shell-nav-active-soft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navbar-magnetic-spotlight,
+  .forma-skip-link {
+    transition: none;
+  }
+
+  .navbar-magnetic-spotlight[data-visible='true'] {
+    opacity: 0.55;
+  }
+}
+
+/* ==========================================================================
+   3. The <=900px dock
+   Moved from src/styles/gym-floor.css.
+   ========================================================================== */
+@media (max-width: 900px) {
+  .modern-nav-wrapper {
+    position: fixed !important;
+    bottom: max(14px, env(safe-area-inset-bottom, 0px)) !important;
+    inset-inline: 0 !important;
+    padding: 0 1rem !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    z-index: 1050 !important;
+    pointer-events: none !important;
+  }
+
+  .modern-navbar {
+    pointer-events: auto !important;
+    width: 100% !important;
+    max-width: 410px !important;
+    height: 64px !important;
+    min-height: 64px !important;
+    border-radius: 9999px !important;
+    background: rgba(14, 22, 34, 0.78) !important;
+    backdrop-filter: blur(28px) saturate(190%) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(190%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+    padding: 0.25rem 0.5rem !important;
+    margin: 0 auto !important;
+  }
+}
+
+/* ==========================================================================
+   4. Mobile refinement of the frame
+   Moved from src/styles/mobile-refinement.css. This file is imported after
+   src/styles/gym-floor.css, so section 3 is what it refines.
+   ========================================================================== */
+
+@media (max-width: 900px) {
+  .app-layout { min-height: 100dvh; }
+  .app-layout .main-content { min-height: 0; }
+
+  /* :not(.in-workout-session-main) for the same reason the landscape block
+     further down carries it: the workout screen floats its own dock, and
+     reserving the global dock's height here on top of .session-hud's is what
+     stacked the three reservations. */
+  .app-layout .main-content:not(.in-workout-session-main) .content-area {
+    padding-inline: var(--mobile-page-gutter);
+    padding-block: calc(var(--shell-topbar-inset) + 0.75rem) calc(max(var(--shell-dock-inset), var(--hud-bottom-offset)) + 1.25rem);
+    scroll-padding-block: 1rem calc(var(--shell-dock-inset) + 1rem);
+  }
+
+  .app-layout.has-live-bar .mobile-top-bar {
+    border-color: color-mix(in srgb, var(--border-highlight) 72%, transparent);
+  }
+
+  .app-layout.has-live-bar aside[aria-label="Floating Dynamic Island HUD"] {
+    inset-block-start: calc(var(--shell-topbar-height) + var(--shell-safe-top) + 0.35rem) !important;
+  }
+
+  .app-layout.has-live-bar .content-area {
+    padding-block-start: calc(var(--shell-livebar-inset) + 0.5rem) !important;
+    padding-block-end: calc(max(var(--hud-bottom-offset), 148px) + 0.75rem) !important;
+    /* Padding reserves the band so the LAST row can be scrolled clear of the
+       chrome; scroll-padding is what a `scrollIntoView()` / focus restore
+       aligns against, and it was left at the no-live-bar values above. Without
+       it a focused row in a long session lands under the floating HUD at the
+       top and under the dock/HUD band at the bottom. Both are derived from the
+       same tokens the padding uses, so they cannot drift. */
+    scroll-padding-block-start: calc(
+      1rem + (var(--shell-livebar-inset) - var(--shell-topbar-inset))
+    );
+    scroll-padding-block-end: calc(max(var(--hud-bottom-offset), 148px) + 1rem);
+  }
+
+  .mobile-top-bar {
+    inset-block-start: 0 !important;
+    background: color-mix(in srgb, var(--bg-primary) 88%, transparent) !important;
+    border-color: var(--border-color) !important;
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--bg-primary) 24%, transparent) !important;
+  }
+
+  .mobile-top-bar > * {
+    min-width: 0;
+  }
+
+  .modern-nav-wrapper {
+    inset-block-end: 0 !important;
+    padding-block: 0 calc(0.5rem + var(--shell-safe-bottom)) !important;
+    padding-inline:
+      max(0.65rem, var(--shell-safe-inline-start))
+      max(0.65rem, var(--shell-safe-inline-end)) !important;
+  }
+
+  .modern-navbar {
+    width: 100% !important;
+    max-width: 520px !important;
+    height: 74px !important;
+    min-height: 74px !important;
+    padding-block: 0.35rem !important;
+    padding-inline: 0.4rem !important;
+    border: 1px solid var(--border-highlight) !important;
+    border-radius: 24px !important;
+    background: color-mix(in srgb, var(--bg-secondary) 96%, transparent) !important;
+    box-shadow: 0 10px 30px color-mix(in srgb, var(--bg-primary) 42%, transparent), inset 0 1px 0 color-mix(in srgb, white 7%, transparent) !important;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1023px) and (orientation: portrait) {
+  .modern-nav-wrapper {
+    position: fixed !important;
+    inset-block: 0 auto !important;
+    inset-inline: 0 auto !important;
+    inset-inline-end: auto !important;
+    z-index: 1000 !important;
+    display: flex !important;
+    width: var(--tablet-rail-width) !important;
+    padding-block: max(0.6rem, var(--shell-safe-top)) max(0.6rem, var(--shell-safe-bottom)) !important;
+    padding-inline: 0.45rem !important;
+    justify-content: flex-start !important;
+    pointer-events: none !important;
+  }
+
+  .modern-navbar {
+    pointer-events: auto;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    max-height: none !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    gap: 0.5rem !important;
+    padding-block: 0.6rem !important;
+    padding-inline: 0.3rem !important;
+    border-radius: 0 !important;
+    border-start-start-radius: 0 !important;
+    border-end-start-radius: 0 !important;
+    border-start-end-radius: 22px !important;
+    border-end-end-radius: 22px !important;
+  }
+
+  .app-layout .main-content {
+    margin-inline-start: var(--tablet-rail-width);
+  }
+}
+
+@media (max-width: 380px) {
+  .app-layout .content-area {
+    padding-inline: var(--mobile-page-gutter);
+  }
+
+  .modern-navbar { padding-inline: 0.25rem !important; }
+}
+
+/* --------------------------------------------------------------------------
+   Phone landscape (<=900px wide, <=540px tall)
+
+   index.css collapses the dock into an inline-start rail for
+   `orientation: landscape and max-height: 540px`, but the `max-width: 900px`
+   block above re-asserts a 74px horizontal pill with a 5-column grid and is
+   imported later, so a phone held sideways between 541px and 900px of
+   viewport width squeezed a 74px-tall grid into a 68px-wide rail. Re-assert
+   the rail, and drop the top-bar / bottom-dock reserve that no longer has any
+   chrome left to clear. The workout screen keeps its own offsets: both
+   selectors below are guarded with :not().
+   -------------------------------------------------------------------------- */
+@media (max-width: 900px) and (orientation: landscape) and (max-height: 540px) {
+  .modern-nav-wrapper {
+    inset-block: 0 auto !important;
+    inset-inline: 0 auto !important;
+    z-index: 1050 !important;
+    display: flex !important;
+    width: 68px !important;
+    height: 100dvh !important;
+    padding-block: max(6px, var(--shell-safe-top)) max(6px, var(--shell-safe-bottom)) !important;
+    padding-inline: max(6px, var(--shell-safe-inline-start)) 0.35rem !important;
+    justify-content: center !important;
+    align-items: center !important;
+    pointer-events: none !important;
+  }
+
+  .modern-navbar {
+    pointer-events: auto !important;
+    width: 58px !important;
+    max-width: none !important;
+    height: calc(100dvh - 12px) !important;
+    min-height: 0 !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    padding-block: 0.5rem !important;
+    padding-inline: 0.2rem !important;
+    border-radius: 18px !important;
+  }
+
+  .app-layout:not(.has-live-bar) .main-content:not(.in-workout-session-main) .content-area {
+    padding-block: max(0.5rem, var(--shell-safe-top)) max(0.5rem, var(--shell-safe-bottom)) !important;
+    scroll-padding-block: var(--space-xs);
+  }
+}
+
+/* data-floor-input hides the thumb dock and the rest HUD, so the scroller must
+   stop reserving room for them: 100dvh does not shrink on iOS when the
+   software keyboard opens, and the reserve is what parks the last sets
+   underneath it. */
+@media (max-width: 900px) {
+  :root[data-floor-input='true'] .app-layout .content-area {
+    padding-block-end: 0.75rem;
+    scroll-padding-block-end: 1rem;
+  }
+}
+
+/* ==========================================================================
+   5. Safe-area insets on the fixed top bar
+   Moved from src/styles/gym-ergonomics.css, the last of the five shell
+   sources. It has to outrank section 1's `padding-inline: clamp(...)`, which
+   is why it lives in this layer rather than in `features`.
+   ========================================================================== */
+@media (max-width: 900px) {
+  .mobile-top-bar {
+    padding-inline:
+      max(0.65rem, var(--shell-safe-inline-start, 0px))
+      max(0.65rem, var(--shell-safe-inline-end, 0px));
+  }
+}
+
+}

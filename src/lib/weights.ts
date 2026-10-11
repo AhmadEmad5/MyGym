@@ -97,11 +97,73 @@ export function normalizeDefaultWeights(raw: unknown): DefaultWeights | null {
   return { unit, byExercise };
 }
 
-/** Uses the same factors as the unit-switch migration in SettingsView.tsx:159. */
+/**
+ * The single place kg/lb factors are applied, so a value converted on the way into
+ * storage (`convertSessionUnits`, `convertRoutineUnits`) can never drift from one
+ * converted for display.
+ */
 export function convertWeight(value: number, from: WeightUnit, to: WeightUnit): number {
   if (!Number.isFinite(value)) return 0;
   if (from === to) return value;
   return roundWeight(from === 'kg' ? value * LB_PER_KG : value * KG_PER_LB);
+}
+
+// The three converters below walk real workout shapes, so they use `import type`
+// against `./api`. That is erased at compile time and keeps this module free of a
+// runtime Firebase dependency (see the note at the top of the file).
+
+import type { Routine, SessionExercise, WorkoutSession } from './api';
+
+/**
+ * Rewrites every set on an exercise list into `to`.
+ *
+ * `fallbackUnit` covers legacy sets written before `unit` was recorded: they belong
+ * to whatever the athlete's setting said at the time. A set already in the target
+ * unit is returned as the same object so untouched sets never churn the payload.
+ */
+function convertExerciseSets(
+  exercises: SessionExercise[] | undefined,
+  fallbackUnit: WeightUnit,
+  to: WeightUnit
+): SessionExercise[] {
+  return (exercises || []).map((exercise) => ({
+    ...exercise,
+    sets: (exercise.sets || []).map((set) => {
+      const from = set.unit || fallbackUnit;
+      return from === to ? set : { ...set, unit: to, weight: convertWeight(set.weight, from, to) };
+    })
+  }));
+}
+
+/** Rewrites every logged weight in a finished or in-progress workout. */
+export function convertSessionUnits(session: WorkoutSession, fallbackUnit: WeightUnit, to: WeightUnit): WorkoutSession {
+  return { ...session, exercises: convertExerciseSets(session.exercises, fallbackUnit, to) };
+}
+
+/**
+ * Rewrites every weight in a routine template.
+ *
+ * `routine.exercises` only mirrors the first training day for legacy single-session
+ * routines; a multi-day program keeps the real work in `routine.sessions`. Rewriting
+ * one without the other leaves the program internally inconsistent by the kg/lb
+ * ratio, so both are always converted together.
+ */
+export function convertRoutineUnits(routine: Routine, fallbackUnit: WeightUnit, to: WeightUnit): Routine {
+  const sessions = routine.sessions;
+  return {
+    ...routine,
+    exercises: convertExerciseSets(routine.exercises, fallbackUnit, to),
+    // Spread instead of assigning `undefined` so routines written before this field
+    // existed keep their original shape instead of growing an empty `sessions` key.
+    ...(Array.isArray(sessions)
+      ? {
+          sessions: sessions.map((session) => ({
+            ...session,
+            exercises: convertExerciseSets(session.exercises, fallbackUnit, to)
+          }))
+        }
+      : {})
+  };
 }
 
 export type WeightSource = 'exercise' | 'class';

@@ -205,6 +205,15 @@ function App() {
     return () => clearInterval(interval);
   }, [data?.settings, data?.sessions, data?.history, isRTL]);
 
+  // Auto-dismiss reminder banner after 15 seconds of inactivity
+  useEffect(() => {
+    if (!workoutReminderBanner) return;
+    const timer = setTimeout(() => {
+      setWorkoutReminderBanner(null);
+    }, 15000);
+    return () => clearTimeout(timer);
+  }, [workoutReminderBanner]);
+
 
   const handleLogin = async (user?: { email: string, name: string; isAdmin?: boolean }) => {
     const isAdmin = user?.isAdmin === true;
@@ -276,7 +285,8 @@ function App() {
   }
 
   return (
-    <AppShell isInSession={isInSession} hasActiveSession={hasActiveSession} isAdminRoute={isAdminRoute}>
+    <>
+      <AppShell isInSession={isInSession} hasActiveSession={hasActiveSession} isAdminRoute={isAdminRoute}>
       <Suspense fallback={<PageSkeleton />}>
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname}>
@@ -336,78 +346,56 @@ function App() {
         </>
       )}
 
-      {/* Workout Reminder Floating Toast / Banner (Suppressed during active sessions) */}
-      <AnimatePresence>
-        {!isInSession && workoutReminderBanner && (
-          <motion.div
-            initial={{ opacity: 0, y: -50, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -50, scale: 0.95 }}
-            transition={{ type: 'spring', stiffness: 350, damping: 25 }}
-            style={{
-              position: 'fixed',
-              top: 'calc(16px + max(0px, env(safe-area-inset-top, 0px)))',
-              left: 0,
-              right: 0,
-              marginInline: 'auto',
-              zIndex: 9999,
-              width: 'calc(100% - 32px)',
-              maxWidth: '480px',
-              padding: '1rem 1.25rem',
-              borderRadius: '18px',
-              background: 'linear-gradient(135deg, rgba(26, 32, 44, 0.96), rgba(15, 23, 42, 0.98))',
-              border: '1px solid rgba(234, 179, 8, 0.4)',
-              boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.7), 0 0 20px rgba(234, 179, 8, 0.2)',
-              backdropFilter: 'blur(12px)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '0.85rem'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div style={{
-                padding: '0.5rem',
-                borderRadius: '12px',
-                background: 'rgba(234, 179, 8, 0.2)',
-                color: '#eab308',
-                display: 'flex'
-              }}>
-                <Dumbbell className="w-6 h-6 animate-pulse" />
-              </div>
-              <div>
-                <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                  {workoutReminderBanner.title}
-                </h4>
-                <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
-                  {workoutReminderBanner.message}
-                </p>
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <button
-                type="button"
-                className="btn btn-primary"
-                style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
-                onClick={() => {
-                  startHomeWorkout().catch(() => setWorkoutReminderBanner(null));
-                }}
-              >
-                {isRTL ? 'ابدأ تمرين 10 دقائق' : 'Start 10-min workout'}
-              </button>
-              <button
-                type="button"
-                className="btn-icon btn-ghost"
-                style={{ padding: '0.35rem', color: 'var(--text-muted)' }}
-                onClick={() => setWorkoutReminderBanner(null)}
-              >
-                ✕
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </AppShell>
+
+    {/* Workout Reminder Floating Toast / Banner (Placed outside AppShell to prevent scroller containment, positioned safely below navbar) */}
+    <AnimatePresence>
+      {!isInSession && workoutReminderBanner && (
+        <motion.div
+          initial={{ opacity: 0, y: -24, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -24, scale: 0.95 }}
+          transition={{ type: 'spring', stiffness: 380, damping: 26 }}
+          className="forma-reminder-toast"
+          role="alert"
+          aria-live="polite"
+        >
+          <div className="forma-reminder-body">
+            <div className="forma-reminder-icon-box" aria-hidden="true">
+              <Dumbbell className="w-5 h-5 animate-pulse" />
+            </div>
+            <div className="forma-reminder-text">
+              <h4 className="forma-reminder-title">
+                {workoutReminderBanner.title}
+              </h4>
+              <p className="forma-reminder-desc">
+                {workoutReminderBanner.message}
+              </p>
+            </div>
+          </div>
+          <div className="forma-reminder-actions">
+            <button
+              type="button"
+              className="btn btn-primary forma-reminder-btn"
+              onClick={() => {
+                startHomeWorkout().catch(() => setWorkoutReminderBanner(null));
+              }}
+            >
+              {isRTL ? 'ابدأ تمرين 10 دقائق' : 'Start 10-min workout'}
+            </button>
+            <button
+              type="button"
+              className="forma-reminder-close"
+              aria-label={isRTL ? 'إغلاق التذكير' : 'Dismiss reminder'}
+              onClick={() => setWorkoutReminderBanner(null)}
+            >
+              ✕
+            </button>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  </>
   );
 }
 

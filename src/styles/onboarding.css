@@ -1,627 +1,455 @@
 /* ==========================================================================
-   FORMA — Interactive Onboarding Coachmark Overlay
-   Logical properties throughout so Arabic RTL mirrors without breakage.
+   FORMA — Interactive Spotlight Onboarding & Product Tour Walkthrough
+   Full WCAG 2.2 AA Compliance, GPU-only Hardware Acceleration, Mobile Ergonomics
    ========================================================================== */
 
 @layer components {
-  .forma-onboarding-backdrop {
+  /* Fullscreen Tour Overlay */
+  .forma-tour-overlay {
     position: fixed;
     inset: 0;
-    z-index: 10000;
+    z-index: 99999;
+    pointer-events: auto;
+    overflow: hidden;
+  }
+
+  /* SVG Mask Backdrop */
+  .forma-tour-mask-svg {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 1;
+    transition: opacity 0.3s ease;
+  }
+
+  /* Spotlight Halo Border Box */
+  .forma-tour-spotlight-halo {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 2;
+    pointer-events: none;
+    border-radius: 18px;
+    border: 2px solid #38bdf8;
+    background: transparent;
+    transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+                width 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+                height 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 0.3s ease,
+                box-shadow 0.3s ease;
+    will-change: transform, width, height;
+  }
+
+  /* Mobile Radar Ping */
+  .forma-tour-ping {
+    position: absolute;
+    inset: -6px;
+    border-radius: 22px;
+    opacity: 0.75;
+    animation: forma-radar-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+    pointer-events: none;
+  }
+
+  @keyframes forma-radar-ping {
+    0% {
+      transform: scale(0.96);
+      opacity: 0.8;
+    }
+    75%, 100% {
+      transform: scale(1.08);
+      opacity: 0;
+    }
+  }
+
+  /* Floating Tour Card (Base) */
+  .forma-tour-card {
+    z-index: 100000;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    padding-block-start: max(0.75rem, var(--shell-safe-top));
-    padding-block-end: max(0.75rem, var(--shell-safe-bottom));
-    padding-inline: max(0.75rem, var(--shell-safe-inline-start)) max(0.75rem, var(--shell-safe-inline-end));
-    background: radial-gradient(circle at center, rgba(15, 23, 42, 0.94) 0%, rgba(3, 7, 18, 0.98) 100%);
+    flex-direction: column;
+    background: linear-gradient(165deg, rgba(17, 24, 39, 0.96) 0%, rgba(10, 15, 29, 0.98) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 20px 48px -10px rgba(0, 0, 0, 0.8),
+                0 0 32px rgba(56, 189, 248, 0.1),
+                inset 0 1px 1px rgba(255, 255, 255, 0.12);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-  }
-
-  .forma-onboarding-card {
-    position: relative;
-    display: flex;
-    width: 100%;
-    max-width: 34rem;
-    max-height: calc(100dvh - 2rem - var(--shell-safe-top) - var(--shell-safe-bottom));
-    flex-direction: column;
+    color: #f8fafc;
     overflow: hidden;
-    border: 1px solid rgba(56, 189, 248, 0.22);
-    border-radius: 1.75rem;
-    background: linear-gradient(170deg, rgba(20, 27, 45, 0.94) 0%, rgba(11, 15, 25, 0.99) 100%);
-    box-shadow:
-      0 24px 64px -12px rgba(0, 0, 0, 0.85),
-      0 0 40px rgba(56, 189, 248, 0.12),
-      inset 0 1px 1px rgba(255, 255, 255, 0.15);
   }
 
-  .forma-onboarding-card:focus {
-    outline: none;
+  /* Desktop Anchored Popover */
+  .forma-tour-card.is-desktop-popover {
+    width: 420px;
+    max-width: calc(100vw - 32px);
+    border-radius: 20px;
+    transition: top 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+                left 0.28s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  .forma-onboarding-card:focus-visible {
-    outline: 3px solid rgba(56, 189, 248, 0.65);
-    outline-offset: 3px;
+  /* Centered Card (Welcome & Finale on Desktop) */
+  .forma-tour-card.is-centered {
+    position: fixed;
+    width: 460px;
+    max-width: calc(100vw - 32px);
+    border-radius: 24px;
+    box-shadow: 0 30px 70px -15px rgba(0, 0, 0, 0.9),
+                0 0 45px rgba(56, 189, 248, 0.18),
+                inset 0 1px 1px rgba(255, 255, 255, 0.15);
   }
 
-  .forma-onboarding-glow {
-    position: absolute;
-    inset-block-start: -80px;
-    inset-inline-start: 50%;
-    width: 300px;
-    height: 160px;
-    transform: translateX(-50%);
-    background: radial-gradient(ellipse at center, rgba(56, 189, 248, 0.32) 0%, rgba(16, 185, 129, 0.14) 50%, transparent 80%);
-    filter: blur(35px);
-    pointer-events: none;
-    z-index: 0;
+  /* Mobile Ergonomic Bottom Drawer */
+  .forma-tour-card.is-mobile-drawer {
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: 100%;
+    max-height: 82dvh;
+    border-radius: 24px 24px 0 0;
+    border-inline: none;
+    border-bottom: none;
+    padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 1rem));
+    box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.85),
+                0 -1px 2px rgba(255, 255, 255, 0.1);
   }
 
-  [dir="rtl"] .forma-onboarding-glow {
-    transform: translateX(50%);
+  .forma-tour-drawer-handle {
+    width: 44px;
+    height: 5px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.22);
+    margin: 10px auto 4px auto;
+    flex-shrink: 0;
   }
 
-  .forma-onboarding-topline {
-    position: relative;
-    z-index: 2;
+  /* Header Cluster */
+  .forma-tour-card-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--space-sm);
-    padding-block: 1.1rem 0.55rem;
-    padding-inline: 1.4rem;
+    padding: 0.85rem 1.25rem 0.4rem 1.25rem;
+    flex-shrink: 0;
   }
 
-  .forma-onboarding-step-tag {
-    display: inline-flex;
+  .forma-tour-badge-cluster {
+    display: flex;
     align-items: center;
-    gap: 0.45rem;
-    padding: 0.3rem 0.75rem;
-    border: 1px solid rgba(56, 189, 248, 0.28);
-    border-radius: 999px;
-    background: rgba(56, 189, 248, 0.1);
-    color: #38bdf8;
-    font-size: 0.7rem;
+    gap: 0.5rem;
+  }
+
+  .forma-tour-step-pill {
+    font-size: 0.72rem;
     font-weight: 800;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.04em;
+    padding: 0.25rem 0.65rem;
+    border-radius: 999px;
+    border: 1px solid;
     text-transform: uppercase;
-    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
   }
 
-  .forma-onboarding-skip-btn {
-    min-height: var(--space-touch-min);
-    padding: 0.4rem 0.6rem;
-    border: 0;
-    border-radius: 8px;
-    background: transparent;
-    color: #94a3b8;
-    font: inherit;
-    font-size: 0.78rem;
-    font-weight: 700;
+  .forma-tour-category-tag {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .forma-tour-btn-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.6);
     cursor: pointer;
-    transition: color 0.18s ease, background-color 0.18s ease;
+    touch-action: manipulation;
+    transition: background 0.18s ease, color 0.18s ease, transform 0.15s ease;
   }
 
-  .forma-onboarding-skip-btn:hover {
-    background: rgba(255, 255, 255, 0.08);
+  .forma-tour-btn-close:hover {
+    background: rgba(255, 255, 255, 0.12);
     color: #ffffff;
   }
 
-  .forma-onboarding-close-btn {
-    display: flex;
-    width: var(--space-touch-min);
-    height: var(--space-touch-min);
-    align-items: center;
-    justify-content: center;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.06);
-    color: #94a3b8;
-    cursor: pointer;
-    transition: background-color 0.2s ease, color 0.2s ease;
+  .forma-tour-btn-close:active {
+    transform: scale(0.92);
   }
 
-  .forma-onboarding-close-btn:hover {
+  /* Card Body */
+  .forma-tour-card-body {
+    padding: 0.4rem 1.25rem 1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    flex: 1;
+  }
+
+  .forma-tour-icon-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+  }
+
+  .forma-tour-icon-gem {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    border: 1.5px solid;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .forma-tour-titles {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .forma-tour-title {
+    margin: 0 0 0.3rem 0;
+    font-size: 1.1rem;
+    font-weight: 800;
+    letter-spacing: -0.015em;
+    color: #ffffff;
+    line-height: 1.3;
+  }
+
+  .forma-tour-desc {
+    margin: 0;
+    font-size: 0.84rem;
+    line-height: 1.5;
+    color: rgba(241, 245, 249, 0.8);
+  }
+
+  /* Quick Config Buttons on Welcome */
+  .forma-tour-quick-config {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 14px;
+  }
+
+  .forma-tour-config-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .forma-tour-config-label {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .forma-tour-pill-group {
+    display: flex;
+    gap: 0.35rem;
+  }
+
+  .forma-tour-config-pill {
+    padding: 0.3rem 0.65rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    touch-action: manipulation;
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.18s ease;
+  }
+
+  .forma-tour-config-pill.is-active {
+    background: rgba(56, 189, 248, 0.2);
+    border-color: rgba(56, 189, 248, 0.6);
+    color: #38bdf8;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
+  }
+
+  /* Celebration Pill */
+  .forma-tour-celebration-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.75rem 1rem;
+    background: rgba(16, 185, 129, 0.14);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    border-radius: 12px;
+    color: #34d399;
+    font-size: 0.84rem;
+    font-weight: 700;
+  }
+
+  .forma-tour-check-icon {
+    flex-shrink: 0;
+    color: #10b981;
+  }
+
+  /* Card Footer Navigation */
+  .forma-tour-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 1.25rem 0.85rem 1.25rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(0, 0, 0, 0.25);
+    flex-shrink: 0;
+  }
+
+  /* Progress Dots */
+  .forma-tour-dots-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .forma-tour-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.2);
+    transition: all 0.25s ease;
+  }
+
+  .forma-tour-dot.is-active {
+    width: 18px;
+    border-radius: 999px;
+  }
+
+  .forma-tour-dot.is-passed {
+    background: rgba(255, 255, 255, 0.45);
+  }
+
+  /* Actions */
+  .forma-tour-action-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Touch-compliant Action Buttons (>= 44px) */
+  .forma-tour-btn-secondary,
+  .forma-tour-btn-text,
+  .forma-tour-btn-primary {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0 1rem;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    touch-action: manipulation;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .forma-tour-btn-secondary {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #e2e8f0;
+  }
+
+  .forma-tour-btn-secondary:hover {
     background: rgba(255, 255, 255, 0.14);
     color: #ffffff;
   }
 
-  .forma-onboarding-route {
-    --forma-tour-steps: 5;
-    position: relative;
-    z-index: 2;
-    display: grid;
-    grid-template-columns: repeat(var(--forma-tour-steps, 5), minmax(0, 1fr));
-    gap: 0.45rem;
-    padding-block: 0.3rem 0.85rem;
-    padding-inline: 1.4rem;
+  .forma-tour-btn-secondary:active {
+    transform: scale(0.97);
   }
 
-  .forma-onboarding-route-bar {
-    position: relative;
-    height: 4px;
+  .forma-tour-btn-text {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.55);
+  }
+
+  .forma-tour-btn-text:hover {
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .forma-tour-btn-text:active {
+    transform: scale(0.97);
+  }
+
+  .forma-tour-btn-primary {
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    box-shadow: 0 4px 16px rgba(2, 132, 199, 0.4);
+  }
+
+  .forma-tour-btn-primary:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 6px 20px rgba(2, 132, 199, 0.55);
+  }
+
+  .forma-tour-btn-primary:active {
+    transform: scale(0.97);
+  }
+
+  /* Focus Visibilities for WCAG 2.2 */
+  .forma-tour-btn-primary:focus-visible,
+  .forma-tour-btn-secondary:focus-visible,
+  .forma-tour-btn-text:focus-visible,
+  .forma-tour-btn-close:focus-visible,
+  .forma-tour-config-pill:focus-visible {
+    outline: 2px solid #38bdf8;
+    outline-offset: 2px;
+  }
+
+  /* Confetti Particles on Celebration */
+  .forma-tour-confetti-container {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 999999;
     overflow: hidden;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.09);
-    transition: background 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  .forma-onboarding-route-bar.is-active {
-    background: linear-gradient(90deg, #38bdf8, #10b981);
-    box-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
-  }
-
-  .forma-onboarding-content {
-    position: relative;
-    z-index: 2;
-    display: flex;
-    flex-direction: column;
-    gap: 1.05rem;
-    padding-block: 0.75rem 1.25rem;
-    padding-inline: 1.4rem;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-  }
-
-  .forma-onboarding-hero-head {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-  }
-
-  .forma-onboarding-icon-gem {
-    display: flex;
-    width: 58px;
-    height: 58px;
-    align-items: center;
-    justify-content: center;
-    margin-block-end: 0.8rem;
-    border: 1px solid rgba(56, 189, 248, 0.4);
-    border-radius: 18px;
-    background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(16, 185, 129, 0.2));
-    box-shadow: 0 12px 28px rgba(56, 189, 248, 0.22);
-  }
-
-  .forma-onboarding-title {
-    margin: 0 0 0.4rem;
-    color: #ffffff;
-    font-size: clamp(1.2rem, 3.6vw, 1.5rem);
-    font-weight: 850;
-    letter-spacing: -0.02em;
-    line-height: 1.25;
-  }
-
-  .forma-onboarding-desc {
-    max-width: 26rem;
-    margin: 0;
-    color: #94a3b8;
-    font-size: 0.84rem;
-    line-height: 1.55;
-  }
-
-  .forma-choice-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.45rem;
-  }
-
-  .forma-choice-label {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    color: #94a3b8;
-    font-size: 0.75rem;
-    font-weight: 750;
-    letter-spacing: 0.02em;
-  }
-
-  .forma-choice-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-    gap: 0.55rem;
-  }
-
-  .forma-choice-grid.is-two {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .forma-choice-grid.is-three {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .forma-choice-grid.is-four {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
-  .forma-choice-card {
-    display: flex;
-    min-height: 3.6rem;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.2rem;
-    padding: 0.7rem 0.6rem;
-    border: 1.5px solid rgba(255, 255, 255, 0.08);
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.04);
-    color: #94a3b8;
-    font-family: inherit;
-    text-align: center;
-    cursor: pointer;
-    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
-  }
-
-  .forma-choice-card:hover {
-    border-color: rgba(255, 255, 255, 0.2);
-    background: rgba(255, 255, 255, 0.08);
-    color: #ffffff;
-  }
-
-  .forma-choice-card.is-active {
-    border-color: #38bdf8;
-    background: linear-gradient(135deg, rgba(56, 189, 248, 0.16), rgba(16, 185, 129, 0.14));
-    color: #ffffff;
-    box-shadow: 0 4px 16px rgba(56, 189, 248, 0.22);
-  }
-
-  .forma-choice-title {
-    color: #ffffff;
-    font-size: 0.92rem;
-    font-weight: 800;
-  }
-
-  .forma-choice-sub {
-    color: #94a3b8;
-    font-size: 0.68rem;
-  }
-
-  .forma-choice-card.is-active .forma-choice-sub {
-    color: #38bdf8;
-  }
-
-  .forma-choice-icon {
-    color: var(--text-muted, #64748b);
-    transition: color 0.2s ease;
-  }
-
-  .forma-choice-card.is-active .forma-choice-icon {
-    color: #38bdf8;
-  }
-
-  .forma-days-row {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: var(--space-xs);
-  }
-
-  .forma-days-pill {
-    min-height: 2.9rem;
-    border: 1.5px solid rgba(255, 255, 255, 0.08);
-    border-radius: 13px;
-    background: rgba(255, 255, 255, 0.04);
-    color: #e2e8f0;
-    font: inherit;
-    font-size: 1rem;
-    font-weight: 800;
-    cursor: pointer;
-    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease,
-      box-shadow 0.2s ease;
-  }
-
-  .forma-days-pill:hover {
-    border-color: rgba(255, 255, 255, 0.2);
-    background: rgba(255, 255, 255, 0.08);
-  }
-
-  .forma-days-pill.is-active {
-    border-color: #38bdf8;
-    background: linear-gradient(135deg, rgba(56, 189, 248, 0.16), rgba(16, 185, 129, 0.14));
-    color: #ffffff;
-    box-shadow: 0 4px 16px rgba(56, 189, 248, 0.22);
-  }
-
-  .forma-alert-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 0.55rem;
-  }
-
-  .forma-alert-toggle {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-sm);
-    padding: 0.7rem 0.85rem;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.04);
-  }
-
-  .forma-alert-legend {
-    color: #e2e8f0;
-    font-size: 0.82rem;
-    font-weight: 700;
-  }
-
-  .forma-switch {
-    position: relative;
-    width: 46px;
-    min-height: var(--space-touch-min);
-    flex-shrink: 0;
-    padding: 0;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.08);
-    cursor: pointer;
-    transition: background-color 0.2s ease, border-color 0.2s ease;
-  }
-
-  .forma-switch.is-on {
-    border-color: rgba(16, 185, 129, 0.6);
-    background: rgba(16, 185, 129, 0.35);
-  }
-
-  .forma-switch-knob {
+  .forma-tour-confetti-particle {
     position: absolute;
-    inset-block-start: calc((100% - 20px) / 2);
-    inset-inline-start: 2px;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: #e2e8f0;
-    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    top: -20px;
+    left: var(--p-x);
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    background-color: var(--p-color);
+    animation: forma-confetti-fall 3s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+    animation-delay: var(--p-delay);
+    will-change: transform, opacity;
   }
 
-  .forma-switch.is-on .forma-switch-knob {
-    background: #10b981;
-    transform: translateX(20px);
-  }
-
-  [dir="rtl"] .forma-switch.is-on .forma-switch-knob {
-    transform: translateX(-20px);
-  }
-
-  .forma-themes-swatches {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: var(--space-xs);
-  }
-
-  .forma-theme-swatch-card {
-    display: flex;
-    min-width: 0;
-    min-block-size: var(--space-touch-min);
-    align-items: center;
-    gap: 0.45rem;
-    padding: 0.55rem 0.5rem;
-    border: 1.5px solid rgba(255, 255, 255, 0.08);
-    border-radius: 13px;
-    background: rgba(255, 255, 255, 0.04);
-    cursor: pointer;
-    transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-  }
-
-  .forma-theme-swatch-card:hover {
-    border-color: rgba(255, 255, 255, 0.2);
-  }
-
-  .forma-theme-swatch-card.is-active {
-    border-color: #38bdf8;
-    background: rgba(56, 189, 248, 0.12);
-    box-shadow: 0 0 14px rgba(56, 189, 248, 0.2);
-  }
-
-  .forma-theme-dot {
-    width: 13px;
-    height: 13px;
-    flex-shrink: 0;
-    border-radius: 50%;
-    box-shadow: 0 0 8px currentColor;
-  }
-
-  .forma-theme-name {
-    overflow: hidden;
-    color: #f1f5f9;
-    font-size: 0.72rem;
-    font-weight: 700;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .forma-summary-card {
-    display: grid;
-    gap: 0.4rem;
-    padding: 0.95rem 1rem;
-    border: 1px solid rgba(56, 189, 248, 0.22);
-    border-radius: 16px;
-    background: linear-gradient(135deg, rgba(56, 189, 248, 0.1), rgba(16, 185, 129, 0.1));
-  }
-
-  .forma-summary-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    color: #94a3b8;
-    font-size: 0.8rem;
-  }
-
-  .forma-summary-row strong {
-    color: #ffffff;
-    font-weight: 800;
-  }
-
-  .forma-summary-row.is-hero {
-    color: #e2e8f0;
-    font-weight: 700;
-  }
-
-  .forma-summary-row.is-hero strong {
-    color: #38bdf8;
-    font-size: 0.92rem;
-  }
-
-  .forma-onboarding-footnote {
-    margin: 0;
-    color: #94a3b8;
-    font-size: 0.75rem;
-    line-height: 1.5;
-    text-align: center;
-  }
-
-  .forma-onboarding-footer {
-    position: relative;
-    z-index: 2;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.85rem;
-    padding-block: 1rem max(1rem, var(--shell-safe-bottom));
-    padding-inline: 1.4rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(11, 15, 25, 0.95);
-  }
-
-  .forma-onboarding-back-btn {
-    display: inline-flex;
-    min-height: 44px;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.65rem 1rem;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.05);
-    color: #94a3b8;
-    font: inherit;
-    font-size: 0.82rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
-  }
-
-  .forma-onboarding-back-btn:hover:not([disabled]) {
-    background: rgba(255, 255, 255, 0.1);
-    color: #ffffff;
-  }
-
-  .forma-onboarding-back-btn[disabled] {
-    opacity: 0.35;
-    cursor: not-allowed;
-  }
-
-  .forma-onboarding-primary-btn {
-    display: inline-flex;
-    min-height: 46px;
-    flex: 1;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-xs);
-    padding: 0.72rem 1.25rem;
-    border: 0;
-    border-radius: 14px;
-    background: linear-gradient(135deg, #38bdf8 0%, #10b981 100%);
-    box-shadow: 0 4px 18px rgba(56, 189, 248, 0.35);
-    color: #031219;
-    font: inherit;
-    font-size: 0.88rem;
-    font-weight: 850;
-    cursor: pointer;
-    transition: transform 0.15s ease, box-shadow 0.2s ease;
-  }
-
-  .forma-onboarding-primary-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 24px rgba(56, 189, 248, 0.45);
-  }
-
-  .forma-onboarding-primary-btn:active {
-    transform: translateY(0);
-  }
-
-  .forma-onboarding-card :focus-visible {
-    outline: 3px solid rgba(56, 189, 248, 0.7);
-    outline-offset: 2px;
-  }
-
-  .forma-onboarding-card .forma-onboarding-back-btn:focus-visible,
-  .forma-onboarding-card .forma-onboarding-primary-btn:focus-visible,
-  .forma-onboarding-card .forma-onboarding-close-btn:focus-visible,
-  .forma-onboarding-card .forma-onboarding-skip-btn:focus-visible {
-    outline: 3px solid rgba(56, 189, 248, 0.75);
-    outline-offset: 2px;
-  }
-
-  @media (max-width: 520px) {
-    .forma-onboarding-card {
-      border-radius: 1.4rem;
+  @keyframes forma-confetti-fall {
+    0% {
+      transform: translateY(0) rotate(0deg) scale(0.8);
+      opacity: 1;
     }
-
-    .forma-onboarding-topline,
-    .forma-onboarding-route,
-    .forma-onboarding-content,
-    .forma-onboarding-footer {
-      padding-inline: 1rem;
-    }
-
-    .forma-themes-swatches {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .forma-choice-grid.is-four {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .forma-days-row {
-      grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: var(--space-xs);
-    }
-
-    .forma-onboarding-back-btn span {
-      display: none;
-    }
-
-    .forma-onboarding-back-btn {
-      padding-inline: 0.85rem;
+    100% {
+      transform: translateY(105vh) rotate(720deg) scale(1.2);
+      opacity: 0;
     }
   }
-
-  @media (prefers-reduced-motion: reduce) {
-    .forma-onboarding-primary-btn,
-    .forma-switch-knob,
-    .forma-onboarding-route-bar,
-    .forma-onboarding-skip-btn,
-    .forma-onboarding-close-btn,
-    .forma-choice-card,
-    .forma-days-pill,
-    .forma-theme-swatch-card,
-    .forma-choice-icon,
-    .forma-onboarding-back-btn {
-      transition: none;
-    }
-
-    .forma-onboarding-primary-btn:hover,
-    .forma-onboarding-primary-btn:active { transform: none; }
-  }
-
-  /* The app's own motion gate needs its own copy: a media query adds no
-     specificity, so these cannot be folded into the block above. */
-  [data-motion='reduced'] .forma-onboarding-primary-btn,
-  [data-motion='reduced'] .forma-switch-knob,
-  [data-motion='reduced'] .forma-onboarding-route-bar,
-  [data-motion='reduced'] .forma-onboarding-skip-btn,
-  [data-motion='reduced'] .forma-onboarding-close-btn,
-  [data-motion='reduced'] .forma-choice-card,
-  [data-motion='reduced'] .forma-days-pill,
-  [data-motion='reduced'] .forma-theme-swatch-card,
-  [data-motion='reduced'] .forma-choice-icon,
-  [data-motion='reduced'] .forma-onboarding-back-btn {
-    transition: none;
-  }
-
-  [data-motion='reduced'] .forma-onboarding-primary-btn:hover,
-  [data-motion='reduced'] .forma-onboarding-primary-btn:active { transform: none; }
 }

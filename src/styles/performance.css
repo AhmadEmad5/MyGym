@@ -193,16 +193,16 @@
     font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
-  .forma-record-chip.is-cyan { color: #34d399; border-color: rgba(52, 211, 153, 0.25); }
-  .forma-record-chip.is-amber { color: #f97316; border-color: rgba(249, 115, 22, 0.25); }
-  .forma-record-chip.is-rose { color: #fb7185; border-color: rgba(251, 113, 133, 0.25); }
+  .forma-record-chip.is-cyan { color: var(--accent-emerald-ink); border-color: rgba(52, 211, 153, 0.25); }
+  .forma-record-chip.is-amber { color: var(--gym-flame); border-color: rgba(249, 115, 22, 0.25); }
+  .forma-record-chip.is-rose { color: var(--accent-rose-ink); border-color: rgba(251, 113, 133, 0.25); }
 
   .forma-radar-shell { display: grid; gap: 1rem; }
   .forma-radar-stage { position: relative; display: grid; place-items: center; min-width: 0; }
   .forma-radar-stage svg { display: block; width: 100%; max-width: 300px; height: auto; }
   .forma-radar-axis-hit { cursor: pointer; }
   .forma-radar-axis-hit:focus { outline: none; }
-  .forma-radar-axis-hit:focus-visible circle { stroke: #fff; stroke-width: 2.5; }
+  .forma-radar-axis-hit:focus-visible circle { stroke: var(--text-primary); stroke-width: 2.5; }
 }
 
 /* ==========================================================================
@@ -325,7 +325,7 @@
 
   .session-target-primary {
     border-color: transparent;
-    color: #04121b;
+    color: var(--text-on-accent);
     background: linear-gradient(135deg, var(--accent-primary), var(--accent-hover));
     box-shadow: 0 10px 26px -8px color-mix(in srgb, var(--accent-primary) 65%, transparent);
     font-size: 1.05rem;
@@ -333,8 +333,8 @@
 
   .session-target-success {
     border-color: color-mix(in srgb, var(--success) 55%, transparent);
-    color: #04140d;
-    background: linear-gradient(135deg, var(--success), #34d399);
+    color: var(--text-on-accent);
+    background: linear-gradient(135deg, var(--success), var(--accent-emerald-ink));
   }
 
   .session-target-ghost { background: color-mix(in srgb, var(--bg-secondary) 80%, transparent); }
@@ -387,7 +387,7 @@
 
   .session-set-check[aria-pressed="true"] .session-set-check-mark {
     border-color: var(--success);
-    color: #04140d;
+    color: var(--text-on-accent);
     background: var(--success);
   }
 
@@ -609,7 +609,7 @@
     position: relative;
     inline-size: 100%;
     aspect-ratio: 16 / 9;
-    background: #000;
+    background: rgb(0 0 0);
     border-radius: 14px;
     overflow: hidden;
     animation: forma-tutorial-frame-in 0.24s ease-out both;
@@ -726,5 +726,34 @@
   html[data-motion="reduced"] .forma-exercise-guide[data-modal-state] .forma-exercise-guide-switch,
   html[data-motion="reduced"] .forma-exercise-guide[data-modal-state] .forma-exercise-guide-switch button {
     transition: none;
+  }
+
+  /* ---- Performance route page frame --------------------------------------
+     Folded in from src/styles/routes.css. The shared card surface lives in
+     components.css, which is imported earlier, so the `!important` rules above
+     still apply to `.performance-page > section`. */
+  .performance-page {
+    --performance-rule: var(--premium-line);
+  }
+
+  .performance-page > div:not(.forma-performance-ledger),
+  .performance-page > section:not(.forma-performance-ledger) {
+    position: relative;
+  }
+
+  .performance-page > div:not(.forma-performance-ledger)::before,
+  .performance-page > section:not(.forma-performance-ledger)::before {
+    position: absolute;
+    inset-block-start: 1.2rem;
+    inset-inline-start: 0;
+    width: 1px;
+    height: 2.3rem;
+    background: var(--accent-cyan);
+    content: '';
+    opacity: 0.65;
+  }
+
+  .performance-page table {
+    font-variant-numeric: tabular-nums;
   }
 }

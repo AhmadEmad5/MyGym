@@ -1,18 +1,20 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback, memo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Plus, Check, Play, Pause, Trash2, X,
   CirclePlay, ChevronRight, ChevronLeft, Sparkles, Dumbbell,
   RotateCcw, Info, CheckCircle2, Bell, MoreVertical, Flag, Square,
-  SearchX, ListTodo, CalendarDays, Lightbulb, Repeat
+  SearchX, ListTodo, CalendarDays, Lightbulb, Repeat, Maximize2
 } from 'lucide-react';
+import { GlanceableRestOverlay } from '../components/GlanceableRestOverlay';
 import { WorkoutSession, SetRecord, SessionExercise } from '../lib/api';
 import { useData } from '../hooks/useData';
 import { Modal } from '../components/Modal';
 import { Button } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
 import { PageSkeleton } from '../components/ui/PageSkeleton';
+import { VirtualizedFeed } from '../components/ui/VirtualizedFeed';
 import { useTranslation } from '../lib/i18n';
 import { gymAudio } from '../lib/audio';
 import { notify } from '../lib/feedback';
@@ -617,22 +619,7 @@ export function SessionDetailView() {
               type="button"
               onClick={() => setSelectedMuscleFilter('all')}
               aria-pressed={selectedMuscleFilter === 'all'}
-              className="muscle-filter-pill touch-target-comfortable"
-              style={{
-                minHeight: '48px',
-                padding: '0.5rem 1rem',
-                borderRadius: '999px',
-                fontSize: '0.85rem',
-                fontWeight: 700,
-                border: selectedMuscleFilter === 'all' ? '1px solid var(--accent-primary)' : '1px solid var(--premium-line)',
-                background: selectedMuscleFilter === 'all' ? 'color-mix(in srgb, var(--accent-primary) 18%, transparent)' : 'transparent',
-                color: selectedMuscleFilter === 'all' ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                whiteSpace: 'nowrap',
-                cursor: 'pointer',
-                flexShrink: 0,
-                scrollSnapAlign: 'start',
-                transition: 'all 0.2s ease'
-              }}
+              className={`muscle-filter-pill touch-target-comfortable${selectedMuscleFilter === 'all' ? ' is-active' : ''}`}
             >
               {isRTL ? 'جميع العضلات' : 'All Muscles'} ({exercises.length})
             </button>
@@ -647,22 +634,7 @@ export function SessionDetailView() {
                   const firstIdx = exercises.findIndex(e => e.targetMuscle === group.muscle);
                   if (firstIdx !== -1) setActiveExerciseIndex(firstIdx);
                 }}
-                className="muscle-filter-pill touch-target-comfortable"
-                style={{
-                  minHeight: '48px',
-                  padding: '0.5rem 1rem',
-                  borderRadius: '999px',
-                  fontSize: '0.85rem',
-                  fontWeight: 700,
-                  border: selectedMuscleFilter === group.muscle ? '1px solid var(--accent-primary)' : '1px solid var(--premium-line)',
-                  background: selectedMuscleFilter === group.muscle ? 'color-mix(in srgb, var(--accent-primary) 18%, transparent)' : 'transparent',
-                  color: selectedMuscleFilter === group.muscle ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                  whiteSpace: 'nowrap',
-                  cursor: 'pointer',
-                  flexShrink: 0,
-                  scrollSnapAlign: 'start',
-                  transition: 'all 0.2s ease'
-                }}
+                className={`muscle-filter-pill touch-target-comfortable${selectedMuscleFilter === group.muscle ? ' is-active' : ''}`}
               >
                 {tMuscle(group.muscle)} ({group.count})
               </button>
@@ -683,51 +655,15 @@ export function SessionDetailView() {
                   key={ex.id || realIdx}
                   type="button"
                   aria-current={isSelected ? 'step' : undefined}
-                  className="exercise-stepper-item touch-target-comfortable"
+                  className={`exercise-stepper-item touch-target-comfortable${isSelected ? ' is-selected' : isDone ? ' is-done' : ''}`}
                   onClick={() => {
                     setActiveExerciseIndex(realIdx);
                     gymAudio.triggerSubtleHaptic([15]);
                   }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.6rem',
-                    minHeight: '56px',
-                    padding: '0.6rem 1rem',
-                    borderRadius: '16px',
-                    border: isSelected
-                      ? '1.5px solid var(--accent-primary)'
-                      : isDone
-                        ? '1px solid color-mix(in srgb, var(--success) 40%, transparent)'
-                        : '1px solid var(--premium-line)',
-                    background: isSelected
-                      ? 'color-mix(in srgb, var(--accent-primary) 22%, transparent)'
-                      : isDone
-                        ? 'color-mix(in srgb, var(--success) 10%, transparent)'
-                        : 'var(--bg-secondary)',
-                    color: isSelected ? 'var(--text-primary)' : isDone ? 'var(--success)' : 'var(--text-secondary)',
-                    cursor: 'pointer',
-                    flexShrink: 0,
-                    scrollSnapAlign: 'start',
-                    transition: 'all 0.2s ease'
-                  }}
                 >
                   <span
                     aria-hidden="true"
-                    className="exercise-stepper-badge"
-                    style={{
-                      width: '28px',
-                      height: '28px',
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '0.75rem',
-                      fontWeight: 800,
-                      background: isDone ? 'var(--success)' : isSelected ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                      color: '#04121b',
-                      flexShrink: 0
-                    }}
+                    className={`exercise-stepper-badge${isSelected ? ' is-selected' : isDone ? ' is-done' : ''}`}
                   >
                     {isDone ? <Check className="w-4 h-4" /> : realIdx + 1}
                   </span>
@@ -769,13 +705,60 @@ export function SessionDetailView() {
         </nav>
 
         {currentExercise ? (
-          <article className="session-exercise-card" style={{
-            borderRadius: '20px',
-            background: 'var(--premium-surface)',
-            border: '1px solid var(--premium-line)',
-            padding: '1.1rem',
-            boxShadow: '0 20px 45px -18px rgba(0, 0, 0, 0.5)'
-          }}>
+          <div style={{ position: 'relative', overflow: 'hidden', borderRadius: '20px' }}>
+            <div
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0 1.25rem',
+                borderRadius: '20px',
+                background: 'linear-gradient(90deg, rgba(16, 185, 129, 0.22) 0%, rgba(0, 0, 0, 0.6) 50%, rgba(245, 158, 11, 0.22) 100%)',
+                zIndex: 0
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#10b981', fontWeight: 800, fontSize: '0.85rem' }}>
+                <Check className="w-5 h-5" />
+                <span>{isRTL ? 'إكمال الجولة' : 'Complete Set'}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#fbbf24', fontWeight: 800, fontSize: '0.85rem' }}>
+                <span>{isRTL ? 'تبديل التمرين' : 'Replace Exercise'}</span>
+                <Repeat className="w-5 h-5" />
+              </div>
+            </div>
+
+            <motion.article
+              drag="x"
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.22}
+              onDragEnd={(_, info) => {
+                const threshold = 65;
+                if (info.offset.x > threshold) {
+                  gymAudio.triggerSubtleHaptic([30, 50]);
+                  gymAudio.playSetCompleteChime();
+                  handleToggleSetComplete(activeExerciseIndex, activeSetIndex);
+                  notify(isRTL ? '✓ تم إكمال الجولة بنجاح بالسحب!' : '✓ Set completed via swipe!', 'success');
+                } else if (info.offset.x < -threshold) {
+                  gymAudio.triggerSubtleHaptic([20]);
+                  setIsAddExerciseModalOpen(true);
+                  notify(isRTL ? 'اختر تمريناً جديداً للتبديل' : 'Select replacement exercise', 'info');
+                }
+              }}
+              className="session-exercise-card"
+              style={{
+                position: 'relative',
+                zIndex: 1,
+                borderRadius: '20px',
+                background: 'var(--premium-surface)',
+                border: '1px solid var(--premium-line)',
+                padding: '1.1rem',
+                boxShadow: '0 20px 45px -18px rgba(0, 0, 0, 0.5)',
+                touchAction: 'pan-y'
+              }}
+            >
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.85rem' }}>
               <div style={{ minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem', flexWrap: 'wrap' }}>
@@ -877,7 +860,7 @@ export function SessionDetailView() {
                 textAlign: 'center',
                 border: '1px solid var(--premium-line)'
               }}>
-                <div className="session-countdown" style={{ fontSize: '3.2rem', color: 'var(--accent-primary)', marginBottom: '1rem' }} role="timer" aria-label={`${formatTimer(cardioSeconds)}`}>
+                <div className="session-countdown tabular-nums" style={{ fontSize: '3.2rem', color: 'var(--accent-primary)', marginBottom: '1rem' }} role="timer" aria-label={`${formatTimer(cardioSeconds)}`}>
                   {formatTimer(cardioSeconds)}
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
@@ -1018,7 +1001,8 @@ export function SessionDetailView() {
               </div>
             </div>
             <InlineHint id="session-complete-set-hint">{t('completeSetHint')}</InlineHint>
-          </article>
+          </motion.article>
+        </div>
         ) : (
           <EmptyState
             icon={<ListTodo size={22} aria-hidden="true" />}
@@ -1110,6 +1094,12 @@ export function SessionDetailView() {
         showCelebration={showRestCelebration}
         onDismissCelebration={() => setShowRestCelebration(false)}
         onCelebrationShown={() => setShowRestCelebration(true)}
+        nextExerciseName={currentExercise?.name}
+        nextSetNumber={activeSetIndex + 1}
+        totalSets={currentExercise?.sets?.length}
+        targetWeight={activeSet?.weight}
+        targetReps={activeSet?.repsActual || activeSet?.repsTarget}
+        weightUnit={activeSet?.unit || 'kg'}
       />
 
       {currentExerciseVideoUrl && currentExercise && (
@@ -1150,34 +1140,40 @@ export function SessionDetailView() {
         onClose={() => setIsAddExerciseModalOpen(false)}
         title={t('addExercise')}
       >
-        <div style={{ display: 'grid', gap: '0.5rem', maxHeight: '60vh', overflowY: 'auto' }} className="hide-scrollbar">
-          {DEFAULT_EXERCISES.map((ex, i) => (
-            <button
-              key={i}
-              type="button"
-              style={{
-                textAlign: isRTL ? 'right' : 'left',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: '0.75rem',
-                cursor: 'pointer',
-                minHeight: '56px',
-                padding: '0.85rem 1rem',
-                borderRadius: '12px',
-                background: 'var(--bg-tertiary)',
-                border: '1px solid var(--premium-line)',
-                color: 'var(--text-primary)'
-              }}
-              onClick={() => handleAddExerciseTemplate(ex)}
-            >
-              <span>
-                <span style={{ display: 'block', fontWeight: 700, fontSize: '0.95rem' }}>{tExercise(ex.name)}</span>
-                <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)' }}>{tMuscle(ex.targetMuscle)}</span>
-              </span>
-              <Plus className="w-5 h-5" style={{ color: 'var(--accent-primary)', flexShrink: 0 }} aria-hidden="true" />
-            </button>
-          ))}
+        <div style={{ height: '55vh' }}>
+          <VirtualizedFeed
+            items={DEFAULT_EXERCISES}
+            estimateSize={64}
+            gap={8}
+            renderItem={(ex, i) => (
+              <button
+                key={i}
+                type="button"
+                style={{
+                  width: '100%',
+                  textAlign: isRTL ? 'right' : 'left',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  cursor: 'pointer',
+                  minHeight: '56px',
+                  padding: '0.85rem 1rem',
+                  borderRadius: '12px',
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--premium-line)',
+                  color: 'var(--text-primary)'
+                }}
+                onClick={() => handleAddExerciseTemplate(ex)}
+              >
+                <span>
+                  <span style={{ display: 'block', fontWeight: 700, fontSize: '0.95rem' }}>{tExercise(ex.name)}</span>
+                  <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)' }}>{tMuscle(ex.targetMuscle)}</span>
+                </span>
+                <Plus className="w-5 h-5" style={{ color: 'var(--accent-primary)', flexShrink: 0 }} aria-hidden="true" />
+              </button>
+            )}
+          />
         </div>
       </Modal>
     </div>
@@ -1189,14 +1185,32 @@ interface RestHudLayerProps {
   showCelebration: boolean;
   onDismissCelebration: () => void;
   onCelebrationShown: () => void;
+  nextExerciseName?: string;
+  nextSetNumber?: number;
+  totalSets?: number;
+  targetWeight?: number;
+  targetReps?: number;
+  weightUnit?: string;
 }
 
-function RestHudLayer({ reducedMotion, showCelebration, onDismissCelebration, onCelebrationShown }: RestHudLayerProps) {
+const RestHudLayer = memo(function RestHudLayer({
+  reducedMotion,
+  showCelebration,
+  onDismissCelebration,
+  onCelebrationShown,
+  nextExerciseName,
+  nextSetNumber,
+  totalSets,
+  targetWeight,
+  targetReps,
+  weightUnit = 'kg'
+}: RestHudLayerProps) {
   const { t, isRTL, tExercise } = useTranslation();
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const [totalSeconds, setTotalSeconds] = useState(90);
   const [exerciseName, setExerciseName] = useState('');
   const [isPaused, setIsPaused] = useState(false);
+  const [isGlanceableOpen, setIsGlanceableOpen] = useState(false);
 
   useEffect(() => {
     let last: number | null = null;
@@ -1236,7 +1250,7 @@ function RestHudLayer({ reducedMotion, showCelebration, onDismissCelebration, on
           transition={reducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 380, damping: 28 }}
           style={{
             inlineSize: '100%',
-            maxWidth: '440px',
+            maxWidth: '460px',
             background: 'var(--premium-surface)',
             border: '1.5px solid color-mix(in srgb, var(--accent-primary) 45%, transparent)',
             borderRadius: '20px',
@@ -1251,7 +1265,11 @@ function RestHudLayer({ reducedMotion, showCelebration, onDismissCelebration, on
             userSelect: 'none'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0 }}>
+          <div
+            onClick={() => setIsGlanceableOpen(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0, cursor: 'pointer' }}
+            title={isRTL ? 'انقر لتكبير المؤقت لشاشة OLED' : 'Click to expand to OLED view'}
+          >
             <div
               aria-hidden="true"
               style={{
@@ -1272,16 +1290,13 @@ function RestHudLayer({ reducedMotion, showCelebration, onDismissCelebration, on
                 {isFinished ? (isRTL ? 'جاهز' : 'Ready') : (isRTL ? 'وقت الراحة' : t('restTimer'))}
               </div>
               <div
-                className="session-countdown"
+                className="session-countdown tabular-nums"
                 role="timer"
                 aria-label={`${Math.floor(secondsLeft / 60)} ${isRTL ? 'دقيقة' : 'minutes'} ${secondsLeft % 60} ${isRTL ? 'ثانية' : 'seconds'} ${isRTL ? 'متبقية من الراحة' : 'remaining in rest'}`}
                 style={{ fontSize: '2rem', color: isFinished ? 'var(--success)' : 'var(--accent-primary)' }}
               >
                 {formatTimer(secondsLeft)}
               </div>
-              {/* Deliberately not a live region: the readout changes every second and
-                  announcing each tick floods a screen reader. Rest completion is
-                  announced once, by the `role="alert"` celebration below. */}
               <span className="forma-sr-only">
                 {exerciseName ? `${tExercise(exerciseName)}. ` : ''}
                 {`${Math.round(fraction * 100)}% ${isRTL ? 'من الراحة' : 'of rest elapsed'}`}
@@ -1289,16 +1304,26 @@ function RestHudLayer({ reducedMotion, showCelebration, onDismissCelebration, on
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexShrink: 0 }}>
             <div aria-hidden="true" style={{ inlineSize: '4px', blockSize: '40px', borderRadius: '999px', background: 'var(--bg-tertiary)', overflow: 'hidden' }}>
               <div style={{ inlineSize: '100%', blockSize: `${fraction * 100}%`, background: 'var(--accent-primary)', marginBlockStart: `${(1 - fraction) * 100}%` }} />
             </div>
             <button
               type="button"
               className="session-target session-target-ghost"
+              onClick={() => setIsGlanceableOpen(true)}
+              aria-label={isRTL ? 'تكبير المؤقت لشاشة OLED' : 'Expand rest timer'}
+              title={isRTL ? 'شاشة الراحة المكبرة' : 'Expand rest timer'}
+              style={{ minWidth: '44px', minHeight: '44px', padding: 0, color: 'var(--accent-primary)' }}
+            >
+              <Maximize2 className="w-5 h-5" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              className="session-target session-target-ghost"
               onClick={() => workoutTimer.adjust(-15)}
               aria-label={isRTL ? 'إنقاص 15 ثانية' : 'Remove 15 seconds'}
-              style={{ minWidth: '48px', minHeight: '48px', padding: 0, fontSize: '0.75rem' }}
+              style={{ minWidth: '44px', minHeight: '44px', padding: 0, fontSize: '0.75rem' }}
             >
               −15
             </button>
@@ -1307,7 +1332,7 @@ function RestHudLayer({ reducedMotion, showCelebration, onDismissCelebration, on
               className="session-target session-target-ghost"
               onClick={() => workoutTimer.adjust(15)}
               aria-label={isRTL ? 'إضافة 15 ثانية' : 'Add 15 seconds'}
-              style={{ minWidth: '48px', minHeight: '48px', padding: 0, fontSize: '0.75rem' }}
+              style={{ minWidth: '44px', minHeight: '44px', padding: 0, fontSize: '0.75rem' }}
             >
               +15
             </button>
@@ -1317,7 +1342,7 @@ function RestHudLayer({ reducedMotion, showCelebration, onDismissCelebration, on
               onClick={() => workoutTimer.togglePause()}
               aria-pressed={isPaused}
               aria-label={isRTL ? (isPaused ? 'متابعة المؤقت' : 'إيقاف المؤقت مؤقتاً') : (isPaused ? 'Resume timer' : 'Pause timer')}
-              style={{ minWidth: '48px', minHeight: '48px', padding: 0 }}
+              style={{ minWidth: '44px', minHeight: '44px', padding: 0 }}
             >
               {isPaused ? <Play className="w-5 h-5" aria-hidden="true" /> : <Pause className="w-5 h-5" aria-hidden="true" />}
             </button>
@@ -1326,14 +1351,34 @@ function RestHudLayer({ reducedMotion, showCelebration, onDismissCelebration, on
               className="session-target session-target-ghost"
               onClick={() => workoutTimer.stop()}
               aria-label={isRTL ? 'تخطي الراحة' : 'Skip rest'}
-              style={{ minWidth: '48px', minHeight: '48px', padding: 0 }}
+              style={{ minWidth: '44px', minHeight: '44px', padding: 0 }}
             >
               <X className="w-5 h-5" aria-hidden="true" />
             </button>
           </div>
-            <span className="forma-sr-only">{isFinished ? (isRTL ? 'انتهت الراحة' : 'Rest complete') : `${Math.round(fraction * 100)}% ${isRTL ? 'من الراحة' : 'of rest elapsed'}`}</span>
+          <span className="forma-sr-only">{isFinished ? (isRTL ? 'انتهت الراحة' : 'Rest complete') : `${Math.round(fraction * 100)}% ${isRTL ? 'من الراحة' : 'of rest elapsed'}`}</span>
         </motion.div>
       </div>
+
+      <GlanceableRestOverlay
+        isOpen={isGlanceableOpen}
+        secondsLeft={secondsLeft}
+        totalSeconds={totalSeconds}
+        isPaused={isPaused}
+        exerciseName={nextExerciseName || exerciseName}
+        nextSetNumber={nextSetNumber}
+        totalSets={totalSets}
+        targetWeight={targetWeight}
+        targetReps={targetReps}
+        weightUnit={weightUnit}
+        onAdjustTime={(delta) => workoutTimer.adjust(delta)}
+        onTogglePause={() => workoutTimer.togglePause()}
+        onSkipRest={() => {
+          workoutTimer.stop();
+          setIsGlanceableOpen(false);
+        }}
+        onClose={() => setIsGlanceableOpen(false)}
+      />
 
       <AnimatePresence>
         {showCelebration && (
@@ -1379,4 +1424,4 @@ function RestHudLayer({ reducedMotion, showCelebration, onDismissCelebration, on
       </AnimatePresence>
     </>
   );
-}
+});

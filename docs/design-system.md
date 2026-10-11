@@ -1,6 +1,6 @@
 # FORMA design-system contract
 
-Version 1. Frozen on `main` at the start of the design-system overhaul.
+Version 2. Updated 2026-10-02, after the CSS consolidation recorded in §8.6.
 
 This is the **integration owner's** document. It records what the design
 system is today, which file owns what, and which known problems are
@@ -10,22 +10,61 @@ do not redefine it.
 `src/styles/__tests__/design-system-contract.test.ts` enforces the load-bearing
 parts of it. If you change a rule here, change that test in the same commit.
 
+> **How to read §8.** Entries 8.1–8.5 are the recorded debt. Two of them
+> (8.1, 8.2) were **closed** by the 2026-10-02 pass and are kept, dated, because
+> the reasoning behind the numbers still matters. Three (8.3, 8.4, 8.5) are
+> still open and none of them can be closed by an agent — they need a product
+> decision, a rendered comparison, or a human grep. §8.6 is what the pass
+> actually changed.
+
 ---
 
 ## 1. Ownership
 
 | Concern | Canonical file | Notes |
 | --- | --- | --- |
-| Design tokens, all 7 themes | `src/styles/design-tokens.css` | The single source of truth |
-| Base stylesheet, global resets | `src/index.css` | **Legacy.** Still owns 6 tokens — see §8 |
-| Feature styles | `src/styles/{today,routines,calendar,performance,gym-floor,mobile-*}.css` | |
-| Component styles | `src/styles/ui-kit.css` | `.ui-*` primitives |
-| Shell / navigation | `src/styles/forma-shell.css`, `src/styles/routes.css` | |
-| Import order | `src/main.tsx` | **Load-bearing**, see §9 |
+| Design tokens, all 7 themes | `src/styles/design-tokens.css` | The single source of truth. **Only** file that may declare a token value |
+| Layer order + base reset | `src/index.css` | Declares the `@layer` order (§8.6) and the `@theme inline` Tailwind bridge. Declares **no** design tokens — see §8.1, §8.2 |
+| App shell / navigation | `src/styles/shell.css` (`@layer shell`) | The frame, the single scroller, desktop nav, mobile top bar, portalled overlays |
+| Shared primitives (`.ui-*`) | `src/styles/ui-kit.css` (`@layer features`) | Base `.ui-*` styles also live in `design-tokens.css:928` under `@layer components` |
+| Page + feature styles | see the inventory below | |
+| Import order | `src/main.tsx` | **Load-bearing**, see §8.6 |
 
-**`design-tokens.css` must be imported after `index.css`.** This is the only
-thing that makes the canonical tokens win, and nothing but the contract test
-prevents it being broken.
+**`design-tokens.css` must be imported after `index.css`.** The contract test
+enforces it. Since the migration in §8.1/§8.2 this is a guard rather than a
+live dependency — `index.css` no longer shadows anything — but it is exactly the
+reorder that used to repaint all seven themes, so it stays pinned.
+
+### File inventory — 16 stylesheets
+
+Every file in `src/styles/` except `design-tokens.css`. `src/index.css` is
+listed above; component-local sheets (`admin-data.css`, `admin-drawer.css`,
+`AdminDashboard.css`, `LoginView.css`) are co-located with their component and
+are not part of this inventory.
+
+| File | Layer | Owns |
+| --- | --- | --- |
+| `shell.css` | `shell` | App frame, scroller, nav, top bar, fixed overlays |
+| `forma-shell.css` | `layout`, `components` | Shell tokens, skip link, nav detail |
+| `page-frame.css` | `components` | `zen-page-container`, `.page-surface`, `.zen-header` |
+| `components.css` | `components` | The shared route card surface |
+| `today.css` | `components` | Dashboard |
+| `today-recovery.css` | `components` | Recovery panel |
+| `calendar-page.css` | `components` | Calendar view |
+| `nutrition-page.css` | `components` | Nutrition view |
+| `settings-page.css` | `components` | Settings view |
+| `routines.css` | `components` | Routines + program builder |
+| `performance.css` | `components` | Performance hub |
+| `onboarding.css` | `components` | Onboarding tour |
+| `ui-kit.css` | `features` | `.ui-*` primitives |
+| `gym-floor.css` | `features` | Gym-floor mode |
+| `gym-ergonomics.css` | `features` | Reachability, safe-area insets |
+| `mobile-refinement.css` | `features`, `components` | Mobile chrome refinements |
+
+`routes.css` and `mobile-log.css` were deleted and their contents folded into
+the files above (§8.6). Import position inside this list is load-bearing for
+`page-frame.css`, `components.css`, `calendar-page.css`, `nutrition-page.css`
+and `settings-page.css`, which must stay ahead of `routines.css`.
 
 ---
 
@@ -80,7 +119,10 @@ the text tokens. Every divider must remain visible in that mode.
 
 `--font-sans` (Inter) is the body face. `--font-display` (Barlow Condensed) is
 for numerals, headings and the session HUD. `--font-mono` is tabular data.
-Cairo is the Arabic face and is set by `dir`, not by a token swap.
+`body` reads `--theme-font`, which is `--font-sans` by default and is switched to
+the Cairo stack by a `[dir="rtl"]` override (`src/index.css:78-80`) — so the
+Arabic face is a `dir` switch, but it reaches the page through a token, not a
+theme block.
 
 Scale: `--text-2xs` 0.6875rem → `--text-4xl` `clamp(2.25rem, 5vw, 3.5rem)`.
 Leading: `--leading-tight` 1.1 → `--leading-relaxed` 1.7.
@@ -193,52 +235,191 @@ ships its own toggle.
 
 ---
 
-## 8. Known contract debt (frozen, not fixed)
+## 8. Known contract debt
 
 Recorded here so workstreams do not each try to solve it, and so the migration
 is measurable.
 
-**1. `src/index.css` shadowed 51 token declarations. All 51 are now removed.**
-Both files declared `:root` and the same 7 themes; `design-tokens.css` won by
-import order, so the `index.css` copies could never affect a computed value.
-They have been deleted. The contract test keeps the count at **0** and fails
-if it ever rises.
+### 8.1 Shadowed token debt — **closed 2026-10-02**
 
-> The original figure recorded here was 55. The measured baseline was 51.
-> The extra 4 were a counting artefact: `index.css` opens several selectors
-> twice, and the test helper read only the first opening.
+**55 shadowed declarations removed. Contract test baseline updated from 55 to
+0. The `canonicalOnly` assertion now expects 0 legacy tokens.**
 
-**2. Fourteen tokens still live only in `src/index.css`:**
+`src/index.css` used to declare tokens under `:root` and under the same seven
+`[data-theme="..."]` selectors that `design-tokens.css` declares. Both files
+existed, so the `index.css` copies could never affect a computed value — the
+colour of the whole app was decided by import order rather than by the design.
+All 55 are deleted. `index.css` opens no `:root` and no `[data-theme]` block,
+and the contract test pins the count at **0** and fails if it ever rises.
+
+> The figure recorded here before this pass was 51, and the doc claimed all 51
+> were already gone. Both halves of that claim were wrong, and the discrepancy
+> is worth keeping because the cause was a bug in the guard itself: `index.css`
+> opens several selectors more than once, and the test helper read only the
+> first opening. The same bug had earlier let 24 genuinely dead declarations
+> survive a cleanup that reported zero remaining. The helper now merges across
+> repeat openings.
+
+One shadowed block survives **outside the guard's reach**:
+`src/index.css:76` re-declares `--text-secondary`, `--text-muted`,
+`--border-color` and `--border-highlight` under `[data-high-contrast]`, where
+`design-tokens.css` declares all four at identical specificity and loads later.
+It is dead in exactly the same way the 55 were, but the contract test only
+inspects the `:root` and `[data-theme]` families, so it stays invisible to the
+guard. One line, safe to delete — removing it means widening the test's scope,
+not migrating a token.
+
+`index.css` still declares two things that are legitimately its own, not
+leftover token debt:
+
+- the `@theme inline` Tailwind bridge (`--color-forma-*`). `design-tokens.css`
+  does not declare these names, and moving them would rename the Tailwind
+  utilities that consume them.
+- the `[dir="rtl"]` `--theme-font` override (`index.css:78-80`). This is not a
+  shadowed second copy — `design-tokens.css:294` declares the base
+  `--theme-font`, and `html[dir="rtl"]` outranks `:root` on specificity, so the
+  Arabic stack wins on the root element. It is the RTL half of §3's font rule.
+
+Nothing else in the file declares a custom property.
+
+### 8.2 Homeless tokens — **closed 2026-10-02**
+
+**The 13 homeless tokens from `index.css` have been adopted into
+`design-tokens.css` with per-theme overrides, not as a bare `:root`.**
+
 `--premium-surface`, `--premium-panel`, `--premium-line`, `--premium-soft`,
-`--premium-ink`, `--theme-shadow`, `--gym-lime`, `--gym-lime-glow`,
-`--gym-cyan`, `--gym-cyan-glow`, `--gym-flame`, `--gym-flame-glow`,
-`--gym-emerald`, `--gym-purple`.
+`--theme-shadow`, `--gym-lime`, `--gym-lime-glow`, `--gym-cyan`,
+`--gym-cyan-glow`, `--gym-flame`, `--gym-flame-glow`, `--gym-emerald`,
+`--gym-purple`.
 
-These are **live, consumed, and homeless** — the biggest remaining hole in the
-contract. `--premium-*` is read by the session HUD and the gym-floor set card;
-`--gym-*` by the gym-floor stylesheets. `design-tokens.css` does define
-`--premium-line` and `--premium-soft`, but only inside
-`[data-high-contrast]`, so they remain homeless with respect to the normal
-themes. Migrating them is the next contract change and needs a rendered
-comparison.
+These were **live, consumed, and homeless** — the biggest hole in the contract.
+`--premium-*` is read by the session HUD, the gym-floor set card and the legacy
+premium modal treatment; `--gym-*` by `gym-floor.css` and `gym-ergonomics.css`.
+`design-tokens.css` already defined `--premium-line` and `--premium-soft`
+inside `[data-high-contrast]`, so those two now have a normal-theme value *and*
+a high-contrast one, and the high-contrast pair still wins where it is applied.
 
-**3. Two competing radius mechanisms.** `--radius-*` (a scale, re-pointed per
-theme) and `--theme-radius` (a single per-theme value, overridden with
-`!important` in `index.css`). They cannot be merged without deciding what a
-theme's corner radius *means*.
+**Why per-theme overrides and not a bare `:root`.** A bare `:root` copy in the
+canonical file outranks the former `index.css` `[data-theme="light"]` rules at
+equal specificity and repaints the light theme with the dark premium surfaces —
+the light theme's overrides live in the same file that imported later, so the
+cascade, not the design, would decide. `design-tokens.css` therefore carries the
+dark `:root` base and every theme re-declares the family. Values were verified
+value-for-value against the pre-migration state.
 
-**4. Density makes `--space-md` and above unsafe to adopt in new CSS.**
+> `--theme-shadow` is re-declared only by the themes that actually changed it
+> (`ocean`, `forest`, `sunset`, `paper`); the other three inherit the `:root`
+> value. That is intentional, not an omission.
+
+The fourteenth token, `--premium-ink`, was **deleted**. It was declared twice in
+`index.css` and consumed by nothing in CSS or TSX.
+
+### 8.3 Two competing radius mechanisms — **open, needs a product decision**
+
+`--radius-*` (a scale, re-pointed per theme) and `--theme-radius` (a single
+per-theme value, overridden with `!important` in `index.css`). They cannot be
+merged without deciding what a theme's corner radius *means*.
+
+### 8.4 Density makes `--space-md` and above unsafe to adopt in new CSS
+
 `[data-density="compact"]` re-points them (`1rem` → `0.85rem`). So replacing a
 hardcoded `1rem` with `var(--space-md)` is **not** value-identical — it
 changes rendering in compact mode. Only `--space-3xs` through `--space-sm` are
 stable enough to substitute mechanically.
 
-**5. Dead CSS.** `.routines-page .routine-card` spanned **three** files, not
-two. Removed, along with 25 other selectors proven to have no consumer.
+### 8.5 Dead CSS: CSS-only greps are unreliable
+
+`.routines-page .routine-card` spanned **three** files, not two. Removed, along
+with 25 other selectors proven to have no consumer.
 
 > Do not trust a `.css`-only grep when hunting dead code. `livePulse` and
 > `clockColonBlink` have zero stylesheet references but are referenced from
 > inline style objects in `ModernClockWidget.tsx`.
+
+### 8.6 Consolidation changes (2026-10-02)
+
+Everything below is true of the current tree. §8.3–8.5 are the only parts of
+this section's subject that remain open.
+
+**Cascade layer order is declared.** `src/index.css:20`:
+
+```css
+@layer reset, tokens, base, layout, components, utilities, features, shell, overrides;
+```
+
+Nothing in `src/` may declare a style outside a layer. Unlayered author
+declarations outrank every layer regardless of source order, which is the
+mechanism that let four files silently outrank the token primitives. `features`
+and `shell` sit deliberately late; `utilities` stays below them so a
+hand-written utility in `features` still wins over a Tailwind utility class.
+
+**Four files re-layered into `@layer features`:** `gym-floor.css`,
+`gym-ergonomics.css`, `ui-kit.css`, `mobile-refinement.css`. All four were
+fully unlayered, so every rule in them outranked every layered rule in the
+project. `ui-kit.css` is the notable one: its `.ui-*` primitives are the
+documented shared component layer and now actually behave like it.
+
+**New `src/styles/shell.css` (`@layer shell`)** consolidates the app frame, the
+single scroller, the desktop nav, the mobile top bar and the portalled
+overlays. The rules were pulled out of **five** files — `index.css`,
+`forma-shell.css`, `gym-floor.css`, `mobile-refinement.css`,
+`gym-ergonomics.css`. Its section order is load order on purpose: section 3
+refines section 1, and section 4 refines section 3, at equal specificity, which
+is what those files did by import position. Reordering the sections silently
+changes the dock geometry.
+
+**`routes.css` and `mobile-log.css` deleted, contents folded.** `routes.css`
+(303 lines) split by owner into `page-frame.css`, `components.css`,
+`calendar-page.css`, `nutrition-page.css` and `settings-page.css`, with its
+`.performance-page` and `.routines-page` blocks going into `performance.css` and
+`routines.css`. Import position is load-bearing: all five new files sit exactly
+where `routes.css` was, ahead of `routines.css`, whose
+`.calendar-page .ribbon-day-pill { border-radius: .85rem }` ties on specificity
+and would otherwise start winning. `mobile-log.css`'s `.mobile-log-actions`
+moved into `mobile-refinement.css`'s `@layer components`, which already owned a
+rule for that class.
+
+**55 shadowed declarations removed; contract baseline 55 → 0.** See §8.1.
+
+**`--premium-ink` deleted; the canonical-only list is now empty.** See §8.2.
+
+**10 dead i18n keys removed** — `focusMode`, `zenFocusMode`, `zenCompleteSet`,
+`zenNextSet`, `zenRestTimer`, in both `en` and `ar`. They described the zen
+focus-mode fullscreen overlay, which is gone. Grep finds no reference outside
+`i18n.tsx`.
+
+**119 hardcoded hex values tokenized across 6 stylesheets.** What is left in
+`src/styles/` is five `var()` fallbacks in `shell.css` (the documented pattern)
+plus two `#fff !important` colour declarations in `mobile-refinement.css:124`
+and `:212`, the nav train-action icon, which were out of scope. `forma-shell.css`
+was already at zero.
+
+**New tokens**, all in `design-tokens.css`:
+- `--accent-amber-deep` `#d97706`, `--accent-emerald-deep` `#059669` — the
+  shaded ends of the two CTA gradients
+- `--text-on-accent` `#06121e`, `--text-on-accent-deep` `#ffffff` — ink printed
+  **on** a saturated fill. Two steps because the choice is driven by the fill's
+  luminance, not the canvas theme: the fills are theme-invariant, so the ink on
+  them cannot be
+- `--gym-abyss`, `--gym-crest` — hydration ramp ends
+- `--gym-indigo`, `--gym-pink` — the routines AI button's three-stop spectrum,
+  kept whole rather than aliased onto `--accent-purple` / `--accent-rose`, which
+  would re-grade the gradient
+
+**New `.on-stage` scope** re-binds `--text-primary` / `-secondary` / `-muted` /
+`-inverted` and `--accent-cyan-ink` / `--accent-emerald-ink` to the dark-canvas
+steps for everything inside it, following the existing `[data-high-contrast]`
+re-binding pattern and placed after every `[data-theme]` block.
+
+It exists because `--text-primary` and `--text-inverted` are both redefined by
+all seven themes and **neither is white in the default dark theme** (`#080c14`).
+Mapping `#ffffff` onto either would have made hero copy and the whole coachmark
+overlay invisible in the light and paper themes. The scope keeps `--text-primary`
+meaning "primary ink for whatever I am standing on" and renders byte-identical
+to the hex it replaces in all seven themes. Applied to exactly two elements:
+`.forma-hero` (`LoginView.tsx:519`) and `.forma-onboarding-backdrop`
+(`OnboardingTour.tsx:405`) — both fixed dark scrims, over a photograph and over
+the app respectively, in every theme.
 
 ---
 

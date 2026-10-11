@@ -789,20 +789,20 @@ Do not hallucinate numbers not visible on the screen. Output raw JSON only.`;
                 )}
 
                 <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.9rem', flexWrap: 'wrap' }}>
-                  <button
+                  <Button
                     type="button"
-                    className="btn btn-secondary"
+                    variant="secondary"
                     onClick={() => fileRef.current?.click()}
                     style={{ flex: '1 1 9rem', minHeight: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontSize: '0.84rem' }}
                   >
                     <Camera size={15} aria-hidden="true" />
                     <span>{t('takePicture')}</span>
-                  </button>
+                  </Button>
 
                   {image && (
-                    <button
+                    <Button
                       type="button"
-                      className="btn btn-primary"
+                      variant="primary"
                       disabled={isAnalyzing}
                       onClick={analyzeCameraCapture}
                       style={{
@@ -818,7 +818,7 @@ Do not hallucinate numbers not visible on the screen. Output raw JSON only.`;
                     >
                       <Sparkles size={15} aria-hidden="true" />
                       <span>{isAnalyzing ? t('analyzingScreen') : t('aiScanCardio')}</span>
-                    </button>
+                    </Button>
                   )}
                 </div>
 
@@ -926,9 +926,10 @@ Do not hallucinate numbers not visible on the screen. Output raw JSON only.`;
                           </div>
                         </div>
 
-                        <button
+                        <Button
                           type="button"
-                          className="btn btn-secondary"
+                          variant="secondary"
+                          size="sm"
                           disabled={isSyncing}
                           onClick={() => connectDevice(provider)}
                           style={{
@@ -942,7 +943,7 @@ Do not hallucinate numbers not visible on the screen. Output raw JSON only.`;
                         >
                           <RefreshCw size={12} className={isSyncing ? 'animate-spin' : ''} aria-hidden="true" />
                           <span>{isSyncing ? '…' : isConnected ? t('syncNow') : t('connect')}</span>
-                        </button>
+                        </Button>
                       </div>
                     );
                   })}

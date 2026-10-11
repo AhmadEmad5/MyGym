@@ -1,0 +1,114 @@
+/* ==========================================================================
+   Calendar route surface.
+
+   Week ribbon, day tab bar and the workout cards that hang off them. Folded out
+   of src/styles/routes.css; the base layout for these selectors still lives in
+   routines.css, which is imported after this file and ties on specificity.
+
+   The reduced-motion guard is emitted twice on purpose: a media query adds no
+   specificity, so `[data-motion='reduced']` cannot be folded into the
+   `@media (prefers-reduced-motion: reduce)` block below.
+   ========================================================================== */
+@layer components {
+  .calendar-page .calendar-week-ribbon {
+    position: relative;
+    padding-block-end: 1rem;
+    border-block-end: 1px solid var(--premium-line);
+    scroll-padding-inline: var(--space-xs);
+    scroll-snap-type: x proximity;
+  }
+
+  .calendar-page .ribbon-day-pill {
+    border-radius: 0.7rem;
+    box-shadow: none;
+    scroll-snap-align: center;
+  }
+
+  .calendar-page .ribbon-day-pill.is-selected {
+    border-color: var(--accent-cyan);
+    background: color-mix(in srgb, var(--accent-cyan) 10%, var(--bg-secondary));
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-cyan) 22%, transparent);
+  }
+
+  .calendar-page .calendar-day-header-bar {
+    border-inline-start: 2px solid var(--accent-cyan) !important;
+    background: color-mix(in srgb, var(--bg-secondary) 78%, transparent) !important;
+  }
+
+  .calendar-page .calendar-day-tab-bar {
+    scroll-padding-inline: var(--space-sm);
+    scroll-snap-type: x proximity;
+  }
+
+  .calendar-page .day-tab-pill {
+    scroll-snap-align: center;
+  }
+
+  .calendar-page .calendar-workout-card:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--accent-cyan) 42%, var(--premium-line)) !important;
+  }
+
+  @media (max-width: 900px) {
+    /* index.css pins the day tabs to 42px with a layered !important. */
+    .calendar-page .day-tab-pill { min-height: 44px !important; }
+  }
+
+  @media (max-width: 640px) {
+    .calendar-page .calendar-week-ribbon {
+      padding-block-end: 0.65rem !important;
+      gap: 0.5rem !important;
+    }
+
+    .calendar-page .ribbon-day-pill {
+      /* Not forced: 7 columns x 44px + 6 x 8px gaps overflows a 360px viewport by
+         ~22px, and the container is overflow-x hidden, so the last day would be
+         clipped. The pill is ~70px tall, so the block axis carries the floor. */
+      min-width: 44px;
+      padding-block: 0.45rem !important;
+      padding-inline: 0.25rem !important;
+    }
+
+    .calendar-page .calendar-day-tab-bar {
+      gap: 0.5rem !important;
+      margin-block-end: 0.75rem !important;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      flex-wrap: nowrap;
+      padding-block-end: 2px;
+    }
+
+    .calendar-page .day-tab-pill {
+      white-space: nowrap;
+      flex-shrink: 0;
+      padding-block: 0.35rem !important;
+      padding-inline: 0.65rem !important;
+      font-size: 0.78rem !important;
+    }
+
+    .calendar-page .calendar-workout-card {
+      padding-block: 0.75rem !important;
+      padding-inline: 0.85rem !important;
+      border-radius: 14px !important;
+      margin-block-end: 0.65rem !important;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .calendar-page .calendar-week-ribbon,
+    .calendar-page .calendar-day-tab-bar {
+      scroll-behavior: auto;
+    }
+
+    .calendar-page .calendar-workout-card:hover { transform: none; }
+  }
+
+  /* The app's own motion gate needs its own copy: a media query adds no
+     specificity, so these cannot be folded into the block above. */
+  [data-motion='reduced'] .calendar-page .calendar-week-ribbon,
+  [data-motion='reduced'] .calendar-page .calendar-day-tab-bar {
+    scroll-behavior: auto;
+  }
+
+  [data-motion='reduced'] .calendar-page .calendar-workout-card:hover { transform: none; }
+}

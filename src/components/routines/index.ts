@@ -1,4 +1,5 @@
-export { PREDEFINED_ROUTINES, PREDEFINED_ROUTINE_CATEGORIES, DAYS_OF_WEEK, CLOSED_DAY_VALUE } from './data';
+export { PREDEFINED_ROUTINES, PREDEFINED_ROUTINE_CATEGORIES, buildScheduleDays } from './data';
+export type { ScheduleDayOption } from './data';
 export { ProgramList } from './ProgramList';
 export { ProgramEmptyState } from './ProgramEmptyState';
 export { ProgramDetail } from './ProgramDetail';

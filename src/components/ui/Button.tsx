@@ -1,6 +1,7 @@
 import { forwardRef } from 'react';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import type { HTMLMotionProps } from 'framer-motion';
+import { Slot } from '@radix-ui/react-slot';
 import { Loader2 } from 'lucide-react';
 import { cn } from './cn';
 import { Pressable } from '../motion/Pressable';
@@ -10,6 +11,7 @@ export type ButtonVariant = 'primary' | 'cyan' | 'secondary' | 'ghost' | 'danger
 export type ButtonSize = 'sm' | 'md' | 'lg' | 'icon';
 
 export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onAnimationStart' | 'onDragStart' | 'onDragEnd' | 'onDrag'> {
+  asChild?: boolean;
   variant?: ButtonVariant;
   size?: ButtonSize;
   isLoading?: boolean;
@@ -37,6 +39,7 @@ const SIZE_CLASS: Record<ButtonSize, string> = {
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   {
+    asChild = false,
     variant = 'primary',
     size = 'md',
     isLoading = false,
@@ -52,6 +55,24 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   ref
 ) {
   const isInactive = disabled || isLoading;
+
+  if (asChild) {
+    return (
+      <Slot
+        ref={ref}
+        className={cn(
+          'ui-button inline-flex items-center justify-center',
+          VARIANT_CLASS[variant],
+          SIZE_CLASS[size],
+          fullWidth && 'w-full',
+          className
+        )}
+        {...props}
+      >
+        {children}
+      </Slot>
+    );
+  }
 
   return (
     <Pressable

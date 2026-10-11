@@ -3,7 +3,16 @@
    Loaded last so it can refine the legacy responsive rules without changing
    their desktop behavior. Every rule here is mobile-scoped unless it fixes a
    fixed-position layer that must clear a safe-area inset on every viewport.
+
+   Lives in @layer features: it was unlayered, which made it outrank every
+   `@layer components` block without needing `!important`. `features` is
+   declared above `components` and `utilities` in src/index.css, so the same
+   precedence is now explicit. The fixed-chrome safe-area rule for
+   `.mobile-top-bar` moved to @layer shell - see src/styles/shell.css
+   section 5.
    ========================================================================== */
+
+@layer features {
 
 :root {
   --gym-floor-target: 56px;
@@ -285,6 +294,8 @@
 .session-countdown {
   font-size: 1.35rem;
   font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
 }
 
 /* ==========================================================================
@@ -317,14 +328,12 @@
   /* `.session-thumb-dock`, `.session-dock-row`, `.session-hud` and
      `.session-hud-rest` geometry - the measured bottom-chrome reservation and
      the keyboard behaviour included - lives in performance.css behind the
-     `--session-*` tokens. This file is unlayered, so a restated offset here
+     `--session-*` tokens. This file is layered, so a restated offset here
      would beat that source of truth on every phone. */
 
-  .mobile-top-bar {
-    padding-inline:
-      max(0.65rem, var(--shell-safe-inline-start, 0px))
-      max(0.65rem, var(--shell-safe-inline-end, 0px));
-  }
+  /* `.mobile-top-bar` moved to @layer shell - see src/styles/shell.css
+     section 5. It has to outrank section 1's `padding-inline: clamp(...)`,
+     which rules out leaving it in `features` here. */
 
   .mobile-top-actions {
     gap: var(--gym-floor-gap) !important;
@@ -503,4 +512,6 @@
 [data-motion='reduced'] .mobile-hero-toggle:active,
 [data-motion='reduced'] .mobile-hero-secondary:active {
   transform: none;
+}
+
 }

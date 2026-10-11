@@ -1,0 +1,32 @@
+/* ==========================================================================
+   Route card surfaces.
+
+   The one card treatment every route shares: square off the radius, drop the
+   generic elevation, and repaint the fill from the theme's premium surfaces.
+   Route-specific follow-ups live in the per-route files (calendar-page.css,
+   nutrition-page.css, settings-page.css) and in performance.css / routines.css.
+
+   Folded out of src/styles/routes.css. The import position in src/main.tsx
+   matters — this file has to keep landing ahead of the per-route files, whose
+   `.nutrition-page .card` and `.calendar-page .calendar-workout-card` rules tie
+   on specificity and must stay downstream.
+   ========================================================================== */
+@layer components {
+  .zen-page-container > .card,
+  .zen-page-container > section.card,
+  .nutrition-page .card,
+  .performance-page > section,
+  .settings-page .card,
+  .calendar-page .calendar-day-header-bar,
+  .calendar-page .calendar-workout-card {
+    border-color: var(--premium-line) !important;
+    border-radius: 0.95rem !important;
+    box-shadow: none !important;
+  }
+
+  .calendar-page .calendar-workout-card,
+  .nutrition-page .card,
+  .performance-page > section {
+    background: linear-gradient(145deg, color-mix(in srgb, var(--bg-secondary) 92%, transparent), color-mix(in srgb, var(--bg-primary) 86%, transparent)) !important;
+  }
+}

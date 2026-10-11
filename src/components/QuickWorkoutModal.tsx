@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { addDays } from 'date-fns';
 import { useTranslation } from '../lib/i18n';
 import type { WorkoutSession, SessionExercise } from '../lib/api';
+import { REST_DAY_KEYS, REST_DAY_LABELS, isRestDay, restDayName, type RestDaySource } from '../lib/restDay';
 import { getExerciseTutorial } from '../lib/exerciseDatabase';
 import { useModalA11y } from './AIMealVisionModal';
 import { useReducedMotion } from './performance/useReducedMotion';
@@ -14,6 +15,7 @@ interface QuickWorkoutModalProps {
   onAdd: (session: Partial<WorkoutSession>) => void;
   weightUnit?: 'kg' | 'lb';
   restSeconds?: number;
+  restDaySettings?: RestDaySource;
 }
 
 export function QuickWorkoutModal({
@@ -21,10 +23,16 @@ export function QuickWorkoutModal({
   onClose,
   onAdd,
   weightUnit = 'kg',
-  restSeconds = 90
+  restSeconds = 90,
+  restDaySettings
 }: QuickWorkoutModalProps) {
   const { t, isRTL } = useTranslation();
-  const isFriday = new Date().getDay() === 5;
+  const isClosedToday = isRestDay(new Date(), restDaySettings);
+  const restDayNameLocal = restDayName(restDaySettings, isRTL);
+  const nextDayName = REST_DAY_LABELS[REST_DAY_KEYS[addDays(new Date(), 1).getDay()]];
+  const rescheduleNotes = isRTL
+    ? `تمت الجدولة ليوم ${nextDayName.labelAr} لأن الجيم مغلق ${restDayNameLocal}`
+    : `Scheduled for ${nextDayName.labelEn} (Gym closed on ${restDayNameLocal})`;
   const reducedMotion = useReducedMotion();
   // Escape, focus containment and focus restore all come from the shared hook so
   // this sheet behaves like every other FORMA dialog.
@@ -130,9 +138,9 @@ export function QuickWorkoutModal({
       };
     });
 
-    // If today is Friday, gym is closed, so schedule for tomorrow (Saturday)
-    const targetDate = isFriday ? addDays(new Date(), 1) : new Date();
-    if (isFriday) targetDate.setHours(18, 0, 0, 0);
+    // When today is the weekly closure, push the session to the next day instead.
+    const targetDate = isClosedToday ? addDays(new Date(), 1) : new Date();
+    if (isClosedToday) targetDate.setHours(18, 0, 0, 0);
 
     const session: Partial<WorkoutSession> = {
       id: Date.now().toString(),
@@ -141,8 +149,8 @@ export function QuickWorkoutModal({
       duration: preset.duration,
       type: preset.type,
       notes: isRTL 
-        ? (isFriday ? 'تمت الجدولة ليوم السبت لأن الجيم مغلق الجمعة' : 'تمرين سريع فوري') 
-        : (isFriday ? 'Scheduled for Saturday (Gym closed on Friday)' : 'Quick instant workout'),
+        ? (isClosedToday ? rescheduleNotes : 'تمرين سريع فوري') 
+        : (isClosedToday ? rescheduleNotes : 'Quick instant workout'),
       isCompleted: false,
       exercises: sessionExercises
     };
@@ -152,8 +160,8 @@ export function QuickWorkoutModal({
   };
 
   const handleCustomEmpty = () => {
-    const targetDate = isFriday ? addDays(new Date(), 1) : new Date();
-    if (isFriday) targetDate.setHours(18, 0, 0, 0);
+    const targetDate = isClosedToday ? addDays(new Date(), 1) : new Date();
+    if (isClosedToday) targetDate.setHours(18, 0, 0, 0);
 
     const session: Partial<WorkoutSession> = {
       id: Date.now().toString(),
@@ -161,9 +169,7 @@ export function QuickWorkoutModal({
       date: targetDate.toISOString(),
       duration: 45,
       type: 'Mixed',
-      notes: isRTL 
-        ? (isFriday ? 'تمت الجدولة ليوم السبت لأن الجيم مغلق الجمعة' : '') 
-        : (isFriday ? 'Scheduled for Saturday (Gym closed on Friday)' : ''),
+      notes: isClosedToday ? rescheduleNotes : '',
       isCompleted: false,
       exercises: []
     };
@@ -254,8 +260,8 @@ export function QuickWorkoutModal({
             </button>
           </div>
 
-          {/* Friday Gym Closed Notice */}
-          {isFriday && (
+          {/* Weekly closure notice */}
+          {isClosedToday && (
             <div style={{
               margin: '1rem 1.5rem 0',
               padding: '0.85rem 1rem',
@@ -269,12 +275,14 @@ export function QuickWorkoutModal({
               <span aria-hidden="true" style={{ fontSize: '1.25rem' }}>🔒</span>
               <div>
                 <p style={{ margin: 0, fontWeight: 700, fontSize: '0.86rem', color: '#ef4444' }}>
-                  {isRTL ? 'الجمعة عطلة أسبوعية — الجيم مغلق' : 'Friday Off-Day — Gym Closed'}
+                  {isRTL
+                    ? `${restDayNameLocal} عطلة أسبوعية — الجيم مغلق`
+                    : `${restDayNameLocal} Off-Day — Gym Closed`}
                 </p>
                 <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
                   {isRTL 
-                    ? 'سيتم جدولة هذا التمرين ليوم غد (السبت) تلقائياً لأن الجيم مغلق اليوم.' 
-                    : 'This workout will be automatically scheduled for tomorrow (Saturday) because the gym is closed today.'}
+                    ? `سيتم جدولة هذا التمرين ليوم ${nextDayName.labelAr} تلقائياً لأن الجيم مغلق اليوم.` 
+                    : `This workout will be automatically scheduled for ${nextDayName.labelEn} because the gym is closed today.`}
                 </p>
               </div>
             </div>

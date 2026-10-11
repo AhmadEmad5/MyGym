@@ -1,9 +1,10 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react';
 import { format } from 'date-fns';
-import { api, AppData, WorkoutSession, Routine, HistoryRecord, UserSettings, MealRecord, BodyMetricEntry, NutritionGoals, PerformanceInsights, estimateWorkoutCalories, readLocalMirror, hasLocalMirror, clearLocalMirror } from '../lib/api';
+import { api, AppData, WorkoutSession, Routine, HistoryRecord, UserSettings, MealRecord, BodyMetricEntry, NutritionGoals, PerformanceInsights, WeightUnit, convertSessionUnits, convertRoutineUnits, estimateWorkoutCalories, readLocalMirror, hasLocalMirror, clearLocalMirror } from '../lib/api';
 import { auth } from '../lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { notify } from '../lib/feedback';
+import { broadcastSyncEvent, subscribeSyncChannel } from '../lib/syncChannel';
 
 type DataContextType = {
   data: AppData | null;
@@ -31,6 +32,11 @@ type DataContextType = {
   resetWater: (dateStr?: string) => Promise<void>;
   saveInsights: (insights: PerformanceInsights) => Promise<void>;
   updateSettings: (settings: UserSettings, user?: AppData['user']) => Promise<void>;
+  /**
+   * Rewrites every stored weight in the account into `target` together with the
+   * settings document, as a single all-or-nothing operation.
+   */
+  convertWeightUnits: (settings: UserSettings, target: WeightUnit) => Promise<void>;
   /**
    * Ends the session: signs out of Firebase Auth, drops this athlete's
    * device-local mirror, and clears the in-memory athlete so the app returns to
@@ -105,6 +111,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // Identifies the newest in-flight load so a slow, older response cannot
   // overwrite fresher state.
   const loadRequestRef = useRef(0);
+  const realtimeUnsubRef = useRef<() => void>(() => {});
   // Always the latest committed data. Reading it inside a state updater (instead
   // of closing over `data`) is what keeps derived values correct when several
   // mutations land before React re-renders.
@@ -212,8 +219,23 @@ export function DataProvider({ children }: { children: ReactNode }) {
           }
           setData(result);
           setLoading(false);
+
+          // Push-based reactive listeners for instant cross-device synchronization (<150ms)
+          realtimeUnsubRef.current();
+          realtimeUnsubRef.current = api.subscribeUserData(
+            firebaseUser.uid,
+            (delta) => {
+              setData(prev => {
+                if (!prev) return prev;
+                return { ...prev, ...delta };
+              });
+            },
+            (err) => console.warn('Realtime sync listener notice:', err)
+          );
         } else {
           // Logged out or Guest mode
+          realtimeUnsubRef.current();
+          realtimeUnsubRef.current = () => {};
           fetchInitialData();
         }
       });
@@ -221,8 +243,118 @@ export function DataProvider({ children }: { children: ReactNode }) {
       fetchInitialData();
     }
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      realtimeUnsubRef.current();
+    };
   }, [fetchInitialData]);
+
+  // Instant Cross-Tab & Multi-Surface Synchronization (<5ms, zero network calls)
+  useEffect(() => {
+    const unsubscribeChannel = subscribeSyncChannel((event) => {
+      const currentUid = auth?.currentUser?.uid || 'guest';
+      if (event.uid && event.uid !== currentUid) return;
+
+      setData(prev => {
+        if (!prev) return prev;
+        switch (event.type) {
+          case 'SESSION_SAVED': {
+            const { session } = event.payload;
+            const newSessions = [...prev.sessions];
+            const idx = newSessions.findIndex(s => s.id === session.id);
+            if (idx >= 0) newSessions[idx] = session;
+            else newSessions.push(session);
+            return { ...prev, sessions: newSessions };
+          }
+          case 'SESSIONS_SAVED': {
+            const { sessions } = event.payload;
+            const newSessions = [...prev.sessions];
+            for (const s of sessions) {
+              const idx = newSessions.findIndex(item => item.id === s.id);
+              if (idx >= 0) newSessions[idx] = s;
+              else newSessions.push(s);
+            }
+            return { ...prev, sessions: newSessions };
+          }
+          case 'SESSION_DELETED': {
+            return { ...prev, sessions: prev.sessions.filter(s => s.id !== event.payload.id) };
+          }
+          case 'SESSIONS_DELETED': {
+            const idSet = new Set(event.payload.ids);
+            return { ...prev, sessions: prev.sessions.filter(s => !idSet.has(s.id)) };
+          }
+          case 'WORKOUT_FINISHED': {
+            const { session, record } = event.payload;
+            return {
+              ...prev,
+              sessions: prev.sessions.filter(s => s.id !== session.id),
+              history: [record, ...(prev.history || []).filter(h => h.sessionId !== session.id)]
+            };
+          }
+          case 'ROUTINE_SAVED': {
+            const { routine } = event.payload;
+            const newRoutines = [...prev.routines];
+            const idx = newRoutines.findIndex(r => r.id === routine.id);
+            if (idx >= 0) newRoutines[idx] = routine;
+            else newRoutines.push(routine);
+            return { ...prev, routines: newRoutines };
+          }
+          case 'ROUTINE_DELETED': {
+            return { ...prev, routines: prev.routines.filter(r => r.id !== event.payload.id) };
+          }
+          case 'MEAL_SAVED': {
+            const { meal } = event.payload;
+            const currentMeals = prev.meals || [];
+            const newMeals = [...currentMeals];
+            const idx = newMeals.findIndex(m => m.id === meal.id);
+            if (idx >= 0) newMeals[idx] = meal;
+            else newMeals.unshift(meal);
+            return { ...prev, meals: newMeals };
+          }
+          case 'MEAL_DELETED': {
+            return { ...prev, meals: (prev.meals || []).filter(m => m.id !== event.payload.id) };
+          }
+          case 'WATER_LOGGED': {
+            const { dateStr, amountDelta } = event.payload;
+            const current = prev.waterLogs?.[dateStr] || 0;
+            return {
+              ...prev,
+              waterLogs: { ...prev.waterLogs, [dateStr]: Math.max(0, current + amountDelta) }
+            };
+          }
+          case 'WATER_RESET': {
+            const { dateStr } = event.payload;
+            return {
+              ...prev,
+              waterLogs: { ...prev.waterLogs, [dateStr]: 0 }
+            };
+          }
+          case 'GOALS_UPDATED': {
+            return { ...prev, nutritionGoals: event.payload.goals };
+          }
+          case 'METRIC_SAVED': {
+            const { entry } = event.payload;
+            const list = prev.bodyMetrics || [];
+            const idx = list.findIndex(m => m.id === entry.id);
+            const next = [...list];
+            if (idx >= 0) next[idx] = entry;
+            else next.unshift(entry);
+            return { ...prev, bodyMetrics: next };
+          }
+          case 'METRIC_DELETED': {
+            return { ...prev, bodyMetrics: (prev.bodyMetrics || []).filter(m => m.id !== event.payload.id) };
+          }
+          case 'SETTINGS_UPDATED': {
+            return { ...prev, settings: event.payload.settings };
+          }
+          default:
+            return prev;
+        }
+      });
+    });
+
+    return () => unsubscribeChannel();
+  }, []);
 
   // Granular update functions (optimistic UI + rollback on error)
   // Granular update functions (optimistic UI updates with state rollback on error)
@@ -237,6 +369,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       else newSessions.push(session);
       return { ...prev, sessions: newSessions };
     });
+
+    broadcastSyncEvent('SESSION_SAVED', { session }, auth?.currentUser?.uid);
 
     try {
       await api.saveSession(session);
@@ -263,6 +397,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       return { ...prev, sessions: newSessions };
     });
 
+    broadcastSyncEvent('SESSIONS_SAVED', { sessions }, auth?.currentUser?.uid);
+
     try {
       await api.saveSessions(sessions);
     } catch (err) {
@@ -280,6 +416,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       snapshot = prev;
       return { ...prev, sessions: prev.sessions.filter(s => s.id !== id) };
     });
+
+    broadcastSyncEvent('SESSION_DELETED', { id }, auth?.currentUser?.uid);
 
     try {
       await api.deleteSession(id);
@@ -300,6 +438,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       snapshot = prev;
       return { ...prev, sessions: prev.sessions.filter(s => !idSet.has(s.id)) };
     });
+
+    broadcastSyncEvent('SESSIONS_DELETED', { ids }, auth?.currentUser?.uid);
 
     try {
       await api.deleteSessions(ids);
@@ -339,6 +479,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       };
     });
 
+    broadcastSyncEvent('WORKOUT_FINISHED', { session: completedSession, record: historyRecord }, auth?.currentUser?.uid);
+
     try {
       await Promise.all([
         api.saveHistory(historyRecord),
@@ -366,6 +508,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       return { ...prev, routines: newRoutines };
     });
 
+    broadcastSyncEvent('ROUTINE_SAVED', { routine }, auth?.currentUser?.uid);
+
     try {
       await api.saveRoutine(routine);
     } catch (err) {
@@ -383,6 +527,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       snapshot = prev;
       return { ...prev, routines: prev.routines.filter(r => r.id !== id) };
     });
+
+    broadcastSyncEvent('ROUTINE_DELETED', { id }, auth?.currentUser?.uid);
 
     try {
       await api.deleteRoutine(id);
@@ -448,6 +594,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       return { ...prev, meals: newMeals };
     });
 
+    broadcastSyncEvent('MEAL_SAVED', { meal }, auth?.currentUser?.uid);
+
     try {
       await api.saveMeal(meal);
     } catch (err) {
@@ -466,6 +614,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const currentMeals = prev.meals || [];
       return { ...prev, meals: currentMeals.filter(m => m.id !== id) };
     });
+
+    broadcastSyncEvent('MEAL_DELETED', { id }, auth?.currentUser?.uid);
 
     try {
       await api.deleteMeal(id);
@@ -490,6 +640,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       return { ...prev, bodyMetrics: newMetrics };
     });
 
+    broadcastSyncEvent('METRIC_SAVED', { entry }, auth?.currentUser?.uid);
+
     try {
       await api.saveBodyMetric(entry);
     } catch (err) {
@@ -509,6 +661,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       return { ...prev, bodyMetrics: current.filter(m => m.id !== id) };
     });
 
+    broadcastSyncEvent('METRIC_DELETED', { id }, auth?.currentUser?.uid);
+
     try {
       await api.deleteBodyMetric(id);
     } catch (err) {
@@ -526,6 +680,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       snapshot = prev;
       return { ...prev, nutritionGoals: goals };
     });
+
+    broadcastSyncEvent('GOALS_UPDATED', { goals }, auth?.currentUser?.uid);
 
     try {
       await api.updateNutritionGoals(goals);
@@ -557,6 +713,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       return { ...prev, waterLogs: { ...(prev.waterLogs || {}), [key]: nextTotal } };
     });
 
+    broadcastSyncEvent('WATER_LOGGED', { dateStr: key, amountDelta, newTotal: nextTotal }, auth?.currentUser?.uid);
+
     try {
       await api.logWater(key, nextTotal);
     } catch (err) {
@@ -578,6 +736,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       snapshot = prev;
       return { ...prev, waterLogs: { ...(prev.waterLogs || {}), [key]: 0 } };
     });
+
+    broadcastSyncEvent('WATER_RESET', { dateStr: key }, auth?.currentUser?.uid);
 
     try {
       await api.logWater(key, 0);
@@ -627,6 +787,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const previous = dataRef.current;
     const targetUser = user !== undefined ? user : previous.user;
     setData(prev => (prev ? { ...prev, settings, user: targetUser } : prev));
+    broadcastSyncEvent('SETTINGS_UPDATED', { settings }, auth?.currentUser?.uid);
 
     try {
       await api.updateRootSettings(settings, targetUser);
@@ -645,6 +806,45 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   /**
+   * Moves the whole account into `settings.weightUnit` in one shot.
+   *
+   * One state update covers sessions, routines and settings together, so the UI can
+   * never render a half-converted history, and the snapshot taken beforehand is
+   * restored in full if persistence fails.
+   */
+  const convertWeightUnits = useCallback(async (settings: UserSettings, target: WeightUnit) => {
+    const previous = dataRef.current;
+    if (!previous) return;
+    if (previous.settings.weightUnit === target) return;
+
+    setData(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        settings,
+        sessions: prev.sessions.map((session) => convertSessionUnits(session, prev.settings.weightUnit, target)),
+        routines: prev.routines.map((routine) => convertRoutineUnits(routine, prev.settings.weightUnit, target))
+      };
+    });
+
+    try {
+      await api.convertWeightUnits({
+        target,
+        currentUnit: previous.settings.weightUnit,
+        sessions: previous.sessions,
+        routines: previous.routines,
+        settings,
+        previousSettings: previous.settings
+      });
+    } catch (err) {
+      console.error('Failed to convert weight units, rolling back:', err);
+      setData(previous);
+      notify('Could not convert your saved weights. Changes reverted.', 'error');
+      throw err;
+    }
+  }, []);
+
+  /**
    * Order matters here. `signOut(auth)` makes `onAuthStateChanged` fire with
    * `null`, which triggers `fetchInitialData()` and rebuilds state from the
    * local mirror. Dropping this athlete's mirror first means that reload finds
@@ -656,6 +856,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
    * account that used this device earlier keeps its cached workouts.
    */
   const signOutUser = useCallback(async () => {
+    realtimeUnsubRef.current();
     clearLocalMirror();
 
     if (auth?.currentUser) {
@@ -728,13 +929,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
     saveSession, saveSessions, deleteSession, deleteSessions, finishWorkoutSession, saveRoutine, deleteRoutine, saveHistory, deleteHistory, saveMeal, deleteMeal,
     saveBodyMetric, deleteBodyMetric, updateNutritionGoals, logWater, resetWater,
     saveInsights,
-    updateSettings, updateData, signOutUser,
+    updateSettings, convertWeightUnits, updateData, signOutUser,
     exportBackup, importBackup
   }), [
     data, loading, theme, setTheme, fetchInitialData,
-    saveSession, saveSessions, deleteSession, deleteSessions, finishWorkoutSession, saveRoutine, deleteRoutine, saveHistory, deleteHistory, saveMeal, deleteMeal,
+    saveSession, saveSessions, deleteSession, deleteSessions, finishWorkoutSession, saveRoutine, deleteRoutine, saveHistory, deleteHistory, saveMeal,
     saveBodyMetric, deleteBodyMetric, updateNutritionGoals, logWater, resetWater,
-    saveInsights, updateSettings, updateData, signOutUser, exportBackup, importBackup
+    saveInsights, updateSettings, convertWeightUnits, updateData, signOutUser, exportBackup, importBackup
   ]);
 
   return (

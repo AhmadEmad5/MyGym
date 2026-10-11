@@ -1,5 +1,6 @@
 import { addDays, format } from 'date-fns';
 import type { WorkoutSession, SessionExercise, SetRecord } from '../../../lib/api';
+import { isRestDay, type RestDaySource } from '../../../lib/restDay';
 import { ensureCardioWarmup } from './templates';
 
 export interface SplitProgramDay {
@@ -45,7 +46,7 @@ export const WORKOUT_SPLIT_PROGRAMS: SplitProgram[] = [
     goalAr: 'تضخيم عضلي',
     level: 'Intermediate',
     levelAr: 'متوسط إلى متقدم',
-    description: 'High-frequency 6-day split training every muscle group twice a week with optimal recovery on Friday.',
+    description: 'High-frequency 6-day split training every muscle group twice a week with optimal recovery on the weekly off-day.',
     descriptionAr: 'جدول احترافي 6 أيام يدرب كل مجموعة عضلية مرتين أسبوعياً مع راحة يوم الجمعة.',
     days: [
       {
@@ -702,20 +703,20 @@ export const WORKOUT_SPLIT_PROGRAMS: SplitProgram[] = [
 
 /**
  * Builds a concrete array of WorkoutSession objects for a target week
- * based on a chosen SplitProgram, guaranteeing Friday rest day exclusion.
+ * based on a chosen SplitProgram, skipping the athlete's configured rest day.
  */
 export function buildSplitProgramSessions(
   program: SplitProgram,
-  weekStartDate: Date
+  weekStartDate: Date,
+  restDaySettings?: RestDaySource
 ): WorkoutSession[] {
   const sessions: WorkoutSession[] = [];
   const baseTimestamp = Date.now();
 
   program.days.forEach((day, dayIndex) => {
     const targetDate = addDays(weekStartDate, day.dayOffset);
-    // Friday is day 5 in JS (0=Sun, 5=Fri, 6=Sat)
-    if (targetDate.getDay() === 5) {
-      return; // Skip Friday gym closure
+    if (isRestDay(targetDate, restDaySettings)) {
+      return; // Skip the weekly closure
     }
 
     targetDate.setHours(18, 0, 0, 0);

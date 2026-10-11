@@ -10,20 +10,24 @@ import {
 import { Modal } from '../../Modal';
 import { WORKOUT_SPLIT_PROGRAMS, type SplitProgram } from './splitPrograms';
 import { useTranslation } from '../../../lib/i18n';
+import { restDayName, type RestDaySource } from '../../../lib/restDay';
 import { gymAudio } from '../../../lib/audio';
 
 interface WorkoutSplitLibraryModalProps {
   isOpen: boolean;
   onClose: () => void;
   onApplySplit: (program: SplitProgram) => void;
+  restDaySettings?: RestDaySource;
 }
 
 export function WorkoutSplitLibraryModal({
   isOpen,
   onClose,
-  onApplySplit
+  onApplySplit,
+  restDaySettings
 }: WorkoutSplitLibraryModalProps) {
   const { isRTL, tMuscle, tExercise } = useTranslation();
+  const restDayNameLocal = restDayName(restDaySettings, isRTL);
   const [selectedProgramId, setSelectedProgramId] = useState<string>('ppl-6day');
   const [expandedDayIndex, setExpandedDayIndex] = useState<number | null>(0);
   const [isApplying, setIsApplying] = useState(false);
@@ -73,8 +77,8 @@ export function WorkoutSplitLibraryModal({
           </div>
           <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
             {isRTL
-              ? 'اختر الجدول المناسب لهدفك ووقتك وطبقه بنقرة واحدة على الأسبوع الحالي (مع استبعاد يوم الجمعة للراحة التامة تلقائياً).'
-              : 'Choose a program tailored to your goals and apply it to your current week in 1-click (Friday is automatically preserved as rest day).'}
+              ? `اختر الجدول المناسب لهدفك ووقتك وطبقه بنقرة واحدة على الأسبوع الحالي (مع استبعاد يوم ${restDayNameLocal} للراحة التامة تلقائياً).`
+              : `Choose a program tailored to your goals and apply it to your current week in 1-click (${restDayNameLocal} is automatically preserved as rest day).`}
           </p>
         </header>
 
@@ -348,7 +352,7 @@ export function WorkoutSplitLibraryModal({
           </div>
         </div>
 
-        {/* Friday Rest Notice */}
+        {/* Weekly rest notice */}
         <div
           style={{
             display: 'flex',
@@ -365,8 +369,8 @@ export function WorkoutSplitLibraryModal({
           <Sparkles size={14} flex-shrink={0} />
           <span>
             {isRTL
-              ? 'تذكير: يوم الجمعة مخصص للراحة والاستشفاء التام (الجيم مغلق)، ولن يتم جدولة أي تمارين فيه.'
-              : 'Note: Friday is strictly preserved for full rest & recovery (the gym is closed); no sessions will be scheduled on Friday.'}
+              ? `تذكير: يوم ${restDayNameLocal} مخصص للراحة والاستشفاء التام (الجيم مغلق)، ولن يتم جدولة أي تمارين فيه.`
+              : `Note: ${restDayNameLocal} is strictly preserved for full rest & recovery (the gym is closed); no sessions will be scheduled on ${restDayNameLocal}.`}
           </span>
         </div>
       </div>

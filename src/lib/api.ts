@@ -129,6 +129,8 @@ export type UserSettings = {
   density?: 'comfortable' | 'compact';
   motion?: 'full' | 'reduced';
   weekStartsOn?: 'saturday' | 'sunday' | 'monday';
+  /** Weekly closure day. The gym is closed on this day everywhere in the app. */
+  restDay?: RestDayKey;
   restTimerSeconds?: number;
   soundAlerts?: boolean;
   vibrationAlerts?: boolean;
@@ -342,6 +344,16 @@ function assertValidSession(session: WorkoutSession) {
   if (session.exercises.some(ex => ex.sets !== undefined && !Array.isArray(ex.sets))) {
     throw new Error('Every exercise must hold a list of sets.');
   }
+}
+
+function assertValidRoutine(routine: Routine) {
+  assertId(routine?.id, 'Routine');
+  if (!routine.name?.trim() || routine.name.length > MAX_TEXT_LENGTH || !Array.isArray(routine.exercises)) throw new Error('Routine requires a valid name and exercise list.');
+  if (routine.sessions !== undefined && !Array.isArray(routine.sessions)) throw new Error('Routine sessions must be a list.');
+  if (routine.description != null && (typeof routine.description !== 'string' || routine.description.length > MAX_DESCRIPTION_LENGTH)) {
+    throw new Error('Routine description must be text under 2000 characters.');
+  }
+  if (routine.daysRequired !== undefined) assertFiniteNonNegative(routine.daysRequired, 'Routine days required', 7);
 }
 
 function assertValidMeal(meal: MealRecord) {
@@ -645,8 +657,10 @@ export function estimateWorkoutCalories(session: WorkoutSession): number {
 
 import { auth, db } from './firebase';
 import { GUEST_EMAIL } from './guestIdentity';
-import { doc, getDoc, getDocs, setDoc, deleteDoc, collection, writeBatch } from 'firebase/firestore';
+import { doc, getDoc, getDocs, setDoc, deleteDoc, collection, writeBatch, onSnapshot, type DocumentReference } from 'firebase/firestore';
 import { isInlineImagePayload, inlineImageBytes, MAX_INLINE_MEAL_IMAGE_BYTES } from './imagePayload';
+import { DEFAULT_REST_DAY, normalizeRestDay, type RestDayKey } from './restDay';
+import { convertWeight, convertSessionUnits, convertRoutineUnits, type WeightUnit } from './weights';
 import { notify } from './feedback';
 
 const getDefaultLanguage = (): 'en' | 'ar' => {
@@ -662,6 +676,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   theme: 'dark',
   motion: 'full',
   weekStartsOn: 'saturday',
+  restDay: DEFAULT_REST_DAY,
   restTimerSeconds: 90,
   soundAlerts: true,
   vibrationAlerts: true,
@@ -676,12 +691,15 @@ const DEFAULT_SETTINGS: UserSettings = {
 };
 
 /**
- * Fills in missing settings keys and repairs a malformed `athlete` profile so
- * every read path (Firestore, local mirror, JSON import) yields the same shape.
+ * Fills in missing settings keys and repairs a malformed `athlete` profile or
+ * `restDay` value so every read path (Firestore, local mirror, JSON import)
+ * yields the same shape. `restDay` drives the closure rules across the app, so
+ * an unrecognised value has to be coerced rather than spread through verbatim.
  */
 export function normalizeSettings(raw: unknown): UserSettings {
   const source = (raw && typeof raw === 'object' ? raw : {}) as Partial<UserSettings>;
   const merged: UserSettings = { ...DEFAULT_SETTINGS, ...source };
+  merged.restDay = normalizeRestDay(source.restDay);
   if ('athlete' in source) {
     merged.athlete = normalizeAthleteProfile(source.athlete);
   } else {
@@ -990,8 +1008,144 @@ function isPermanentFirestoreError(err: unknown): boolean {
   return code === 'permission-denied' || code === 'unauthenticated' || code === 'invalid-argument' || code === 'failed-precondition';
 }
 
+// Re-exported so callers can describe a unit switch without reaching past this
+// module; the conversion itself is owned by `./weights`.
+export type { WeightUnit };
+export { convertWeight, convertSessionUnits, convertRoutineUnits };
+
 // Data Access Repository
 export const api = {
+  /**
+   * Push-Based Reactive Real-Time Subscriptions:
+   * Binds scoped real-time listeners to the user document and subcollections
+   * (sessions, routines, history, meals) indexed strictly by the authenticated uid.
+   * Returns a unified unsubscribe function to eliminate zombie listeners and memory leaks.
+   */
+  subscribeUserData(
+    uid: string,
+    onUpdate: (delta: Partial<AppData>, source: 'remote' | 'cache') => void,
+    onError?: (err: Error) => void
+  ): () => void {
+    if (!db || !uid) return () => {};
+
+    const unsubs: (() => void)[] = [];
+
+    // 1. Root user doc (settings, user, bodyMetrics, nutritionGoals, waterLogs, insights)
+    try {
+      const userDocRef = doc(db, 'users', uid);
+      const unsubUser = onSnapshot(
+        userDocRef,
+        { includeMetadataChanges: false },
+        (snap) => {
+          if (!snap.exists()) return;
+          const rootData = snap.data();
+          const delta: Partial<AppData> = {};
+          if (rootData.settings) delta.settings = normalizeSettings(rootData.settings);
+          if (rootData.user) delta.user = rootData.user;
+          if (Array.isArray(rootData.bodyMetrics)) delta.bodyMetrics = rootData.bodyMetrics;
+          if (rootData.nutritionGoals) delta.nutritionGoals = rootData.nutritionGoals;
+          if (rootData.waterLogs && typeof rootData.waterLogs === 'object') delta.waterLogs = rootData.waterLogs;
+          if (rootData.insights) delta.insights = { ...DEFAULT_PERFORMANCE_INSIGHTS, ...rootData.insights };
+          onUpdate(delta, snap.metadata.fromCache ? 'cache' : 'remote');
+        },
+        (err) => {
+          console.warn('Real-time listener error (user root):', err);
+          onError?.(err);
+        }
+      );
+      unsubs.push(unsubUser);
+    } catch (e) {
+      console.warn('Failed to attach user root snapshot listener:', e);
+    }
+
+    // 2. Sessions collection
+    try {
+      const sessionsRef = collection(db, 'users', uid, 'sessions');
+      const unsubSessions = onSnapshot(
+        sessionsRef,
+        { includeMetadataChanges: false },
+        (snap) => {
+          const sessions = snap.docs.map(d => d.data() as WorkoutSession);
+          onUpdate({ sessions }, snap.metadata.fromCache ? 'cache' : 'remote');
+        },
+        (err) => {
+          console.warn('Real-time listener error (sessions):', err);
+          onError?.(err);
+        }
+      );
+      unsubs.push(unsubSessions);
+    } catch (e) {
+      console.warn('Failed to attach sessions snapshot listener:', e);
+    }
+
+    // 3. Routines collection
+    try {
+      const routinesRef = collection(db, 'users', uid, 'routines');
+      const unsubRoutines = onSnapshot(
+        routinesRef,
+        { includeMetadataChanges: false },
+        (snap) => {
+          const routines = snap.docs.map(d => d.data() as Routine);
+          onUpdate({ routines }, snap.metadata.fromCache ? 'cache' : 'remote');
+        },
+        (err) => {
+          console.warn('Real-time listener error (routines):', err);
+          onError?.(err);
+        }
+      );
+      unsubs.push(unsubRoutines);
+    } catch (e) {
+      console.warn('Failed to attach routines snapshot listener:', e);
+    }
+
+    // 4. History collection
+    try {
+      const historyRef = collection(db, 'users', uid, 'history');
+      const unsubHistory = onSnapshot(
+        historyRef,
+        { includeMetadataChanges: false },
+        (snap) => {
+          const history = snap.docs.map(d => d.data() as HistoryRecord);
+          onUpdate({ history }, snap.metadata.fromCache ? 'cache' : 'remote');
+        },
+        (err) => {
+          console.warn('Real-time listener error (history):', err);
+          onError?.(err);
+        }
+      );
+      unsubs.push(unsubHistory);
+    } catch (e) {
+      console.warn('Failed to attach history snapshot listener:', e);
+    }
+
+    // 5. Meals collection
+    try {
+      const mealsRef = collection(db, 'users', uid, 'meals');
+      const unsubMeals = onSnapshot(
+        mealsRef,
+        { includeMetadataChanges: false },
+        (snap) => {
+          const meals = snap.docs.map(d => d.data() as MealRecord);
+          onUpdate({ meals }, snap.metadata.fromCache ? 'cache' : 'remote');
+        },
+        (err) => {
+          console.warn('Real-time listener error (meals):', err);
+          onError?.(err);
+        }
+      );
+      unsubs.push(unsubMeals);
+    } catch (e) {
+      console.warn('Failed to attach meals snapshot listener:', e);
+    }
+
+    return () => {
+      unsubs.forEach(unsub => {
+        try {
+          unsub();
+        } catch {}
+      });
+    };
+  },
   async getData(): Promise<AppData> {
     if (auth?.currentUser && db) {
       const uid = auth.currentUser.uid;
@@ -1249,13 +1403,7 @@ export const api = {
   },
 
   async saveRoutine(routine: Routine) {
-    assertId(routine?.id, 'Routine');
-    if (!routine.name?.trim() || routine.name.length > MAX_TEXT_LENGTH || !Array.isArray(routine.exercises)) throw new Error('Routine requires a valid name and exercise list.');
-    if (routine.sessions !== undefined && !Array.isArray(routine.sessions)) throw new Error('Routine sessions must be a list.');
-    if (routine.description != null && (typeof routine.description !== 'string' || routine.description.length > MAX_DESCRIPTION_LENGTH)) {
-      throw new Error('Routine description must be text under 2000 characters.');
-    }
-    if (routine.daysRequired !== undefined) assertFiniteNonNegative(routine.daysRequired, 'Routine days required', 7);
+    assertValidRoutine(routine);
     mirrorLocalData(local => {
       if (!local.routines) local.routines = [];
       const idx = local.routines.findIndex(r => r.id === routine.id);
@@ -1270,6 +1418,115 @@ export const api = {
         console.warn("Could not sync routine to Firestore (retained in local cache):", err);
         if (isPermanentFirestoreError(err)) throw err;
       }
+    }
+  },
+
+  /**
+   * Moves every stored weight in the account into `target` as one operation.
+   *
+   * A unit switch touches logged workouts, routine templates *and* the training days
+   * inside `routine.sessions`, plus the settings document that describes them. These
+   * must all land together: a partial conversion leaves the athlete's history
+   * disagreeing with itself by the kg/lb ratio, and on the next load Firestore (which
+   * wins over the local mirror) would silently reintroduce the old values anyway.
+   *
+   * The local mirror is therefore written once with the full converted snapshot, the
+   * cloud is updated in batched writes, and a cloud failure puts every document that
+   * already moved back the way it was before the error is rethrown.
+   *
+   * A local-only (guest or offline) account has no cloud to fall out of sync with, so
+   * the mirror write alone is the completed conversion.
+   */
+  async convertWeightUnits(next: {
+    target: WeightUnit;
+    currentUnit: WeightUnit;
+    sessions: WorkoutSession[];
+    routines: Routine[];
+    settings: UserSettings;
+    previousSettings: UserSettings;
+  }): Promise<void> {
+    const { target, currentUnit, sessions, routines, settings, previousSettings } = next;
+    if (target !== 'kg' && target !== 'lb') throw new Error('Unsupported weight unit.');
+    if (target === currentUnit) return;
+    if (!Array.isArray(sessions) || !Array.isArray(routines)) throw new Error('Weight conversion requires session and routine lists.');
+
+    const convertedSessions = sessions.map((session) => convertSessionUnits(session, currentUnit, target));
+    const convertedRoutines = routines.map((routine) => convertRoutineUnits(routine, currentUnit, target));
+
+    // Validate the whole conversion before a single byte is written so one bad
+    // record cannot leave the account half-converted.
+    convertedSessions.forEach(assertValidSession);
+    convertedRoutines.forEach(assertValidRoutine);
+
+    const scope = activeMirrorScope();
+    const previousMirror = readMirrorForScope(scope);
+
+    mirrorLocalData(local => {
+      local.sessions = convertedSessions;
+      local.routines = convertedRoutines;
+      local.settings = settings;
+    });
+
+    if (!auth?.currentUser || !db) return;
+
+    const firestoreDb = db;
+    const uid = auth.currentUser.uid;
+    const userRef = doc(firestoreDb, 'users', uid);
+    // Forward and rollback ops share one ordering, so op `n` restores exactly the
+    // document that forward op `n` overwrote.
+    const forward: Array<{ ref: DocumentReference; data: Record<string, any>; merge?: boolean }> = [
+      { ref: userRef, data: { settings: sanitizeForFirestore(settings) }, merge: true }
+    ];
+    const rollback: Array<{ ref: DocumentReference; data: Record<string, any>; merge?: boolean }> = [
+      { ref: userRef, data: { settings: sanitizeForFirestore(previousSettings) }, merge: true }
+    ];
+
+    sessions.forEach((session, index) => {
+      const ref = doc(firestoreDb, 'users', uid, 'sessions', session.id);
+      forward.push({ ref, data: sanitizeForFirestore(convertedSessions[index]) });
+      rollback.push({ ref, data: sanitizeForFirestore(session) });
+    });
+    routines.forEach((routine, index) => {
+      const ref = doc(firestoreDb, 'users', uid, 'routines', routine.id);
+      forward.push({ ref, data: sanitizeForFirestore(convertedRoutines[index]) });
+      rollback.push({ ref, data: sanitizeForFirestore(routine) });
+    });
+
+    const commitChunk = async (ops: Array<{ ref: DocumentReference; data: Record<string, any>; merge?: boolean }>) => {
+      const batch = writeBatch(firestoreDb);
+      ops.forEach((op) => {
+        if (op.merge) batch.set(op.ref, op.data, { merge: true });
+        else batch.set(op.ref, op.data);
+      });
+      await batch.commit();
+    };
+
+    // Firestore rejects a batched write above 500 operations.
+    const chunkSize = 450;
+    const committedChunks: number[] = [];
+    try {
+      for (let i = 0; i < forward.length; i += chunkSize) {
+        await commitChunk(forward.slice(i, i + chunkSize));
+        committedChunks.push(i);
+      }
+    } catch (err) {
+      console.error('Weight unit conversion failed, rolling back:', err);
+      if (previousMirror) writeMirrorForScope(scope, previousMirror);
+      else clearLocalMirror(scope);
+
+      const committed = committedChunks.flatMap((start) => rollback.slice(start, start + chunkSize));
+      if (committed.length > 0) {
+        try {
+          for (let i = 0; i < committed.length; i += chunkSize) {
+            await commitChunk(committed.slice(i, i + chunkSize));
+          }
+        } catch (rollbackErr) {
+          // Nothing further can be done here: surface it loudly rather than letting
+          // the athlete believe the rollback restored a unit they no longer match.
+          console.error('Could not roll back the failed weight unit conversion. Force reloading may be needed:', rollbackErr);
+        }
+      }
+      throw err;
     }
   },
 

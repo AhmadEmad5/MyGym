@@ -1,6 +1,7 @@
 import { addDays } from 'date-fns';
 import type { Day } from 'date-fns';
 import type { SessionExercise, WorkoutSession } from '../../../lib/api';
+import { isRestDay, type RestDaySource } from '../../../lib/restDay';
 import { ensureCardioWarmup } from './templates';
 
 type PplBlock = { name: string; targetMuscle: string; restTime: number; videoUrl?: string; reps: number };
@@ -29,8 +30,6 @@ const PPL_BLOCKS: { days: number[]; title: string; blueprint: PplBlock[] }[] = [
   { days: [1, 4], title: 'Legs (Quads, Hamstrings)', blueprint: LEGS }
 ];
 
-export const REST_DAY = 5;
-
 export function toExercises(blueprint: PplBlock[], seed: string): SessionExercise[] {
   return blueprint.map((entry, index) => ({
     id: `${seed}-${index}-${Math.random().toString(36).slice(2, 7)}`,
@@ -43,7 +42,12 @@ export function toExercises(blueprint: PplBlock[], seed: string): SessionExercis
   }));
 }
 
-export function buildPPLPlan(days = 28, now = new Date()): WorkoutSession[] {
+/**
+ * The auto-generated Push/Pull/Legs plan. The athlete's configured rest day is
+ * skipped rather than a hardcoded Friday, so a gym open on Friday still gets a
+ * full PPL week.
+ */
+export function buildPPLPlan(days = 28, now = new Date(), restDaySettings?: RestDaySource): WorkoutSession[] {
   const baseDate = new Date(now);
   baseDate.setHours(18, 0, 0, 0);
   const stamp = Date.now();
@@ -52,7 +56,7 @@ export function buildPPLPlan(days = 28, now = new Date()): WorkoutSession[] {
   for (let i = 0; i < days; i++) {
     const date = addDays(baseDate, i);
     const dayOfWeek = date.getDay();
-    if (dayOfWeek === REST_DAY) continue;
+    if (isRestDay(date, restDaySettings)) continue;
     const block = PPL_BLOCKS.find(item => item.days.includes(dayOfWeek));
     if (!block) continue;
     const dateStr = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);

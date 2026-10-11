@@ -10,6 +10,7 @@ import { addDays, startOfWeek } from 'date-fns';
 import { useData } from '../hooks/useData';
 import { WorkoutSession, SessionExercise, Routine } from '../lib/api';
 import { useTranslation } from '../lib/i18n';
+import { isRestDay, restDayIndex, restDayName } from '../lib/restDay';
 import ReactMarkdown from 'react-markdown';
 import { useReducedMotion } from './performance/useReducedMotion';
 import { useModalA11y } from './AIMealVisionModal';
@@ -137,6 +138,8 @@ export function AIWorkoutGeneratorModal({ isOpen, onClose, onRoutineScheduled }:
       ? `CRITICAL REQUIREMENT: The user interface is in ARABIC. You MUST write all textual fields ("routineName", "tagline", "scientificRationale", session "title", exercise "name", "targetMuscle", and "coachingCue") in fluent, natural, professional ARABIC (e.g. "تمرين ضغط الصدر بالبار المستوي", "الصدر", "الظهر", etc.).` 
       : `Output all fields in English.`;
 
+    const restDayNameForPrompt = restDayName({ restDay: data?.settings?.restDay }, false);
+
     const prompt = `You are a world-class certified strength & conditioning coach (CSCS) and exercise biomechanist.
 Design an optimal, science-backed workout program customized for the following athlete profile:
 
@@ -145,7 +148,7 @@ Design an optimal, science-backed workout program customized for the following a
 - Desired Frequency: ${daysCount} days per week
 - Available Equipment: ${eqObj?.titleEn} (${eqObj?.descEn})
 - Specific Focus & Constraints: "${customFocus.trim() || 'Balanced full development, optimal stimulus-to-fatigue ratio'}"
-- Crucial Schedule Rule: The gym is strictly closed every Friday. Athletes NEVER train on Friday. Friday must ALWAYS remain an off-day / complete recovery day.
+- Crucial Schedule Rule: The gym is strictly closed every ${restDayNameForPrompt}. Athletes NEVER train on ${restDayNameForPrompt}. ${restDayNameForPrompt} must ALWAYS remain an off-day / complete recovery day.
 - Crucial Warm-up Rule: Every single workout session MUST start with an aerobic warm-up & cardio exercise as its very first exercise (Exercise 1: "Treadmill Warm-up & Cardio" with targetMuscle: "Cardio", sets: 1, reps: "5-10 min", restSeconds: 60, coachingCue: "Light aerobic warm-up to elevate core temperature and lubricate joints before lifting.").
 
 Structure exactly ${daysCount} training sessions (e.g. Push, Pull, Legs, Upper, Lower, or Full Body depending on frequency).
@@ -214,17 +217,36 @@ Output strictly valid JSON with NO markdown code fences, using this schema:
       let weekStart = startOfWeek(today, { weekStartsOn: 0 }); // Sunday
       const newSessions: WorkoutSession[] = [];
 
-      // Map sessions to appropriate days evenly spaced across the week
-      // NOTE: Friday (day 5) is strictly a rest day in FORMA!
-      const daySpacingMap: Record<number, number[]> = {
+      // Map sessions to appropriate days evenly spaced across the week. The curated
+      // tables encode deliberate recovery gaps, so they are kept as-is and only
+      // the athlete's configured rest day is removed from them.
+      const restIndex = restDayIndex({ restDay: data?.settings?.restDay });
+      const curatedSpacing: Record<number, number[]> = {
         2: [1, 4], // Mon, Thu
         3: [0, 2, 4], // Sun, Tue, Thu
         4: [0, 1, 3, 4], // Sun, Mon, Wed, Thu
-        5: [0, 1, 2, 4, 6], // Sun, Mon, Tue, Thu, Sat (avoid Friday 5)
-        6: [0, 1, 2, 3, 4, 6], // Sun, Mon, Tue, Wed, Thu, Sat (avoid Friday 5)
+        5: [0, 1, 2, 4, 6], // Sun, Mon, Tue, Thu, Sat
+        6: [0, 1, 2, 3, 4, 6] // Sun, Mon, Tue, Wed, Thu, Sat
       };
 
-      const targetDays = daySpacingMap[generatedPlan.daysRequired] || [0, 1, 2, 3].slice(0, generatedPlan.daysRequired);
+      // When the rest day was one of the curated slots, backfill from the days
+      // that were skipped so the athlete still gets the requested frequency.
+      const pickDays = (count: number) => {
+        const curated = (curatedSpacing[count] ?? [0, 1, 2, 3, 4, 5, 6].slice(0, count))
+          .filter(day => day !== restIndex);
+        const spare = [0, 1, 2, 3, 4, 5, 6].filter(day => day !== restIndex && !curated.includes(day));
+        return [...curated, ...spare].slice(0, count).sort((a, b) => a - b);
+      };
+
+      const daySpacingMap: Record<number, number[]> = {
+        2: pickDays(2),
+        3: pickDays(3),
+        4: pickDays(4),
+        5: pickDays(5),
+        6: pickDays(6)
+      };
+
+      const targetDays = daySpacingMap[generatedPlan.daysRequired] || pickDays(Math.min(generatedPlan.daysRequired, 6));
 
       // If all target days for this week have already passed, start from next week
       const remainingThisWeek = targetDays.filter(dayOffset => addDays(weekStart, dayOffset) >= today);
@@ -239,8 +261,8 @@ Output strictly valid JSON with NO markdown code fences, using this schema:
           const sessionDate = addDays(weekStart, week * 7 + dayOffset);
           sessionDate.setHours(18, 0, 0, 0);
 
-          // CRITICAL: NEVER schedule workouts on past days or on Friday (gym closed)!
-          if (sessionDate < today || sessionDate.getDay() === 5) {
+          // CRITICAL: NEVER schedule workouts on past days or on the weekly closure!
+          if (sessionDate < today || isRestDay(sessionDate, { restDay: data?.settings?.restDay })) {
             return;
           }
 

@@ -122,6 +122,16 @@ describe('normalizeSettings / normalizeAthleteProfile', () => {
     expect('athlete' in normalizeSettings({ theme: 'dark' })).toBe(false);
   });
 
+  it('defaults the weekly rest day to Friday for the MENA region', () => {
+    expect(normalizeSettings({}).restDay).toBe('friday');
+  });
+
+  it('keeps a stored rest day and coerces an unrecognised one', () => {
+    expect(normalizeSettings({ restDay: 'sunday' }).restDay).toBe('sunday');
+    expect(normalizeSettings({ restDay: 'NOT_A_DAY' }).restDay).toBe('friday');
+    expect(normalizeSettings({ restDay: 3 }).restDay).toBe('wednesday');
+  });
+
   it('drops a non-object profile instead of throwing', () => {
     expect(normalizeAthleteProfile(null)).toEqual({
       goal: 'general',

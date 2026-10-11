@@ -16,6 +16,7 @@ import type { WorkoutSession } from '../../lib/api';
 import { useTranslation } from '../../lib/i18n';
 import { gymAudio } from '../../lib/audio';
 import { useFormaReducedMotion } from '../TodayBentoGrid';
+import { BackgroundGradient, Meteors } from '../ui';
 import { GYM_FLOOR_HAPTICS, pulseHaptic } from './gymFloorHaptics';
 
 interface MobileHeroWorkoutCardProps {
@@ -59,123 +60,133 @@ export function MobileHeroWorkoutCard({
   };
 
   return (
-    <motion.div
-      className="mobile-hero-workout"
-      data-state={isCompletedToday ? 'complete' : 'planned'}
-      initial={reduceMotion ? false : { opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={enterTransition}
+    <BackgroundGradient
+      animate={!reduceMotion}
+      containerClassName="w-full mb-3.5 rounded-[24px]"
+      className="w-full rounded-[22px]"
     >
-      <div className="mobile-hero-topline">
-        <span className="mobile-hero-tag">
-          {isCompletedToday ? <CheckCircle2 size={13} aria-hidden="true" /> : <Sparkles size={13} aria-hidden="true" />}
-          {isCompletedToday
-            ? isRTL ? 'تمرين اليوم منجز' : 'Workout completed'
-            : isRTL ? 'تمرين اليوم' : 'Today’s workout'}
-        </span>
-      </div>
-
-      <h2 className="mobile-hero-title">{workoutTitle}</h2>
-
-      {hasContent ? (
-        <p className="mobile-hero-stats">
-          <span>
-            <Dumbbell size={14} aria-hidden="true" />
-            {exerciseCount} {isRTL ? 'تمارين' : 'exercises'}
+      <motion.div
+        className="mobile-hero-workout relative overflow-hidden"
+        style={{ marginBlockEnd: 0 }}
+        data-state={isCompletedToday ? 'complete' : 'planned'}
+        initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={enterTransition}
+      >
+        {isCompletedToday && !reduceMotion && (
+          <Meteors number={16} className="opacity-70 pointer-events-none" />
+        )}
+        <div className="mobile-hero-topline relative z-10">
+          <span className="mobile-hero-tag">
+            {isCompletedToday ? <CheckCircle2 size={13} aria-hidden="true" /> : <Sparkles size={13} aria-hidden="true" />}
+            {isCompletedToday
+              ? isRTL ? 'تمرين اليوم منجز' : 'Workout completed'
+              : isRTL ? 'تمرين اليوم' : 'Today’s workout'}
           </span>
-          {estimatedMinutes > 0 && (
+        </div>
+
+        <h2 className="mobile-hero-title relative z-10">{workoutTitle}</h2>
+
+        {hasContent ? (
+          <p className="mobile-hero-stats relative z-10">
+            <span>
+              <Dumbbell size={14} aria-hidden="true" />
+              {exerciseCount} {isRTL ? 'تمارين' : 'exercises'}
+            </span>
+            {estimatedMinutes > 0 && (
+              <>
+                <i aria-hidden="true" />
+                <span>
+                  <Clock size={14} aria-hidden="true" />
+                  ~{estimatedMinutes} {isRTL ? 'دقيقة' : 'min'}
+                </span>
+              </>
+            )}
+          </p>
+        ) : (
+          <p className="mobile-hero-empty relative z-10">
+            {isRTL
+              ? 'لا توجد تمارين في هذه الجلسة بعد — اختر روتيناً أو أضف جلسة سريعة.'
+              : 'This session has no exercises yet — pick a routine or log a quick workout.'}
+          </p>
+        )}
+
+        <motion.button
+          type="button"
+          className="mobile-hero-cta relative z-10"
+          data-variant={isCompletedToday ? 'review' : 'start'}
+          whileTap={reduceMotion ? undefined : { scale: 0.985 }}
+          onClick={handleOpenWorkout}
+        >
+          {isCompletedToday ? (
             <>
-              <i aria-hidden="true" />
-              <span>
-                <Clock size={14} aria-hidden="true" />
-                ~{estimatedMinutes} {isRTL ? 'دقيقة' : 'min'}
-              </span>
+              <RotateCcw size={17} aria-hidden="true" />
+              <span>{isRTL ? 'مراجعة وتعديل التمرين' : 'Review / reopen session'}</span>
+            </>
+          ) : (
+            <>
+              <Play size={17} fill="currentColor" aria-hidden="true" />
+              <span>{isRTL ? 'بدء التمرين الآن' : 'Start session'}</span>
+              <ArrowRight size={15} className={isRTL ? 'rotate-180' : ''} aria-hidden="true" />
             </>
           )}
-        </p>
-      ) : (
-        <p className="mobile-hero-empty">
-          {isRTL
-            ? 'لا توجد تمارين في هذه الجلسة بعد — اختر روتيناً أو أضف جلسة سريعة.'
-            : 'This session has no exercises yet — pick a routine or log a quick workout.'}
-        </p>
-      )}
+        </motion.button>
 
-      <motion.button
-        type="button"
-        className="mobile-hero-cta"
-        data-variant={isCompletedToday ? 'review' : 'start'}
-        whileTap={reduceMotion ? undefined : { scale: 0.985 }}
-        onClick={handleOpenWorkout}
-      >
-        {isCompletedToday ? (
+        {targetMuscles.length > 0 && (
+          <ul className="mobile-hero-muscles relative z-10" aria-label={isRTL ? 'العضلات المستهدفة' : 'Target muscles'}>
+            {targetMuscles.map((muscle) => (
+              <li key={muscle}>{tMuscle(muscle)}</li>
+            ))}
+          </ul>
+        )}
+
+        {exerciseCount > 0 && (
           <>
-            <RotateCcw size={17} aria-hidden="true" />
-            <span>{isRTL ? 'مراجعة وتعديل التمرين' : 'Review / reopen session'}</span>
-          </>
-        ) : (
-          <>
-            <Play size={17} fill="currentColor" aria-hidden="true" />
-            <span>{isRTL ? 'بدء التمرين الآن' : 'Start session'}</span>
-            <ArrowRight size={15} className={isRTL ? 'rotate-180' : ''} aria-hidden="true" />
+            <button
+              type="button"
+              className="mobile-hero-toggle relative z-10"
+              aria-expanded={isExpanded}
+              aria-controls="mobile-hero-exercise-list"
+              onClick={() => setIsExpanded((prev) => !prev)}
+            >
+              <span>{isRTL ? 'معاينة قائمة التمارين' : 'Preview exercises'}</span>
+              <ChevronDown size={15} style={{ transform: isExpanded ? 'rotate(180deg)' : 'none' }} aria-hidden="true" />
+            </button>
+
+            <AnimatePresence initial={false}>
+              {isExpanded && (
+                <motion.ul
+                  id="mobile-hero-exercise-list"
+                  className="mobile-hero-exercises relative z-10"
+                  initial={reduceMotion ? false : { opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={reduceMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
+                  transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  {exercises.map((exercise, index) => (
+                    <li key={exercise.id || index}>
+                      <span className="mobile-hero-exercise-index tabular-nums" aria-hidden="true">
+                        {index + 1}
+                      </span>
+                      <span className="mobile-hero-exercise-name">{tExercise(exercise.name)}</span>
+                      <span className="mobile-hero-exercise-sets tabular-nums">
+                        {exercise.sets?.length || 0} {isRTL ? 'جولات' : 'sets'}
+                      </span>
+                    </li>
+                  ))}
+                </motion.ul>
+              )}
+            </AnimatePresence>
           </>
         )}
-      </motion.button>
 
-      {targetMuscles.length > 0 && (
-        <ul className="mobile-hero-muscles" aria-label={isRTL ? 'العضلات المستهدفة' : 'Target muscles'}>
-          {targetMuscles.map((muscle) => (
-            <li key={muscle}>{tMuscle(muscle)}</li>
-          ))}
-        </ul>
-      )}
-
-      {exerciseCount > 0 && (
-        <>
-          <button
-            type="button"
-            className="mobile-hero-toggle"
-            aria-expanded={isExpanded}
-            aria-controls="mobile-hero-exercise-list"
-            onClick={() => setIsExpanded((prev) => !prev)}
-          >
-            <span>{isRTL ? 'معاينة قائمة التمارين' : 'Preview exercises'}</span>
-            <ChevronDown size={15} style={{ transform: isExpanded ? 'rotate(180deg)' : 'none' }} aria-hidden="true" />
+        {isCompletedToday && (
+          <button type="button" className="mobile-hero-secondary relative z-10" onClick={onQuickWorkout}>
+            <Plus size={14} aria-hidden="true" />
+            <span>{isRTL ? 'بدء تمرين إضافي' : 'Log extra workout'}</span>
           </button>
-
-          <AnimatePresence initial={false}>
-            {isExpanded && (
-              <motion.ul
-                id="mobile-hero-exercise-list"
-                className="mobile-hero-exercises"
-                initial={reduceMotion ? false : { opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={reduceMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
-                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-              >
-                {exercises.map((exercise, index) => (
-                  <li key={exercise.id || index}>
-                    <span className="mobile-hero-exercise-index tabular-nums" aria-hidden="true">
-                      {index + 1}
-                    </span>
-                    <span className="mobile-hero-exercise-name">{tExercise(exercise.name)}</span>
-                    <span className="mobile-hero-exercise-sets tabular-nums">
-                      {exercise.sets?.length || 0} {isRTL ? 'جولات' : 'sets'}
-                    </span>
-                  </li>
-                ))}
-              </motion.ul>
-            )}
-          </AnimatePresence>
-        </>
-      )}
-
-      {isCompletedToday && (
-        <button type="button" className="mobile-hero-secondary" onClick={onQuickWorkout}>
-          <Plus size={14} aria-hidden="true" />
-          <span>{isRTL ? 'بدء تمرين إضافي' : 'Log extra workout'}</span>
-        </button>
-      )}
-    </motion.div>
+        )}
+      </motion.div>
+    </BackgroundGradient>
   );
 }

@@ -1,621 +1,449 @@
-:root {
-  --shell-nav-active: color-mix(in srgb, var(--accent-cyan, #38bdf8) 60%, var(--text-primary, #f8fafc));
-  --shell-nav-active-soft: color-mix(in srgb, var(--accent-cyan, #38bdf8) 16%, transparent);
-  --shell-focus-ring: 2px solid var(--border-focus, #38bdf8);
-  --shell-safe-top: env(safe-area-inset-top, 0px);
-  --shell-safe-bottom: env(safe-area-inset-bottom, 0px);
-  --shell-safe-inline-start: env(safe-area-inset-left, 0px);
-  --shell-safe-inline-end: env(safe-area-inset-right, 0px);
-  --shell-topbar-height: 52px;
-  --shell-dock-height: 74px;
-  --shell-topbar-inset: calc(var(--shell-topbar-height) + max(0.75rem, var(--shell-safe-top)));
-  --shell-dock-inset: calc(var(--shell-dock-height) + max(0.75rem, var(--shell-safe-bottom)));
-  --shell-livebar-inset: calc(var(--shell-topbar-inset) + 3.25rem);
-  --shell-scroll-offset: 1.5rem;
-}
+/* ==========================================================================
+   FORMA — Shared Layout Primitives & Page Shell
 
-.forma-skip-link {
-  position: fixed;
-  z-index: var(--z-skip);
-  inset-block-start: calc(0.5rem + var(--shell-safe-top));
-  inset-inline: 0;
-  margin-inline: auto;
-  width: fit-content;
-  max-width: calc(100% - 2rem);
-  padding: 0.7rem 1.15rem;
-  border: 1px solid var(--border-focus, var(--accent-cyan));
-  border-radius: 12px;
-  color: var(--text-primary);
-  background: var(--bg-secondary, #0d1524);
-  box-shadow: 0 12px 30px -10px rgb(0 0 0 / 60%);
-  font-size: 0.85rem;
-  font-weight: 750;
-  text-decoration: none;
-  white-space: nowrap;
-  transform: translateY(-180%);
-  transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
-}
+   The unlayered prefix of this file (shell tokens, skip link, admin frame and
+   the whole nav-detail block) moved to @layer shell - see src/styles/shell.css
+   section 2. What is left here is split across two layers:
 
-.forma-skip-link:focus,
-.forma-skip-link:focus-visible {
-  transform: translateY(0);
-  outline: var(--shell-focus-ring);
-  outline-offset: 2px;
-}
+   - `@layer layout` owns the page frame and the `.northline-*` rails: pure
+     box geometry that every route inherits and that nothing overrides.
+   - `@layer components` owns the reusable page chrome (metric tiles, the
+     primary button, the save status pill, the sheets).
 
-.main-content:focus,
-.main-content:focus-visible {
-  outline: var(--shell-focus-ring);
-  outline-offset: -2px;
-}
+   Neither was `layout` before. Splitting them is what lets the shell be
+   reasoned about separately from the surfaces it hosts: `layout` has to sit
+   BELOW `components`, and the `.forma-page-frame` / `.forma-mobile-sheet`
+   refinements in mobile-refinement.css are `features`, which is above both.
+   ========================================================================== */
 
-.admin-app-layout {
-  min-height: 100dvh;
-  width: 100%;
-  max-width: 100%;
-}
+@layer layout {
 
-.navbar-magnetic-spotlight {
-  background: radial-gradient(
-    280px circle at var(--spotlight-x, 50%) var(--spotlight-y, 50%),
-    color-mix(in srgb, var(--accent-cyan) 16%, transparent),
-    transparent 75%
-  );
-  opacity: 0;
-  transition: opacity 220ms ease;
-}
+/* Page layout primitives and Northline adaptive layout.
+   Page-level containers (max-width, padding, min-height: 100vh), the Northline
+   rail/grid layout system, and adaptive layout for portrait phones, landscape
+   phones, tablets, and small laptops. */
 
-.navbar-magnetic-spotlight[data-visible='true'] {
-  opacity: 1;
-}
+/* Full-page route canvas. `width: 100%` is load-bearing, not a reset: the
+   page sets `padding-inline: var(--mobile-page-gutter)` below 900px while
+   also sizing itself to the same gutter, so without `width: 100%` the border
+   box overflows the viewport by twice the gutter and the whole shell drifts
+   sideways. `max-width` removes that drift at desktop widths, where the gutter
+   is 0 and the column is centred by `margin-inline: auto`.
 
-.theme-popover-anchor {
-  position: relative;
-}
-
-.brand-icon,
-.brand-glow-halo {
-  display: block;
-}
-
-.brand-text-col {
-  display: grid;
-  min-width: 0;
-}
-
-.avatar-letter {
-  display: inline-flex;
+   `flex: 1` plus `min-block-size: 0` is the flex contract that lets
+   `.content-area` - the single app scroller - actually shrink inside
+   `.main-content`: without `min-block-size: 0` a flex item floors at its
+   content height and the scroller never gets a bounded block size.
+   `.min()` on the page minimum is deliberate; it is `min()` rather than
+   `max()` because it is evaluated against the parent, and a *negative* floor
+   is what stops `100vh` from being read as "at least the viewport" when the
+   sheet keyboard shrinks the visible area. */
+.forma-page-frame {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
   width: 100%;
-  height: 100%;
-  line-height: 1;
-  letter-spacing: -0.02em;
+  margin-inline: auto;
+  padding-block: clamp(1.5rem, 3vh, 2.5rem);
+  min-block-size: min(100vh, 100dvh);
+  min-block-size: min(100%, 100vh);
+  flex: 1;
 }
 
-.nav-action-pill .action-icon {
-  flex: 0 0 auto;
+.forma-page-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+  width: 100%;
 }
 
-.nav-action-pill .lang-text {
-  font-size: 0.72rem;
-  font-weight: 800;
-  line-height: 1;
+.forma-page-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xl);
+  width: 100%;
+  max-width: var(--space-page-max);
+  margin-inline: auto;
 }
 
-.nav-action-pill.theme-cycler {
-  gap: 0.42rem;
+/* Universal page header. Two variants:
+   - default: title on the left, actions on the right (single row)
+   - compact: title + actions on the right (e.g. Routines page)
+   ========================================================================== */
+.forma-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-2xl);
+  width: 100%;
+  max-width: var(--space-page-max);
+  margin-inline: auto;
 }
 
-.nav-action-pill .theme-dot-indicator {
-  flex: 0 0 auto;
-  margin-inline-start: 0;
-}
-
-.theme-popover-check {
-  margin-inline-start: auto;
-  flex: 0 0 auto;
-}
-
-.modern-nav-item {
-  color: var(--text-secondary);
-}
-
-.modern-nav-item:hover,
-.modern-nav-item:focus-visible {
-  color: var(--text-primary);
-}
-
-.modern-nav-item.is-active {
-  color: var(--shell-nav-active);
-  font-weight: 800;
-}
-
-.modern-nav-item.is-active .nav-label {
-  color: var(--shell-nav-active);
-}
-
-.modern-nav-active-bg {
-  background: linear-gradient(
-    135deg,
-    var(--shell-nav-active-soft),
-    color-mix(in srgb, var(--accent-primary, var(--accent-emerald)) 14%, transparent)
-  );
-  border-color: color-mix(in srgb, var(--shell-nav-active) 42%, transparent);
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--shell-nav-active) 20%, transparent),
-    inset 0 1px 0 color-mix(in srgb, white 10%, transparent);
-}
-
-.active-top-beam {
-  inset-inline-start: 20%;
-  inset-inline-end: 20%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    var(--shell-nav-active),
-    color-mix(in srgb, var(--accent-primary, var(--accent-emerald)) 70%, var(--shell-nav-active)),
-    transparent
-  );
-  box-shadow: 0 0 8px color-mix(in srgb, var(--shell-nav-active) 70%, transparent);
-}
-
-.nav-active-dot {
-  background: var(--shell-nav-active);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--shell-nav-active) 70%, transparent);
-}
-
-.more-sheet-item-copy {
-  display: grid;
-  gap: 0.1rem;
-  flex: 1 1 auto;
+.forma-page-heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
   min-width: 0;
-  text-align: start;
 }
 
-.more-sheet-item-copy strong {
-  overflow: hidden;
-  color: inherit;
-  font-size: 0.86rem;
-  font-weight: 750;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.more-sheet-item-copy small {
-  overflow: hidden;
-  color: var(--text-secondary);
-  font-size: 0.73rem;
-  font-weight: 500;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.more-sheet-item-chevron {
-  flex: 0 0 auto;
+.forma-page-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
   color: var(--text-muted);
 }
 
-[dir='rtl'] .more-sheet-item-chevron {
-  transform: scaleX(-1);
+.forma-page-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.65rem, 3.5vw, var(--text-3xl));
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-primary);
+  line-height: var(--leading-tight);
+  text-wrap: balance;
 }
 
-.more-sheet-item.is-active .more-sheet-item-copy strong {
-  font-weight: 800;
+.forma-page-subtitle {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: var(--leading-normal);
+  max-width: 60ch;
 }
 
-.theme-popover-item.is-selected {
-  color: var(--shell-nav-active);
-  border-color: color-mix(in srgb, var(--shell-nav-active) 45%, transparent);
-  background: var(--shell-nav-active-soft);
+.forma-page-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-shrink: 0;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .navbar-magnetic-spotlight,
-  .forma-skip-link {
-    transition: none;
+/* Metric Tile Grid (2x2 & 4x1 layouts) */
+.northline-rail-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  width: 100%;
+  max-width: 320px;
+  flex-shrink: 0;
+  padding-block: var(--space-xs);
+}
+
+.northline-rail-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-2xs) var(--space-xs);
+  align-items: center;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+  transition: border-color var(--motion-fast) var(--ease-standard),
+    background var(--motion-fast) var(--ease-standard);
+}
+
+.northline-rail-item:hover {
+  border-color: var(--border-default);
+  background: var(--surface-card-hover);
+}
+
+/* Horizontal rail for tablets & small laptops */
+.northline-rail-horizontal {
+  display: flex;
+  flex-direction: row;
+  gap: var(--space-sm);
+  width: 100%;
+  overflow-x: auto;
+  padding-block: var(--space-xs);
+  padding-inline-end: var(--space-2xs);
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  scroll-padding-inline: var(--space-2xs);
+}
+
+.northline-rail-horizontal::-webkit-scrollbar { display: none; }
+
+.northline-rail-horizontal .northline-rail-item {
+  flex: 0 0 auto;
+  min-width: 148px;
+  padding: var(--space-md);
+}
+
+/* Tablet (iPad 11" 1194x834): mobile layout uses too much width, desktop uses
+   too much height. Custom breakpoint for adaptive Northline switching. */
+@media (min-width: 768px) and (max-width: 1280px) and (orientation: landscape) {
+  .has-northline-rail .forma-page-grid {
+    flex-direction: row;
+    align-items: flex-start;
   }
 
-  .navbar-magnetic-spotlight[data-visible='true'] {
-    opacity: 0.55;
+  .has-northline-rail .northline-rail-vertical {
+    max-width: 280px;
+    padding-inline-end: var(--space-sm);
+    border-inline-end: 1px solid var(--border-subtle);
   }
+
+  .has-northline-rail .forma-page-main {
+    flex: 1;
+  }
+}
+
+/* Portrait phones: content stacks, rail goes to bottom as horizontal scroll */
+@media (max-width: 767px) and (orientation: portrait) {
+  .has-northline-rail .forma-page-grid {
+    flex-direction: column-reverse;
+  }
+
+  .has-northline-rail .northline-rail-vertical {
+    max-width: 100%;
+    width: 100%;
+    flex-direction: row;
+    overflow-x: auto;
+    gap: var(--space-xs);
+    padding-block: 0;
+    padding-inline-end: var(--space-2xs);
+    scrollbar-width: none;
+    scroll-padding-inline: var(--space-2xs);
+  }
+
+  .has-northline-rail .northline-rail-vertical::-webkit-scrollbar { display: none; }
+
+  .has-northline-rail .northline-rail-item {
+    flex: 0 0 auto;
+    min-width: 140px;
+    padding: var(--space-sm);
+  }
+}
+
 }
 
 @layer components {
-  .forma-page-frame {
-    position: relative;
-    width: 100%;
-    max-width: min(var(--space-page-max), 100%);
-    margin: 0 auto;
-    padding-block: clamp(var(--space-md), 2vw, var(--space-xl)) var(--space-3xl);
-    padding-inline: 0;
-    scroll-margin-block: var(--shell-scroll-offset);
-    overflow-x: clip;
-  }
 
-  .forma-page-frame :target {
-    scroll-margin-block: calc(var(--shell-scroll-offset) + 0.75rem);
-    border-radius: var(--radius-lg, 1rem);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--shell-nav-active) 40%, transparent);
-  }
+/* --- Metric Tile Content Elements (complements the grid in @layer layout) --- */
 
-  .forma-page-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: clamp(1rem, 2vw, 2rem);
-  }
+/* Metric tile: label above, value below, unit beside the value. The unit
+   stays on the value's baseline; at a 2xl value it would otherwise drop to a
+   fourth line and stretch the tile. */
+.forma-tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+  padding: var(--space-md);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-xs);
+  transition: border-color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard);
+}
 
-  .forma-page-main {
-    min-width: 0;
-  }
+.forma-tile:hover {
+  border-color: var(--border-default);
+  box-shadow: var(--shadow-sm);
+}
 
-  .forma-page-header {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 0.9rem 1.25rem;
-    margin-block-end: clamp(1.35rem, 3vw, 2.35rem);
-    scroll-margin-block-start: var(--shell-scroll-offset);
-  }
+.forma-tile-label {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
 
-  .forma-page-heading {
-    flex: 1 1 18rem;
-    min-width: 0;
-  }
+.forma-tile-value {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-primary);
+  line-height: var(--leading-tight);
+}
 
-  .forma-page-header h1 {
-    margin: 0;
-    color: var(--text-primary);
-    font-size: clamp(1.85rem, 4vw, 3.4rem);
-    font-weight: 900;
-    letter-spacing: -0.04em;
-    line-height: 1.05;
-    text-wrap: balance;
-  }
+.forma-tile-unit {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--text-secondary);
+  margin-inline-start: var(--space-3xs);
+  vertical-align: baseline;
+}
 
-  .forma-page-header p {
-    max-width: 44rem;
-    margin: 0.65rem 0 0;
-    color: var(--text-secondary);
-    font-size: 0.95rem;
-    line-height: 1.55;
-    text-wrap: pretty;
-  }
+.forma-tile-trend { display: flex; align-items: center; gap: var(--space-3xs); font-size: var(--text-xs); font-weight: var(--weight-medium); }
+.forma-tile-trend-up { color: var(--color-success); }
+.forma-tile-trend-down { color: var(--color-error); }
+.forma-tile-trend-neutral { color: var(--text-secondary); }
 
-  .forma-page-eyebrow {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-xs);
-    margin-block-end: 0.65rem;
-    color: var(--shell-nav-active);
-    font-size: 0.74rem;
-    font-weight: 750;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-  }
+/* Focus ring for interactive form elements */
+input:focus-visible, textarea:focus-visible, select:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
 
-  .forma-page-eyebrow::before {
-    width: 0.45rem;
-    height: 0.45rem;
-    border-radius: 999px;
-    background: var(--shell-nav-active);
-    box-shadow:
-      0 0 0 3px color-mix(in srgb, var(--shell-nav-active) 25%, transparent),
-      0 0 12px color-mix(in srgb, var(--shell-nav-active) 70%, transparent);
-    content: '';
-  }
+.forma-primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-md);
+  background: var(--interactive-primary);
+  color: var(--interactive-primary-text);
+  font-weight: var(--weight-bold);
+  font-size: var(--text-md);
+  transition: background var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
+}
 
-  .forma-page-actions {
-    display: flex;
-    flex: 0 1 auto;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 0.65rem;
-    min-width: 0;
-  }
+.forma-primary-button:hover:not(:disabled) {
+  background: var(--interactive-primary-hover);
+  transform: translateY(-1px);
+}
 
-  .forma-page-actions > * {
-    min-width: 0;
-  }
+.forma-primary-button:active:not(:disabled) {
+  transform: translateY(0);
+}
 
-  .northline-rail {
-    position: relative;
-    display: grid;
-    gap: 1.1rem;
-    min-width: 0;
-  }
+.forma-primary-button:disabled {
+  opacity: var(--opacity-disabled);
+  cursor: not-allowed;
+}
 
-  .northline-rail-vertical {
-    align-content: start;
-    width: min(15rem, 100%);
-    padding-block: 0.4rem;
-    padding-inline: 0 1rem;
-  }
+/* "Saving… / Saved" pill below the submit button. */
+.forma-save-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2xs);
+  min-height: var(--space-2xl);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--text-muted);
+  transition: color var(--motion-fast) var(--ease-standard);
+}
 
-  .northline-rail-horizontal {
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(8rem, 1fr);
-    gap: 0;
-    padding-block: 0.4rem 0.9rem;
-    overflow-x: auto;
-    scroll-padding-inline: var(--space-sm);
-    scroll-snap-type: x proximity;
-    scrollbar-width: thin;
-  }
+.forma-save-status.is-saving { color: var(--color-warning); }
+.forma-save-status.is-saved { color: var(--color-success); }
+.forma-save-status.is-error { color: var(--color-error); }
 
-  .northline-rail-line {
-    position: absolute;
-    inset-block: 0.7rem;
-    inset-inline-start: 0.28rem;
-    width: 1px;
-    background: linear-gradient(180deg, transparent, var(--premium-line) 8%, var(--shell-nav-active) 50%, var(--premium-line) 92%, transparent);
-  }
+/* Sheets
+   -----------------------------------------------------------------------
+   Legacy background naming is retained for backward compatibility.
+   The elevated surface is now the layered `--surface-elevated` token, which
+   every theme in design-tokens.css defines, so `--sheet-bg` is an alias
+   rather than a per-theme literal. */
+.forma-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-sheet);
+  background: var(--bg-overlay);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: fadeIn var(--motion-fast) var(--ease-standard);
+}
 
-  .northline-rail-horizontal .northline-rail-line {
-    inset-block: 0.8rem auto;
-    inset-inline: 0.7rem;
-    width: auto;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--premium-line) 8%, var(--shell-nav-active) 50%, var(--premium-line) 92%, transparent);
-  }
+.forma-sheet-handle {
+  width: 40px;
+  height: 4px;
+  margin: var(--space-sm) auto var(--space-md);
+  border-radius: var(--radius-full);
+  background: var(--border-strong);
+}
 
-  .northline-rail-item {
-    position: relative;
-    display: flex;
-    align-items: flex-start;
-    gap: 0.7rem;
-    min-width: 0;
-  }
+.forma-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: 0 var(--space-lg);
+  padding-block-end: var(--space-md);
+  border-block-end: 1px solid var(--border-subtle);
+}
 
-  .northline-rail-horizontal .northline-rail-item {
-    display: grid;
-    justify-items: center;
-    gap: var(--space-xs);
-    padding-inline: var(--space-xs);
-    scroll-snap-align: center;
-    text-align: center;
-  }
+.forma-sheet-header h2 {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  letter-spacing: var(--tracking-tight);
+}
 
-  .northline-rail-marker {
-    position: relative;
-    z-index: 1;
-    flex: 0 0 auto;
-    width: 0.62rem;
-    height: 0.62rem;
-    margin-block-start: 0.25rem;
-    border: 2px solid var(--text-muted);
-    border-radius: 999px;
-    background: var(--bg-primary);
-  }
+.forma-sheet-body {
+  padding: var(--space-lg);
+  overflow-y: auto;
+}
 
-  .northline-status-current .northline-rail-marker {
-    border-color: var(--shell-nav-active);
-    background: var(--shell-nav-active);
-    box-shadow:
-      0 0 0 5px color-mix(in srgb, var(--shell-nav-active) 15%, transparent),
-      0 0 14px color-mix(in srgb, var(--shell-nav-active) 60%, transparent);
-  }
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
 
-  .northline-status-complete .northline-rail-marker {
-    border-color: var(--accent-green);
-    background: var(--accent-green);
-  }
+/* Mobile Bottom Sheet (Gym Floor) */
+.forma-mobile-sheet {
+  position: fixed;
+  inset-block-end: 0;
+  inset-inline: 0;
+  z-index: var(--z-sheet);
+  max-block-size: 85vh;
+  max-block-size: 85dvh;
+  background: var(--sheet-bg);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border-block-start: 1px solid var(--border-default);
+  border-start-start-radius: var(--radius-2xl);
+  border-start-end-radius: var(--radius-2xl);
+  box-shadow: 0 -24px 60px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  animation: sheetSlideUp var(--motion-base) var(--ease-out);
+  will-change: transform;
+  overflow: hidden;
+}
 
-  .northline-status-attention .northline-rail-marker {
-    border-color: var(--warning);
-    background: var(--warning);
-  }
+/* Redundant iOS shorthand, but `bottom` reads first in devtools and the
+   shorthand makes the intent explicit. */
+.forma-mobile-sheet {
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
 
-  .northline-rail-copy {
-    display: grid;
-    gap: 0.12rem;
-    min-width: 0;
-  }
+.forma-sheet-header .btn-icon {
+  flex-shrink: 0;
+  min-width: 44px;
+  min-height: 44px;
+}
 
-  .northline-rail-copy strong {
-    overflow: hidden;
-    color: var(--text-primary);
-    font-size: 0.76rem;
-    font-weight: 750;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
+@keyframes sheetSlideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
 
-  .northline-rail-copy small {
-    color: var(--text-muted);
-    font-size: 0.68rem;
-  }
+/* Accessibility: Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .forma-sheet-backdrop { animation: none; }
+  .forma-mobile-sheet { animation: none; }
+  .forma-primary-button,
+  .forma-tile { transition: none; }
+  .forma-primary-button:hover:not(:disabled) { transform: none; }
+}
 
-  .forma-metric-pair {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    align-items: baseline;
-    column-gap: 0.45rem;
-    row-gap: 0.15rem;
-    min-width: 0;
-  }
+/* Accessibility: High Contrast Mode */
+[data-high-contrast] .forma-tile {
+  border-width: 2px;
+}
 
-  .forma-metric-pair > span {
-    grid-column: 1 / -1;
-    color: var(--text-muted);
-    font-size: 0.68rem;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-  }
+[data-high-contrast] .forma-page-title,
+[data-high-contrast] .forma-tile-value {
+  font-weight: var(--weight-bold);
+}
 
-  .forma-metric-pair strong {
-    color: var(--text-primary);
-    font-size: 1.2rem;
-    font-weight: 850;
-  }
+/* Long numbers (1,234.5 kg) must not overflow the tile or the column. */
+.forma-page-frame .tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
 
-  .forma-metric-pair small {
-    color: var(--text-muted);
-    font-size: 0.7rem;
-  }
-
-  .forma-metric-cyan strong { color: var(--shell-nav-active); }
-  .forma-metric-emerald strong { color: var(--accent-green); }
-  .forma-metric-amber strong { color: var(--warning); }
-  .forma-metric-lime strong { color: var(--gym-lime); }
-
-  .forma-primary-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.45rem;
-    min-height: 2.75rem;
-    padding-block: 0.72rem;
-    padding-inline: 1rem;
-    border: 1px solid transparent;
-    border-radius: 0.78rem;
-    color: var(--text-inverted, #06121a);
-    background: var(--shell-nav-active);
-    box-shadow: 0 10px 24px color-mix(in srgb, var(--shell-nav-active) 18%, transparent);
-    font: inherit;
-    font-size: 0.8rem;
-    font-weight: 800;
-    cursor: pointer;
-    transition: transform 160ms ease, filter 160ms ease, box-shadow 160ms ease;
-  }
-
-  .forma-primary-button:hover { filter: brightness(1.06); transform: translateY(-1px); }
-  .forma-primary-button:active { transform: translateY(0) scale(0.98); }
-  .forma-primary-button:disabled { cursor: not-allowed; opacity: 0.55; transform: none; }
-
-  .forma-save-status {
-    display: inline-flex;
-    align-items: center;
-    min-height: 1.4rem;
-    color: var(--text-muted);
-    font-size: 0.68rem;
-    font-weight: 700;
-  }
-
-  .forma-save-status.is-saved { color: var(--accent-green); }
-  .forma-save-status.is-error { color: var(--danger); }
-  .forma-save-status.is-saving { color: var(--shell-nav-active); }
-
-  .forma-sheet-backdrop {
-    position: fixed;
-    z-index: 1195;
-    inset: 0;
-    background: rgb(2 6 23 / 66%);
-    backdrop-filter: blur(8px);
-  }
-
-  .forma-mobile-sheet {
-    position: fixed;
-    z-index: 1200;
-    inset-block-end: 0;
-    inset-inline: 0;
-    max-height: min(88dvh, 44rem);
-    padding-block: 0.7rem calc(1rem + var(--shell-safe-bottom));
-    padding-inline: 1rem;
-    overflow: auto;
-    overscroll-behavior: contain;
-    border: 1px solid var(--premium-line);
-    border-block-end: 0;
-    border-radius: 1.35rem 1.35rem 0 0;
-    color: var(--text-primary);
-    background: var(--premium-surface);
-    box-shadow: 0 -22px 60px rgb(0 0 0 / 44%);
-  }
-
-  .forma-sheet-handle {
-    width: 2.5rem;
-    height: 0.25rem;
-    margin: 0 auto 0.7rem;
-    border-radius: 999px;
-    background: var(--border-highlight);
-  }
-
-  .forma-sheet-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-block-end: 1rem;
-  }
-
-  .forma-sheet-header h2 { margin: 0; font-size: 1rem; }
-  .forma-sheet-body { min-height: 4rem; }
-
-  .tabular-nums { font-variant-numeric: tabular-nums; }
-
-  @keyframes forma-skeleton-shimmer {
-    0% { background-position: 180% 0; }
-    100% { background-position: -40% 0; }
-  }
-
-  @media (min-width: 900px) {
-    .forma-page-grid.has-northline-rail {
-      grid-template-columns: minmax(10rem, 15rem) minmax(0, 1fr);
-      align-items: start;
-    }
-
-    .forma-page-grid.has-northline-rail > .northline-rail-vertical {
-      position: sticky;
-      inset-block-start: var(--shell-scroll-offset);
-      max-height: calc(100dvh - 3rem);
-      overflow-y: auto;
-    }
-
-    .forma-page-grid.has-northline-rail > .northline-rail-horizontal {
-      grid-column: 1 / -1;
-    }
-  }
-
-  @media (max-width: 700px) {
-    .forma-page-header {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 0.7rem;
-      margin-block-end: 0.85rem;
-    }
-
-    .forma-page-heading { flex: 1 1 auto; }
-
-    .forma-page-actions {
-      width: 100%;
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--space-xs);
-    }
-
-    .forma-page-actions > * {
-      flex: 1 1 8rem;
-      max-width: 100%;
-      min-height: 44px;
-      justify-content: center;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .forma-page-header h1 {
-      font-size: 1.65rem;
-      letter-spacing: -0.03em;
-    }
-
-    .forma-page-header p {
-      margin-block-start: 0.25rem;
-      font-size: 0.82rem;
-      line-height: 1.4;
-    }
-
-    .forma-page-frame {
-      padding-block: calc(0.35rem + var(--shell-safe-top)) calc(var(--shell-dock-inset) + 1.5rem);
-      padding-inline: 0;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    /* :hover is compound, so it outranks a bare .forma-primary-button and the
-       hover lift survived reduced motion. */
-    .forma-primary-button { transition: none; }
-    .forma-primary-button:hover { transform: none; }
-  }
 }

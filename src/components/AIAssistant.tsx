@@ -507,6 +507,8 @@ export function AIAssistant() {
     <>
       <motion.button
         className="ai-fab"
+        id="forma-ai-trigger"
+        data-tour="ai-coach"
         style={{
           position: 'fixed',
           bottom: 'calc(5.5rem + max(0px, env(safe-area-inset-bottom, 0px)))',

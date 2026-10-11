@@ -41,8 +41,8 @@ export function PageFrame({
           <header className="forma-page-header" aria-labelledby={titleId}>
             <div className="forma-page-heading">
               {eyebrow && <span className="forma-page-eyebrow">{eyebrow}</span>}
-              <h1 id={titleId}>{title}</h1>
-              {subtitle && <p>{subtitle}</p>}
+              <h1 id={titleId} className="forma-page-title">{title}</h1>
+              {subtitle && <p className="forma-page-subtitle">{subtitle}</p>}
             </div>
 
             {actions && (

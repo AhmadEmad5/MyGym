@@ -36,6 +36,9 @@
     box-shadow: var(--shadow-modal);
   }
 
+  /* Carries `on-stage` (see design-tokens.css): a photograph under a fixed
+     dark scrim in every theme, so its ink reads from the stage scope rather
+     than from --text-primary, which is a dark step in the light/paper themes. */
   .forma-hero {
     position: relative;
     display: flex;
@@ -49,7 +52,7 @@
     background-size: cover;
     background-position: center;
     padding: clamp(1.5rem, 3.2vw, 2.6rem);
-    color: #f8fafc;
+    color: var(--text-primary);
   }
 
   [data-theme="light"] .forma-hero {
@@ -92,8 +95,8 @@
     height: 30px;
     place-items: center;
     border-radius: 9px;
-    background: linear-gradient(135deg, #38bdf8, #8b5cf6);
-    color: #06121e;
+    background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+    color: var(--text-on-accent);
   }
 
   .forma-brand-name {
@@ -106,7 +109,7 @@
     border-radius: 999px;
     background: rgba(56, 189, 248, 0.22);
     padding: 0.15rem 0.5rem;
-    color: #7dd3fc;
+    color: var(--accent-cyan-ink);
     font-size: 0.6rem;
     font-weight: 900;
     letter-spacing: 0.12em;
@@ -120,7 +123,7 @@
     border: 1px solid rgba(255, 255, 255, 0.18);
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.08);
-    color: #e2e8f0;
+    color: var(--text-primary);
     font: inherit;
     font-size: 0.78rem;
     font-weight: 700;
@@ -131,7 +134,7 @@
 
   .forma-lang-btn:hover {
     background: rgba(255, 255, 255, 0.16);
-    color: #ffffff;
+    color: var(--text-primary);
   }
 
   .forma-hero-content {
@@ -149,7 +152,7 @@
   }
 
   .forma-hero-title strong {
-    background: linear-gradient(120deg, #7dd3fc, #bef264);
+    background: linear-gradient(120deg, var(--accent-cyan-ink), var(--accent-lime));
     background-clip: text;
     -webkit-background-clip: text;
     color: transparent;
@@ -163,7 +166,7 @@
   .forma-hero-desc {
     max-width: 30rem;
     margin: 0;
-    color: #cbd5e1;
+    color: var(--text-secondary);
     font-size: 0.9rem;
     line-height: 1.65;
   }
@@ -185,7 +188,7 @@
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.06);
     padding: 0.35rem 0.8rem;
-    color: #e2e8f0;
+    color: var(--text-primary);
     font-size: 0.76rem;
     font-weight: 650;
     backdrop-filter: blur(10px);
@@ -216,7 +219,7 @@
     place-items: center;
     border-radius: 10px;
     background: rgba(16, 185, 129, 0.2);
-    color: #6ee7b7;
+    color: var(--accent-emerald-ink);
   }
 
   .forma-trust-card strong {
@@ -227,7 +230,7 @@
 
   .forma-trust-card p {
     margin: 0.2rem 0 0;
-    color: #cbd5e1;
+    color: var(--text-secondary);
     font-size: 0.78rem;
     line-height: 1.5;
   }
@@ -237,7 +240,7 @@
     align-items: center;
     gap: 0.4rem;
     margin: 0;
-    color: #94a3b8;
+    color: var(--text-muted);
     font-size: 0.75rem;
   }
 
@@ -421,7 +424,7 @@
   .forma-check input:checked + .forma-check-box {
     border-color: var(--accent-cyan);
     background: var(--accent-cyan);
-    color: #06121e;
+    color: var(--text-on-accent);
   }
 
   .forma-check input:focus-visible + .forma-check-box {
@@ -493,7 +496,7 @@
   }
 
   .forma-social-glyph {
-    color: #bef264;
+    color: var(--accent-lime);
     font-weight: 900;
   }
 

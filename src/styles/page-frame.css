@@ -1,0 +1,68 @@
+/* ==========================================================================
+   Page frame — the shared chrome every route renders into.
+
+   `.zen-page-container` / `.page-surface` are the page wrappers, `.zen-header`
+   the title block that sits at the top of them. Folded out of
+   src/styles/routes.css, which held one flat list of rules for every route.
+
+   The import position in src/main.tsx matters: this file has to keep landing
+   where routes.css used to, i.e. ahead of routines.css, whose
+   `.calendar-page .ribbon-day-pill` / `.calendar-page .day-tab-pill` rules tie
+   on specificity and would otherwise start winning.
+   ========================================================================== */
+@layer components {
+  .zen-page-container,
+  .page-surface {
+    position: relative;
+    width: min(var(--space-page-max), 100%);
+    margin: 0 auto;
+    padding-block-end: 3rem;
+    scroll-margin-block: var(--shell-scroll-offset, 1.5rem);
+    /* `clip`, never `hidden`: `overflow-x: hidden` computes the untouched block
+       axis to `auto`, which silently turns every page wrapper into a second
+       scroll container competing with `.content-area`. Matches the root policy
+       documented in index.css. */
+    overflow-x: clip;
+  }
+
+  .zen-page-container::before {
+    position: absolute;
+    inset-block-start: 0.4rem;
+    inset-inline-start: 0;
+    width: 1px;
+    height: min(10rem, 18vh);
+    background: linear-gradient(180deg, var(--accent-cyan), var(--premium-line), transparent);
+    content: '';
+    opacity: 0.72;
+    pointer-events: none;
+  }
+
+  .zen-page-container :target,
+  .page-surface :target {
+    scroll-margin-block: calc(var(--shell-scroll-offset, 1.5rem) + 0.75rem);
+  }
+
+  .zen-header {
+    position: relative;
+    padding-block-end: 1rem;
+    border-block-end: 1px solid var(--premium-line);
+  }
+
+  .zen-header h1 {
+    letter-spacing: -0.06em;
+    font-weight: 850;
+    text-wrap: balance;
+  }
+
+  .zen-header p { font-size: 0.86rem; }
+
+  @media (max-width: 900px) {
+    .zen-page-container::before { display: none; }
+
+    .zen-page-container,
+    .page-surface {
+      width: 100%;
+      padding-block-end: calc(var(--shell-dock-inset, 5rem) + 1rem);
+    }
+  }
+}

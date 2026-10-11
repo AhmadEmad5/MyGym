@@ -1,0 +1,46 @@
+/* ==========================================================================
+   Settings route surface.
+
+   Folded out of src/styles/routes.css. The shared `.settings-page .card`
+   treatment lives in components.css, which is imported ahead of this file so
+   these tie-break rules stay downstream of it.
+   ========================================================================== */
+@layer components {
+  .settings-page {
+    max-width: var(--space-page-max);
+  }
+
+  .settings-page .settings-hero {
+    padding-block-end: 1.1rem;
+    border-block-end: 1px solid var(--premium-line);
+  }
+
+  .settings-page .settings-profile {
+    border-inline-start: 2px solid var(--accent-cyan) !important;
+  }
+
+  .settings-page .settings-section-title {
+    margin-block-end: 0.7rem;
+  }
+
+  .settings-page .settings-list {
+    border-radius: 0.8rem !important;
+    box-shadow: none !important;
+  }
+
+  .settings-page .setting-row {
+    min-height: 4.2rem;
+    border-block-end-color: var(--premium-line);
+  }
+
+  @media (max-width: 640px) {
+    .settings-page .settings-hero {
+      padding-block-end: 0.75rem !important;
+    }
+
+    .settings-page .setting-row {
+      min-height: 3.4rem !important;
+      padding-block: 0.45rem !important;
+    }
+  }
+}

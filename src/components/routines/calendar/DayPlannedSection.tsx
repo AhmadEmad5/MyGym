@@ -1,12 +1,14 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { Check, ChevronRight, Clock, Dumbbell, Moon, Pencil, Plus, Sparkles, Trash2 } from 'lucide-react';
 import type { WorkoutSession } from '../../../lib/api';
+import { REST_DAY_KEYS, REST_DAY_LABELS, restDayName, type RestDaySource } from '../../../lib/restDay';
 import { sessionAccent, targetMusclesText } from './calendarData';
 
 type DayPlannedSectionProps = {
   day: Date;
   sessions: WorkoutSession[];
   isRestDay: boolean;
+  restDaySettings?: RestDaySource;
   isRTL: boolean;
   t: (key: any) => string;
   tTitle: (name: string) => string;
@@ -40,8 +42,14 @@ export function DayPlannedSection({
   onGeneratePPL,
   onOpenAI,
   onMoveToSaturday,
+  restDaySettings,
   showEmptyDetail
 }: DayPlannedSectionProps) {
+  const restDayNameLocal = restDayName(restDaySettings, isRTL);
+  // The "schedule for tomorrow" shortcut is only meaningful because the closure
+  // is always one day, so the next slot is simply the following date.
+  const nextDayName = REST_DAY_LABELS[REST_DAY_KEYS[nextDay(day).getDay()]];
+
   if (isRestDay && sessions.length === 0) {
     return (
       <div className="calendar-gym-closed-card">
@@ -50,10 +58,18 @@ export function DayPlannedSection({
         </span>
         <span className="calendar-gym-closed-tag">{isRTL ? '🔒 الجيم مغلق' : '🔒 Gym Closed'}</span>
         <h3>{t('gymClosedTitle')}</h3>
-        <p>{t('gymClosedDesc')}</p>
+        <p>
+          {isRTL
+            ? `الجيم مغلق كل ${restDayNameLocal} — استمتع بالراحة التامة والاستشفاء.`
+            : `The gym is closed every ${restDayNameLocal} — enjoy full recovery and rest.`}
+        </p>
         <button type="button" className="btn btn-primary" onClick={() => onAddSession(nextDay(day))}>
           <Plus width={16} height={16} aria-hidden="true" />
-          <span>{isRTL ? 'جدولة تمرين للغد (السبت)' : 'Schedule for Tomorrow (Saturday)'}</span>
+          <span>
+            {isRTL
+              ? `جدولة تمرين ليوم ${nextDayName.labelAr}`
+              : `Schedule for ${nextDayName.labelEn}`}
+          </span>
         </button>
       </div>
     );
@@ -110,16 +126,18 @@ export function DayPlannedSection({
         <div className="calendar-friday-warning">
           <div>
             <p className="calendar-friday-warning-title">
-              {isRTL ? 'الجمعة عطلة أسبوعية — الجيم مغلق' : 'Friday off-day — the gym is closed'}
+              {isRTL
+                ? `${restDayNameLocal} عطلة أسبوعية — الجيم مغلق`
+                : `${restDayNameLocal} off-day — the gym is closed`}
             </p>
             <p className="calendar-friday-warning-body">
               {isRTL
-                ? 'توجد جلسات مجدولة في يوم عطلة الجيم. يُنصح بنقلها إلى السبت.'
-                : 'You have sessions scheduled on a closed day. Moving them to Saturday keeps the week clean.'}
+                ? `توجد جلسات مجدولة في يوم عطلة الجيم. يُنصح بنقلها إلى ${nextDayName.labelAr}.`
+                : `You have sessions scheduled on a closed day. Moving them to ${nextDayName.labelEn} keeps the week clean.`}
             </p>
           </div>
           <button type="button" className="btn btn-primary" onClick={onMoveToSaturday}>
-            {isRTL ? 'نقل جميع الجلسات للسبت' : 'Move all to Saturday'}
+            {isRTL ? `نقل جميع الجلسات إلى ${nextDayName.labelAr}` : `Move all to ${nextDayName.labelEn}`}
           </button>
         </div>
       )}

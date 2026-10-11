@@ -31,6 +31,7 @@ import {
   Wifi
 } from 'lucide-react';
 import { clearLocalMirror, type UserSettings } from '../lib/api';
+import { REST_DAY_KEYS, REST_DAY_LABELS, normalizeRestDay, type RestDayKey } from '../lib/restDay';
 import { useData } from '../hooks/useData';
 import { useTranslation } from '../lib/i18n';
 import { useAdminStatus } from '../lib/useAdminStatus';
@@ -97,7 +98,7 @@ const useIsDesktop = () => {
 };
 
 export function SettingsView() {
-  const { data, updateSettings: saveSettings, saveSessions, saveRoutine, theme, setTheme, exportBackup, importBackup, signOutUser } = useData();
+  const { data, updateSettings: saveSettings, convertWeightUnits, theme, setTheme, exportBackup, importBackup, signOutUser } = useData();
   const { t, language, setLanguage, isRTL } = useTranslation();
   const navigate = useNavigate();
   const isDesktop = useIsDesktop();
@@ -153,38 +154,23 @@ export function SettingsView() {
       try {
         if (next.theme) await setTheme(next.theme);
 
+        // A unit switch rewrites every stored weight, so it goes through the single
+        // atomic conversion instead of the plain settings write: sessions, routine
+        // templates and `routine.sessions` all have to move together or the history
+        // desyncs by the kg/lb ratio.
         if (next.weightUnit && next.weightUnit !== settings.weightUnit) {
-          const target = next.weightUnit;
-          const convert = (value: number, unit: string) =>
-            unit === target ? value : Math.round(value * (target === 'kg' ? 0.453592 : 2.20462) * 10) / 10;
+          const updated: UserSettings = { ...settings, ...next, weightUnit: next.weightUnit };
+          await convertWeightUnits(updated, next.weightUnit);
 
-          const updatedSessions = data.sessions.map((session) => ({
-            ...session,
-            exercises: (session.exercises || []).map((exercise) => ({
-              ...exercise,
-              sets: (exercise.sets || []).map((set) => ({
-                ...set,
-                unit: target,
-                weight: convert(set.weight, set.unit || settings.weightUnit)
-              }))
-            }))
-          }));
-          await saveSessions(updatedSessions);
-          await Promise.all(
-            data.routines.map((routine) =>
-              saveRoutine({
-                ...routine,
-                exercises: (routine.exercises || []).map((exercise) => ({
-                  ...exercise,
-                  sets: (exercise.sets || []).map((set) => ({
-                    ...set,
-                    unit: target,
-                    weight: convert(set.weight, set.unit || settings.weightUnit)
-                  }))
-                }))
-              })
-            )
-          );
+          const patch = { ...next };
+          delete patch.theme;
+          delete patch.language;
+          delete patch.weightUnit;
+          if (Object.keys(patch).length > 0) {
+            await saveSettings({ ...settings, ...patch });
+          }
+          setRowState(rowId, 'saved');
+          return;
         }
 
         const patch = { ...next };
@@ -198,7 +184,7 @@ export function SettingsView() {
         setRowState(rowId, 'error');
       }
     },
-    [data, saveRoutine, saveSessions, saveSettings, setRowState, setTheme, settings]
+    [convertWeightUnits, data, saveSettings, setRowState, setTheme, settings]
   );
 
   const changeLanguage = useCallback(
@@ -822,6 +808,20 @@ function TrainingSection({ settings, t, isRTL, language, changeLanguage, saveSta
           { value: 'monday', label: t('mon') }
         ]}
         saveState={saveState.weekStart}
+        isRTL={isRTL}
+      />
+      <ChoiceRow
+        id={rowId('restDay')}
+        icon={<Moon size={19} aria-hidden="true" />}
+        title={t('restDayTitle')}
+        detail={t('restDayDetail')}
+        value={normalizeRestDay(settings.restDay)}
+        onChange={(value) => void persist(rowId('restDay'), { restDay: value as RestDayKey })}
+        options={REST_DAY_KEYS.map((key) => ({
+          value: key,
+          label: isRTL ? REST_DAY_LABELS[key].labelAr : REST_DAY_LABELS[key].labelEn
+        }))}
+        saveState={saveState.restDay}
         isRTL={isRTL}
       />
     </div>

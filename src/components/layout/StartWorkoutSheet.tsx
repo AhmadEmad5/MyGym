@@ -1,5 +1,7 @@
 import { CalendarDays, Dumbbell, Layers } from 'lucide-react';
 import { useTranslation } from '../../lib/i18n';
+import { restDayName } from '../../lib/restDay';
+import { useData } from '../../hooks/useData';
 import { NAV_ROUTE_PATHS } from '../../app/routes';
 import { MobileActionSheet } from './MobileActionSheet';
 
@@ -19,6 +21,8 @@ export function StartWorkoutSheet({
   onNavigate,
 }: StartWorkoutSheetProps) {
   const { isRTL } = useTranslation();
+  const { data } = useData();
+  const restDayNameLocal = restDayName({ restDay: data?.settings?.restDay }, isRTL);
 
   const title = isOffDay
     ? isRTL
@@ -30,8 +34,8 @@ export function StartWorkoutSheet({
 
   const description = isOffDay
     ? isRTL
-      ? 'الجيم مغلق اليوم الجمعة. يمكنك استكشاف الروتينات أو مراجعة خطة الأسبوع.'
-      : 'The gym is closed today (Friday). Explore routines or review your training week.'
+      ? `الجيم مغلق اليوم (${restDayNameLocal}). يمكنك استكشاف الروتينات أو مراجعة خطة الأسبوع.`
+      : `The gym is closed today (${restDayNameLocal}). Explore routines or review your training week.`
     : isRTL
       ? 'ابدأ جلسة سريعة أو اختر روتيناً محفوظاً.'
       : 'Start a quick workout or choose a saved routine.';

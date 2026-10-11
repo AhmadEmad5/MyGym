@@ -4,7 +4,9 @@ import { addDays, format, startOfWeek } from 'date-fns';
 import { motion } from 'framer-motion';
 import { Calendar, CheckCircle, Info, Zap } from 'lucide-react';
 import { Button, Modal } from '../ui';
-import { CLOSED_DAY_VALUE, DAYS_OF_WEEK } from './data';
+import { buildScheduleDays } from './data';
+import { closedDayOffset, restDayName } from '../../lib/restDay';
+import { useData } from '../../hooks/useData';
 import type { ProgramDraft } from './types';
 
 const REPEAT_OPTIONS = [
@@ -44,6 +46,12 @@ export function ScheduleRoutineModal({
   const [isScheduling, setIsScheduling] = useState(false);
   const submittingRef = useRef(false);
 
+  const { data } = useData();
+  const restDay = data?.settings?.restDay;
+  const scheduleDays = useMemo(() => buildScheduleDays({ restDay }), [restDay]);
+  const closedValue = useMemo(() => closedDayOffset({ restDay }), [restDay]);
+  const closedDayName = restDayName({ restDay }, isRTL);
+
   const daysRequired = program?.daysRequired ?? 0;
   const initialDaysKey = `${isOpen ? '1' : '0'}:${initialDays.join(',')}`;
 
@@ -52,8 +60,8 @@ export function ScheduleRoutineModal({
     setScheduleStart('thisWeek');
     setRepeatWeeks(4);
     setReplaceExisting(true);
-    setSelectedDays(initialDays.filter(day => day !== CLOSED_DAY_VALUE).slice(0, daysRequired));
-  }, [initialDaysKey, isOpen, daysRequired, initialDays]);
+    setSelectedDays(initialDays.filter(day => day !== closedValue).slice(0, daysRequired));
+  }, [initialDaysKey, isOpen, daysRequired, initialDays, closedValue]);
 
   const today = useMemo(() => {
     const value = new Date();
@@ -101,9 +109,11 @@ export function ScheduleRoutineModal({
   }, [program, sortedDays, repeatWeeks, scheduleStart, currentWeekSaturday, today]);
 
   const toggleDay = (dayValue: number) => {
-    if (dayValue === CLOSED_DAY_VALUE) {
+    if (dayValue === closedValue) {
       onNotify(
-        isRTL ? 'الجمعة عطلة أسبوعية والجيم مغلق دائماً!' : 'Friday is an off-day — the gym is closed every Friday!',
+        isRTL
+          ? `${closedDayName} عطلة أسبوعية والجيم مغلق دائماً!`
+          : `${closedDayName} is an off-day — the gym is closed every ${closedDayName}!`,
         'warning'
       );
       return;
@@ -178,7 +188,7 @@ export function ScheduleRoutineModal({
             )}
           </p>
           <div className="routine-day-grid" role="group" aria-label={isRTL ? 'أيام الأسبوع' : 'Days of the week'}>
-            {DAYS_OF_WEEK.map(day => {
+            {scheduleDays.map(day => {
               const selected = selectedDays.includes(day.value);
               const closed = day.isClosed;
               const disabled = closed || (!selected && selectedDays.length >= daysRequired);

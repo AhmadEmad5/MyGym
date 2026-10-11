@@ -93,6 +93,52 @@ export function Modal({
     };
   }, [isOpen, onClose, getFocusable]);
 
+  // Native swipe-to-dismiss touch gesture for mobile bottom sheets
+  const touchStartY = useRef<number | null>(null);
+  const touchDeltaY = useRef<number>(0);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('.modal-drag-handle') || target.closest('.modal-header-bar')) {
+      touchStartY.current = e.touches[0].clientY;
+      touchDeltaY.current = 0;
+      if (cardRef.current) {
+        cardRef.current.style.transition = 'none';
+      }
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartY.current === null) return;
+    const currentY = e.touches[0].clientY;
+    const delta = currentY - touchStartY.current;
+    if (delta > 0) {
+      touchDeltaY.current = delta;
+      if (cardRef.current) {
+        cardRef.current.style.transform = `translateY(${delta}px)`;
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (touchStartY.current === null) return;
+    const delta = touchDeltaY.current;
+    touchStartY.current = null;
+    touchDeltaY.current = 0;
+
+    if (cardRef.current) {
+      cardRef.current.style.transition = 'transform 0.24s cubic-bezier(0.16, 1, 0.3, 1)';
+      if (delta > 75) {
+        cardRef.current.style.transform = 'translateY(100%)';
+        setTimeout(() => {
+          onClose();
+        }, 160);
+      } else {
+        cardRef.current.style.transform = 'translateY(0px)';
+      }
+    }
+  };
+
   if (!isOpen) return null;
 
   return createPortal(
@@ -113,6 +159,9 @@ export function Modal({
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         style={reducedMotion ? { animation: 'none' } : undefined}
       >
         <div className="modal-drag-handle" />

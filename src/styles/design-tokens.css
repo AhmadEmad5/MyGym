@@ -28,7 +28,22 @@
 :root {
   color-scheme: dark;
 
-  /* Surface Tokens */
+  /* ------------------------------------------------------------------------
+     1. Primitive Color Scale (Raw Hues)
+     ------------------------------------------------------------------------ */
+  --slate-950: #080c14;
+  --slate-900: #0d1524;
+  --slate-850: #111a2c;
+  --slate-800: #162238;
+  --slate-700: #1a2742;
+  --zinc-900: #0f172a;
+  --zinc-800: #1e293b;
+  --zinc-400: #94a3b8;
+  --zinc-100: #f1f5f9;
+
+  /* ------------------------------------------------------------------------
+     2. Semantic Layout & Surface Tokens
+     ------------------------------------------------------------------------ */
   --surface-canvas: #080c14;
   --surface-primary: #0d1524;
   --surface-card: #111a2c;
@@ -37,6 +52,20 @@
   --surface-input: #0c1422;
   --surface-glass: rgba(14, 22, 38, 0.82);
   --surface-glass-border: rgba(255, 255, 255, 0.08);
+
+  /* Semantic aliases */
+  --bg-canvas: var(--surface-canvas);
+  --bg-surface: var(--surface-card);
+  --bg-elevated: var(--surface-elevated);
+  --accent-brand: var(--accent-cyan);
+
+  /* ------------------------------------------------------------------------
+     3. Component & Interaction Tokens
+     ------------------------------------------------------------------------ */
+  --card-border-glow: rgba(56, 189, 248, 0.35);
+  --dock-surface-blur: 16px;
+  --table-row-hover: color-mix(in srgb, var(--accent-cyan) 6%, transparent);
+  --button-active-scale: 0.98;
 
   /* Performance Brand Accents */
   --accent-cyan: #38bdf8;
@@ -92,6 +121,18 @@
   --color-pr-hit: #fbbf24;
   --color-set-ghost: rgba(148, 163, 184, 0.25);
 
+  /* Shaded end of each CTA gradient, so the two-stop fill is a token pair
+     instead of a literal. Pairs with the invariant accent bases above. */
+  --accent-amber-deep: #d97706;
+  --accent-emerald-deep: #059669;
+
+  /* Ink printed ON TOP of a saturated accent fill - CTA gradients, filled
+     chips, checked boxes. Pick by the FILL's luminance, never by the canvas
+     theme: the fill itself is theme-invariant (--accent-amber is #f59e0b in all
+     seven themes), so the ink on it cannot be either. */
+  --text-on-accent: #06121e;
+  --text-on-accent-deep: #ffffff;
+
   /* Touch Target Tokens */
   --space-touch-min: 44px;
   --space-touch-comfortable: 48px;
@@ -140,7 +181,39 @@
   --shadow-card-hover: 0 20px 48px -10px rgba(0, 0, 0, 0.72), 0 0 0 1px var(--card-border-glow), 0 0 24px -4px rgba(56, 189, 248, 0.15), var(--card-top-bevel);
   --shadow-glow-cyan: 0 0 25px rgba(56, 189, 248, 0.3);
   --shadow-glow-emerald: 0 0 25px rgba(16, 185, 129, 0.3);
-  --shadow-modal: 0 25px 60px -15px rgba(0, 0, 0, 0.85), 0 0 0 1px var(--border-card);
+--shadow-modal: 0 25px 60px -15px rgba(0, 0, 0, 0.85), 0 0 0 1px var(--border-card);
+
+  /* Premium surface family. Adopted from the second `:root` in src/index.css,
+     which used to own these; every theme overrides them below. --premium-line is
+     what the product surfaces actually draw card borders and dividers with, and
+     --premium-soft the low-alpha tint behind them. */
+  --premium-surface: linear-gradient(145deg, rgba(17, 26, 44, .9), rgba(10, 16, 28, .96));
+  --premium-panel: linear-gradient(105deg, rgba(20, 31, 52, .86), rgba(12, 18, 32, .9));
+  --premium-line: rgba(56, 189, 248, .18);
+  --premium-soft: rgba(56, 189, 248, .1);
+
+  /* Single shadow value read by the legacy `.card` / `.premium-modal` /
+     `.ai-panel` treatment. The semantic scale above is its replacement; the
+     premium surfaces still resolve this name, so it is declared per theme. */
+  --theme-shadow: 0 18px 50px rgba(0, 0, 0, .28);
+
+  /* Gym-floor athletic accents, read by gym-floor.css and gym-ergonomics.css.
+     Deliberately NOT derived from the `--accent-*` scale above: these are the
+     higher-chroma equipment colours, and aliasing them would drag the ramp. */
+  --gym-lime: #c6f432;
+  --gym-lime-glow: rgba(198, 244, 50, 0.25);
+  --gym-cyan: #06b6d4;
+  --gym-cyan-glow: rgba(6, 182, 212, 0.25);
+  --gym-flame: #f97316;
+  --gym-flame-glow: rgba(249, 115, 22, 0.25);
+  --gym-emerald: #10b981;
+  --gym-purple: #a855f7;
+  --gym-abyss: #0a3b52;
+  --gym-crest: #ffffff;
+  /* The violet→pink spectrum on the routines AI button, kept whole so the
+     three-stop gradient does not get re-graded by aliasing it. */
+  --gym-indigo: #6366f1;
+  --gym-pink: #ec4899;
 
   /* Spacing Scale */
   --space-3xs: 0.25rem;
@@ -387,9 +460,14 @@
   --ambient-orb-b-alpha: 0.11;
   --ambient-orb-c-alpha: 0.07;
   --ambient-aurora-alpha: 0.06;
-  --ambient-bloom: rgb(255 255 255 / 0.6);
+--ambient-bloom: rgb(255 255 255 / 0.6);
   --ambient-vignette: color-mix(in srgb, var(--surface-canvas) 28%, rgb(203 213 225));
   --ambient-grain-opacity: 0.02;
+
+  --premium-surface: linear-gradient(145deg, rgba(255, 255, 255, .98), rgba(240, 246, 255, .94));
+  --premium-panel: linear-gradient(105deg, rgba(230, 246, 255, .96), rgba(247, 242, 255, .96));
+  --premium-line: rgba(40, 104, 155, .16);
+  --premium-soft: rgba(30, 155, 211, .1);
 }
 
 /* --------------------------------------------------------------------------
@@ -451,8 +529,13 @@
 
   /* Ambient: blue lead, violet support, cyan counterweight. The warm default
      counterweight would read as a stray ember on this cool canvas. */
-  --ambient-orb-b: #a78bfa;
+--ambient-orb-b: #a78bfa;
   --ambient-orb-c: #22d3ee;
+
+  --premium-surface: linear-gradient(145deg, rgba(14, 32, 67, .9), rgba(5, 13, 31, .96));
+  --premium-panel: linear-gradient(105deg, rgba(19, 46, 93, .86), rgba(7, 18, 42, .91));
+  --premium-line: rgba(72, 147, 255, .22);
+  --premium-soft: rgba(55, 125, 255, .12);
 }
 
 /* --------------------------------------------------------------------------
@@ -513,8 +596,13 @@
   --theme-radius: var(--radius-lg);
 
   /* Ambient: fuchsia lead, cyan support, violet counterweight. */
-  --ambient-orb-b: #22d3ee;
+--ambient-orb-b: #22d3ee;
   --ambient-orb-c: #a855f7;
+
+  --premium-surface: linear-gradient(145deg, rgba(36, 22, 49, .9), rgba(15, 16, 27, .97));
+  --premium-panel: linear-gradient(105deg, rgba(47, 24, 57, .89), rgba(18, 21, 31, .94));
+  --premium-line: rgba(228, 86, 243, .24);
+  --premium-soft: rgba(228, 86, 243, .12);
 }
 
 /* --------------------------------------------------------------------------
@@ -575,8 +663,14 @@
   --theme-radius: var(--radius-lg);
 
   /* Ambient: teal lead, blue support, violet counterweight. */
-  --ambient-orb-b: #3b82f6;
+--ambient-orb-b: #3b82f6;
   --ambient-orb-c: #a78bfa;
+
+  --premium-surface: linear-gradient(145deg, rgba(11, 55, 70, .92), rgba(4, 27, 40, .96));
+  --premium-panel: linear-gradient(105deg, rgba(13, 68, 84, .9), rgba(4, 31, 47, .94));
+  --premium-line: rgba(103, 239, 231, .19);
+  --premium-soft: rgba(84, 229, 225, .11);
+  --theme-shadow: 0 22px 55px rgba(0, 12, 22, .34);
 }
 
 /* --------------------------------------------------------------------------
@@ -639,8 +733,14 @@
   /* Ambient: lime lead, emerald support, sky counterweight. A third green would
      be indistinguishable from the other two once they are blurred into a wash;
      a low-alpha cool note keeps the frame from turning monochrome. */
-  --ambient-orb-b: #34d399;
+--ambient-orb-b: #34d399;
   --ambient-orb-c: #38bdf8;
+
+  --premium-surface: linear-gradient(145deg, rgba(34, 67, 43, .93), rgba(12, 30, 19, .96));
+  --premium-panel: linear-gradient(105deg, rgba(44, 82, 46, .9), rgba(13, 34, 22, .95));
+  --premium-line: rgba(180, 232, 117, .16);
+  --premium-soft: rgba(169, 226, 116, .1);
+  --theme-shadow: 0 17px 38px rgba(0, 18, 7, .33);
 }
 
 /* --------------------------------------------------------------------------
@@ -702,8 +802,14 @@
 
   /* Ambient: amber lead, rose support, violet counterweight. The default amber
      counterweight would collide with this theme's own lead colour. */
-  --ambient-orb-b: #f06081;
+--ambient-orb-b: #f06081;
   --ambient-orb-c: #a78bfa;
+
+  --premium-surface: linear-gradient(145deg, rgba(77, 37, 46, .92), rgba(36, 17, 28, .97));
+  --premium-panel: linear-gradient(105deg, rgba(104, 46, 53, .88), rgba(43, 19, 32, .96));
+  --premium-line: rgba(255, 190, 118, .18);
+  --premium-soft: rgba(255, 158, 99, .12);
+  --theme-shadow: 0 24px 58px rgba(31, 6, 14, .4);
 }
 
 /* --------------------------------------------------------------------------
@@ -785,8 +891,14 @@
   --ambient-orb-c-alpha: 0.06;
   --ambient-aurora-alpha: 0.05;
   --ambient-bloom: rgb(255 253 249 / 0.55);
-  --ambient-vignette: color-mix(in srgb, var(--surface-canvas) 30%, rgb(214 202 186));
+--ambient-vignette: color-mix(in srgb, var(--surface-canvas) 30%, rgb(214 202 186));
   --ambient-grain-opacity: 0.022;
+
+  --premium-surface: linear-gradient(145deg, rgba(255, 253, 248, .98), rgba(237, 230, 218, .96));
+  --premium-panel: linear-gradient(105deg, rgba(255, 250, 242, .98), rgba(240, 230, 217, .97));
+  --premium-line: rgba(93, 69, 50, .16);
+  --premium-soft: rgba(165, 83, 65, .09);
+  --theme-shadow: 0 10px 22px rgba(79, 55, 36, .12);
 }
 
 /* --------------------------------------------------------------------------
@@ -805,6 +917,37 @@
      those dividers at its resting 0.14-0.24 alpha in high-contrast mode. */
   --premium-line: color-mix(in srgb, var(--text-primary) 52%, transparent);
   --premium-soft: color-mix(in srgb, var(--text-primary) 16%, transparent);
+}
+
+/* --------------------------------------------------------------------------
+   Stage Scope
+   A stage surface keeps its own dark field in every theme: the sign-in hero is a
+   photograph under a fixed scrim, and the coachmark overlay dims the app behind
+   a near-opaque one. Their ink therefore must NOT follow the normal --text-*
+   values, which flip to dark steps in [data-theme="light"] and
+   [data-theme="paper"] and would vanish against the image.
+
+   This block re-binds the SAME semantic names to the dark-canvas steps for
+   everything inside, so a component painting on a stage never has to know it is
+   painting on one, and `--text-primary` keeps meaning "the primary ink for
+   whatever I am standing on". It follows every [data-theme] block, so it also
+   wins on an element that carries both the scope and a theme attribute.
+   -------------------------------------------------------------------------- */
+.on-stage {
+  --text-primary: #ffffff;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --text-inverted: var(--text-on-accent);
+  --accent-cyan-ink: #7dd3fc;
+  --accent-emerald-ink: #6ee7b7;
+}
+
+
+/* RTL Typography Mapping */
+html[dir="rtl"], [dir="rtl"] {
+  --font-sans: 'Cairo', system-ui, -apple-system, sans-serif;
+  --font-display: 'Cairo', system-ui, -apple-system, sans-serif;
+  --theme-font: 'Cairo', system-ui, -apple-system, sans-serif;
 }
 
 /* Compact density */
@@ -1073,7 +1216,7 @@
   border: none;
   outline: none;
   color: var(--text-primary);
-  font-size: 0.95rem;
+  font-size: 1rem; /* 16px minimum prevents iOS Safari auto-zoom */
   width: 100%;
   min-height: 1.5rem;
 }
@@ -1374,6 +1517,11 @@
 .text-tabular {
   font-variant-numeric: tabular-nums;
   font-family: var(--font-mono);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
 }
 
 /* Touch Target Utilities */

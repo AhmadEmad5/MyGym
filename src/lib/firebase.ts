@@ -120,6 +120,33 @@ try {
   storageInstance = null;
 }
 
+// App Check attestation. Must be initialised before any Firebase service is used,
+// so it is registered here rather than lazily at first call. generateGeminiContent
+// is deployed with enforceAppCheck: true, so the AI features are rejected with
+// HTTP 401 until this runs (see functions/.env.example).
+// Kept in an async IIFE rather than top-level await: Vite's default build target
+// (safari14/chrome87/firefox78) has no top-level await and esbuild fails the build.
+const appCheckSiteKey = import.meta.env.VITE_FIREBASE_APP_CHECK_SITE_KEY;
+// An unfilled .env.example placeholder is truthy, which would activate a provider
+// that can never attest and would break the AI features. Skip it, same guard as
+// validateFirebaseConfig() uses for the API key.
+const appCheckConfigured =
+  !!appCheckSiteKey && !String(appCheckSiteKey).startsWith('your_') && appCheckSiteKey !== 'your-api-key';
+
+if (appInstance && appCheckConfigured) {
+  void (async () => {
+    try {
+      const { initializeAppCheck, ReCaptchaEnterpriseProvider } = await import('firebase/app-check');
+      initializeAppCheck(appInstance, {
+        provider: new ReCaptchaEnterpriseProvider(appCheckSiteKey),
+        isTokenAutoRefreshEnabled: true
+      });
+    } catch (appCheckError) {
+      console.warn('App Check initialization failed:', appCheckError);
+    }
+  })();
+}
+
 // Export with proper null checks and validation
 export const getFirebaseServices = (): { 
   app: any, 

@@ -516,7 +516,7 @@ export function LoginView({ onLogin }: LoginProps) {
       </a>
 
       <div className="forma-shell">
-        <aside className="forma-hero">
+        <aside className="forma-hero on-stage">
           <div className="forma-brand-header">
             <div className="forma-brand-pill">
               <span className="forma-brand-gem" aria-hidden="true">
