@@ -1,41 +1,41 @@
 <div align="center">
 
-  <img src="public/favicon.svg" width="108" height="108" alt="FORMA Logo" />
+  <img src="public/favicon.svg" width="96" height="96" alt="FORMA Logo" />
 
   # FORMA
-  ### The Intelligent Athletic Coach & Workout Operating System
+  ### High-Performance Athletic Tracking, Gym Floor HUD & Biomechanical Recovery
 
   <p align="center">
-    <strong>One-thumb fast mid-set telemetry, 3D biomechanics, and precision recovery for athletes — engineered for every screen you own.</strong>
+    <strong>An engineered athletic operating system built for one-thumb mid-set speed, offline resilience, and scientific recovery analysis.</strong>
   </p>
 
   <p align="center">
-    <a href="https://mygym-ab892.web.app"><img src="https://img.shields.io/badge/Live_App-myGym--forma-06b6d4?style=for-the-badge&logo=firebase&logoColor=white&labelColor=0b0f19" alt="Live App" /></a>
-    <a href="https://github.com/AhmadEmad5/MyGym/actions"><img src="https://img.shields.io/badge/Tests-277_Passed-10b981?style=for-the-badge&logo=vitest&logoColor=white&labelColor=0b0f19" alt="Vitest Tests" /></a>
-    <img src="https://img.shields.io/badge/Aceternity_UI-3D_&_Motion-8b5cf6?style=for-the-badge&logo=framer&logoColor=white&labelColor=0b0f19" alt="Aceternity UI" />
-    <img src="https://img.shields.io/badge/License-MIT-c6f432?style=for-the-badge&labelColor=0b0f19" alt="MIT License" />
+    <a href="https://mygym-ab892.web.app"><img src="https://img.shields.io/badge/Live_App-forma--gym-06b6d4?style=for-the-badge&logo=firebase&logoColor=white&labelColor=0a0f1d" alt="Live App" /></a>
+    <a href="https://github.com/AhmadEmad5/MyGym/actions"><img src="https://img.shields.io/badge/Test_Suite-277_Passing-10b981?style=for-the-badge&logo=vitest&logoColor=white&labelColor=0a0f1d" alt="Vitest Tests" /></a>
+    <img src="https://img.shields.io/badge/Motion-60fps_Hardware_Accelerated-8b5cf6?style=for-the-badge&logo=framer&logoColor=white&labelColor=0a0f1d" alt="Motion" />
+    <img src="https://img.shields.io/badge/License-MIT-c6f432?style=for-the-badge&labelColor=0a0f1d" alt="MIT License" />
   </p>
 
   <p align="center">
-    <img src="https://img.shields.io/badge/React-18.3-61dafb?style=flat-square&logo=react&logoColor=black&labelColor=0b0f19" alt="React 18" />
-    <img src="https://img.shields.io/badge/TypeScript-5.5-3178c6?style=flat-square&logo=typescript&logoColor=white&labelColor=0b0f19" alt="TypeScript 5.5" />
-    <img src="https://img.shields.io/badge/Vite-5.4-646cff?style=flat-square&logo=vitedotjs&logoColor=white&labelColor=0b0f19" alt="Vite 5" />
-    <img src="https://img.shields.io/badge/Tailwind-4.3-38bdf8?style=flat-square&logo=tailwindcss&logoColor=white&labelColor=0b0f19" alt="Tailwind CSS 4" />
-    <img src="https://img.shields.io/badge/Firebase-12-ffca28?style=flat-square&logo=firebase&logoColor=black&labelColor=0b0f19" alt="Firebase 12" />
-    <img src="https://img.shields.io/badge/Capacitor-8-119EFF?style=flat-square&logo=capacitor&logoColor=white&labelColor=0b0f19" alt="Capacitor 8" />
-    <img src="https://img.shields.io/badge/PWA-Ready-10b981?style=flat-square&logo=pwa&logoColor=white&labelColor=0b0f19" alt="PWA Ready" />
-    <img src="https://img.shields.io/badge/RTL-Native_Arabic-f59e0b?style=flat-square&labelColor=0b0f19" alt="RTL Native" />
+    <img src="https://img.shields.io/badge/React-18.3-61dafb?style=flat-square&logo=react&logoColor=black&labelColor=0a0f1d" alt="React 18" />
+    <img src="https://img.shields.io/badge/TypeScript-5.5-3178c6?style=flat-square&logo=typescript&logoColor=white&labelColor=0a0f1d" alt="TypeScript 5.5" />
+    <img src="https://img.shields.io/badge/Vite-5.4-646cff?style=flat-square&logo=vitedotjs&logoColor=white&labelColor=0a0f1d" alt="Vite 5" />
+    <img src="https://img.shields.io/badge/Tailwind-4.3-38bdf8?style=flat-square&logo=tailwindcss&logoColor=white&labelColor=0a0f1d" alt="Tailwind CSS 4" />
+    <img src="https://img.shields.io/badge/Firebase-12-ffca28?style=flat-square&logo=firebase&logoColor=black&labelColor=0a0f1d" alt="Firebase 12" />
+    <img src="https://img.shields.io/badge/Capacitor-8-119EFF?style=flat-square&logo=capacitor&logoColor=white&labelColor=0a0f1d" alt="Capacitor 8" />
+    <img src="https://img.shields.io/badge/PWA-Offline_First-10b981?style=flat-square&logo=pwa&logoColor=white&labelColor=0a0f1d" alt="PWA Ready" />
+    <img src="https://img.shields.io/badge/i18n-English_%7C_Arabic_(RTL)-f59e0b?style=flat-square&labelColor=0a0f1d" alt="Bilingual Support" />
   </p>
 
 </div>
 
 ---
 
-## 📸 Interface Showcase
+## 📸 Production Interface
 
 <div align="center">
-  <h3>⚡ Desktop Flagship Dashboard & Neon Workout HUD</h3>
-  <p><em>Equipped with Aceternity <code>BackgroundGradient</code> aura, <code>MovingBorderButton</code> traveling glow, and real-time exercise telemetry.</em></p>
+  <h3>⚡ Desktop Flagship Dashboard & Active Training HUD</h3>
+  <p><em>Desktop workout console featuring multi-layer background gradient glow, traveling border actions, and live session dials.</em></p>
   <img src="docs/screenshots/hero-today-desktop.png" alt="FORMA Today Desktop Interface" width="100%" />
 </div>
 
@@ -44,138 +44,142 @@
 <table>
   <tr>
     <td width="50%" align="center">
-      <h3>🔄 3D Perspective Program Carousel</h3>
-      <p><em>Aceternity 3D carousel with cursor parallax tilt & instant grid toggle.</em></p>
-      <img src="docs/screenshots/routines-3d-carousel.png" alt="Routines 3D Carousel" width="100%" />
+      <h3>🔄 3D Perspective Program Library</h3>
+      <p><em>Interactive 3D routine carousel with mouse-tracked parallax tilt, depth falloff, and split configuration.</em></p>
+      <img src="docs/screenshots/routines-3d-carousel.png" alt="Routines 3D Perspective Carousel" width="100%" />
     </td>
     <td width="50%" align="center">
       <h3>✨ Interactive Glowing Bento Grid</h3>
-      <p><em>Cursor-following <code>GlowingEffect</code> lasers, fuel meters & recovery readiness.</em></p>
+      <p><em>Cursor-following dynamic laser borders tracking daily volume, caloric deficit, target blueprint, and recovery readiness.</em></p>
       <img src="docs/screenshots/today-bento-glowing.png" alt="Interactive Glowing Bento Grid" width="100%" />
     </td>
   </tr>
 </table>
 
+<br />
+
 <div align="center">
-  <h3>📱 Mobile-First Gym Floor Ergonomics (&lt; 768px)</h3>
-  <p><em>One-thumb reachability, 60px tactile check-offs, and ambient background gradient aura.</em></p>
-  <img src="docs/screenshots/mobile-hero-workout.png" alt="FORMA Mobile Hero Workout Card" width="380" />
+  <h3>📱 Mobile Gym Floor Ergonomics (&lt; 768px)</h3>
+  <p><em>Engineered for one-handed operation mid-set: 60px tactile touch targets, floating rest timer, and ambient visual focus.</em></p>
+  <img src="docs/screenshots/mobile-hero-workout.png" alt="FORMA Mobile Gym Floor Interface" width="400" />
 </div>
 
 ---
 
-## 📑 Table of Contents
+## 📑 Contents
 
-- [Vision & The Problem](#-vision--the-problem)
-- [Design Engineering & Aceternity UI](#-design-engineering--aceternity-ui)
-- [Key Features](#-key-features)
-- [Architecture & Data Layer](#-architecture--data-layer)
-- [Tech Stack](#-tech-stack)
-- [Getting Started](#-getting-started)
-- [Testing & Quality Gates](#-testing--quality-gates)
-- [Security Model & Data Isolation](#-security-model--data-isolation)
-- [Deployment & Cross-Platform](#-deployment--cross-platform)
+- [Architectural Philosophy](#-architectural-philosophy)
+- [Design Engineering & Motion System](#-design-engineering--motion-system)
+- [Core Capabilities](#-core-capabilities)
+- [System Architecture](#-system-architecture)
+- [Technical Stack](#-technical-stack)
+- [Local Setup & Development](#-local-setup--development)
+- [Testing & Quality Assurance](#-testing--quality-assurance)
+- [Data Security & Privacy](#-data-security--privacy)
+- [Cross-Platform Builds](#-cross-platform-builds)
 - [License](#-license)
 
 ---
 
-## 🎯 Vision & The Problem
+## 🎯 Architectural Philosophy
 
-Most fitness apps are designed for a comfortable desk. But the most critical moment in training occurs **mid-set, one-handed, while exhausted and sweaty**.
+Training apps frequently fail in real-world gym environments: complex hierarchies, tiny touch targets, and dependence on continuous network connectivity render them frustrating mid-set. 
 
-Existing trackers bury set entry behind navigation menus, tiny buttons, and nested modals. **FORMA inverts that paradigm:**
-1. **The Workout HUD Comes First** — Logging a set never requires leaving your screen. Primary controls are anchored in the thumb zone.
-2. **Glanceable at High Heart Rates** — Volume, rest clocks, and macro budgets are formatted for 1-second legibility.
-3. **100% Offline Resilience** — Every write commits immediately to an optimistic local mirror before cloud sync. No spinner mid-workout.
-4. **Motion with Intent** — Micro-animations celebrate athletic milestones while honoring reduced motion down to the hardware level.
+**FORMA is engineered around four core requirements:**
+
+1. **Sub-Second Input Velocity** — Logging a set requires zero screen transitions. Primary steppers (±2.5 kg, ±1 rep) and set completion checkboxes sit strictly inside natural thumb reach.
+2. **Deterministic Offline Availability** — Reads and writes execute synchronously against an optimistic local data store before queuing background cloud synchronization. Workouts are never interrupted by poor gym cellular reception.
+3. **High-Stress Visual Legibility** — Rest countdowns, target weights, and progression targets are rendered in high-contrast typographic hierarchy readable from two meters away on a gym bench.
+4. **Hardware-Accelerated Motion with Accessibility Gates** — Visual feedback uses GPU-accelerated CSS transforms. All transitions strictly respect OS `prefers-reduced-motion` and user settings, falling back to instant state changes.
 
 ---
 
-## 💎 Design Engineering & Aceternity UI
+## 💎 Design Engineering & Motion System
 
-FORMA combines cutting-edge motion choreography with dark-mode athletics:
+FORMA's visual layer is built with custom design tokens and composable motion primitives:
 
-| Aceternity / Motion Component | Implementation & Architectural Role |
+| Component | Engineering Implementation |
 | :--- | :--- |
-| **`BackgroundGradient`** | Multi-layer animated radial gradient producing an electric neon halo around hero workout surfaces without layout thrashing. |
-| **`MovingBorderButton`** | High-energy primary CTAs with SVG path-following radial glow beams for *"Start workout"* and *"Quick workout"*. |
-| **`GlowingEffect`** | Interactive cursor-tracking neon laser borders that illuminate Bento Grid cards with semantic tone palettes (Emerald, Lime, Amber, Cyan). |
-| **`3D Carousel`** | Program library showcase with interactive mouse parallax coordinates, depth scale falloff, and swipe navigation. |
-| **`Meteors`** | Shooting star physics celebrating session completion and 100% daily ring closure. |
-| **`useGsapStagger`** | Frame-synchronized hardware-accelerated stagger entrances across cards and feed items. |
+| **`BackgroundGradient`** | High-performance multi-layer radial gradient mesh creating focused visual depth behind active training surfaces without repaints. |
+| **`MovingBorderButton`** | SVG path-calculated beam progression around high-priority action triggers (*"Start workout"*, *"Quick workout"*). |
+| **`GlowingEffect`** | Mouse-coordinated proximity lasers illuminating Bento Grid metric cards with semantic color themes (Emerald, Lime, Amber, Cyan). |
+| **`3D Carousel`** | Program library presentation utilizing CSS 3D perspective transforms and cursor parallax coordinates with graceful touch fallbacks. |
+| **`Meteors`** | Particle stream celebrating daily volume thresholds and workout completions. |
+| **`Design Tokens Engine`** | 3-layer token hierarchy (Primitive → Semantic → Component) supporting 8 switchable atmospheric themes without inline style clutter. |
 
 > [!NOTE]
-> **Accessibility & Reduced Motion:** Every animation strictly listens to both the OS `prefers-reduced-motion` media query and the in-app `data-motion="reduced"` preference, disabling loops and replacing transitions instantly.
+> **Accessibility Compliance:** Touch targets maintain a minimum of 48×48 CSS pixels across mobile screens. High-contrast typography satisfies WCAG 2.2 AA ratios across both dark and light atmospheres.
 
 ---
 
-## 🚀 Key Features
+## 🚀 Core Capabilities
 
-### 🏋️ Training & Gym Floor HUD
-- **One-Thumb Workout HUD**: Large set checklist, numeric keypad with kg/lb unit switching, and pause/resume rest timers.
-- **Gym Floor Mode**: Oversized ±2.5 kg / ±1 rep thumb steppers, previous-session reference for progressive overload, and 60px check-offs.
-- **Multi-Session Split Builder**: Push/Pull/Legs, Upper/Lower, and custom multi-day schedules with full drag-and-drop and keyboard reordering.
-- **Glanceable Rest Clock Overlay**: Picture-in-picture floating rest timer with subtle haptic and audio pings.
+### 🏋️ Gym Floor Workout HUD
+- **One-Thumb Set Logging**: Quick set checklist with automated rest timer triggers and target volume previews.
+- **Progressive Overload Telemetry**: Real-time display of previous session performance alongside current targets.
+- **Tactile Weight & Rep Steppers**: Fast ±1.25 kg, ±2.5 kg, and ±5 kg adjustments without opening system keyboards.
+- **Floating Rest Clock**: Glanceable Picture-in-Picture rest clock with audio and haptic alerts.
+- **Split & Routine Engine**: Comprehensive workout splits (Push/Pull/Legs, Upper/Lower, Full Body) with drag-and-drop exercise reordering.
 
-### 🥗 Nutrition & Energy Balance
-- **Smart Macro Dial**: Hero remaining calorie count paired with protein, carbohydrate, and fat budget progress.
-- **Meal Scanner & Barcode Lookup**: Instant photo-based macronutrient estimation and barcode scanning.
-- **TDEE & Composition Engine**: BMR/TDEE calculation with unit-aware metric/imperial conversions.
-- **Wave-Fill Hydration**: One-tap water logging with live progress filling.
+### 🥗 Nutrition & Metabolic Balance
+- **Dynamic Energy Dial**: Real-time tracking of calories consumed, caloric expenditure, and remaining caloric targets.
+- **Macronutrient Precision**: Independent daily tracking for protein, carbohydrate, and fat targets with grams-per-bodyweight benchmarks.
+- **Hydration Tracking**: One-tap liquid intake logging with volume animation.
+- **TDEE & Energy Calculation**: Accurate BMR/TDEE calculations utilizing Mifflin-St Jeor and Katch-McArdle models.
 
-### 🧬 Biomechanics & Recovery
-- **Muscle Recovery Heatmap**: Muscle-by-muscle readiness calculated from actual training volume and recency.
-- **Interactive 3D Muscle Hologram**: Agonist, antagonist, and synergist movement attributions.
-- **Athletic Power Radar**: 5-axis visualization mapping strength, volume capacity, consistency, conditioning, and recovery.
+### 🧬 Biomechanics & Recovery Tracking
+- **Muscle Fatigue Modeling**: Multi-day recovery decay curve based on total volume, intensity, and muscle group frequency.
+- **Interactive Hologram**: Anatomical mapping of agonist, antagonist, and synergist muscle engagement.
+- **Performance Radar**: 5-axis athletic metric chart evaluating strength, volume, conditioning, consistency, and recovery.
 
-### 🌐 Internationalization & Ergo Shell
-- **Full Bilingual Support**: Instant runtime toggling between English and Arabic.
-- **Zero-Drift RTL Engine**: Built with logical CSS properties (`margin-inline`, `padding-block`, `inset-inline-start`) guaranteeing zero CSS duplication.
-- **8 Curated Themes**: Dark, Midnight, Light, Neon, Ocean, Forest, Sunset, and Paper.
+### 🌐 Universal Localization & Ergo Layout
+- **Bilingual Internationalization**: Instant runtime switching between English and Arabic.
+- **Zero-Drift RTL Layout**: Entire layout is built on CSS Logical Properties (`margin-inline`, `padding-block`, `inset-inline-start`) ensuring identical visual balance in LTR and RTL.
+- **8 Curated Atmospheres**: Dark, Midnight, Light, Neon, Ocean, Forest, Sunset, and Paper.
 
 ---
 
-## 🏛️ Architecture & Data Layer
+## 🏛️ System Architecture
 
 ```
 MyGym/
 ├── src/
-│   ├── app/                        # Route definitions & AppShell layout
+│   ├── app/                        # Application bootstrap, routing & layout shell
 │   ├── components/
-│   │   ├── layout/                 # PageFrame, navigation dock, slide-over sheets
+│   │   ├── layout/                 # PageFrame, navigation docks, and sheets
 │   │   ├── mobile/                 # GymFloorSetCard, MobileHeroWorkoutCard, steppers
 │   │   ├── routines/               # 3D ProgramList, NewSessionDrawer, SplitLibrary
-│   │   ├── ui/                     # Aceternity primitives (3d-card, carousel, glowing-effect, etc.)
-│   │   └── TodayBentoGrid.tsx      # Flagship Activity Rings & Fuel dashboard
-│   ├── hooks/                      # useData (single-source store), useAI, timers
-│   ├── lib/                        # api.ts (offline mirror + Firestore), recovery, i18n
+│   │   ├── ui/                     # Aceternity motion primitives (3d-card, carousel, glowing-effect)
+│   │   └── TodayBentoGrid.tsx      # Daily vitals, energy balance, and readiness cards
+│   ├── hooks/                      # useData (reactive store), timers, hardware listeners
+│   ├── lib/                        # api.ts (storage layer & cloud sync), recovery models, i18n
 │   ├── styles/                     # design-tokens.css, gym-floor.css, today.css
-│   └── views/                      # Lazy-loaded top-level views (Today, Routines, Calendar...)
-├── functions/                      # Authenticated Cloud Functions & Gemini relay
-├── docs/screenshots/               # High-resolution production visual assets
-└── firestore.rules                 # User-isolated data security rules
+│   └── views/                      # Lazy-loaded views (Today, Routines, Calendar, Analytics)
+├── functions/                      # Cloud Functions v2 backend endpoints
+├── docs/screenshots/               # High-resolution production visual documentation
+└── firestore.rules                 # User-isolated data security definitions
 ```
 
 ---
 
-## 🛠️ Tech Stack
+## 🛠️ Technical Stack
 
-| Domain | Technology |
+| Layer | Technologies |
 | :--- | :--- |
-| **Framework & Core** | React 18.3, TypeScript 5.5, Vite 5.4 |
-| **Styling & Design Tokens** | Tailwind CSS 4, Custom 3-Layer Design Token Engine (Vanilla CSS) |
-| **Motion & 3D Components** | Aceternity UI, Framer Motion 14, GSAP 3, Three.js / WebGL |
-| **Local Persistence** | `localStorage` mirror + IndexedDB offline cache |
-| **Backend & Cloud** | Firebase Cloud Firestore, Authentication, Cloud Functions v2 |
-| **Cross-Platform Native** | Capacitor 8 (iOS & Android native containers) |
-| **PWA Engine** | `vite-plugin-pwa` with Workbox offline precaching |
+| **Frontend Framework** | React 18.3, TypeScript 5.5, Vite 5.4 |
+| **Styling & CSS Architecture** | Tailwind CSS 4, Custom 3-Layer Design Token Engine |
+| **Animation & Motion** | Aceternity UI, Motion 14, GSAP 3, WebGL Canvas |
+| **Local Persistence** | Synchronous LocalStorage Mirror + IndexedDB offline cache |
+| **Cloud Infrastructure** | Firebase Cloud Firestore, Authentication, Cloud Functions v2 |
+| **Mobile Runtime** | Capacitor 8 (iOS & Android native container) |
+| **Offline Engine** | Progressive Web App (`vite-plugin-pwa`) with Workbox caching |
 
 ---
 
-## 💻 Getting Started
+## 💻 Local Setup & Development
 
 ### Prerequisites
-- **Node.js**: `20.x` or newer (Tested on Node 20 & 22)
+- **Node.js**: `20.x` or newer
 - **npm**: `10.x` or newer
 
 ### 1. Clone the repository
@@ -189,71 +193,74 @@ cd MyGym
 npm install
 ```
 
-### 3. Setup environment variables
+### 3. Environment configuration
 ```bash
 cp .env.example .env
 ```
-*(The application runs immediately in **Guest Mode** even without Firebase credentials!)*
+*(The application operates in complete **Guest Mode** locally without third-party credentials.)*
 
-### 4. Start development server
+### 4. Launch development server
 ```bash
 npm run dev
 ```
-Open **http://localhost:1420** in your browser *(port `1420` is pinned in `vite.config.ts`)*.
+Navigate to **http://localhost:1420** in your browser *(port is configured in `vite.config.ts`)*.
 
 ---
 
-## 🧪 Testing & Quality Gates
+## 🧪 Testing & Quality Assurance
 
-The codebase is protected by comprehensive test suites and contracts:
+The codebase enforces strict quality gates across component rendering, ergonomic accessibility, and data transformations:
 
 ```bash
-# Run the Vitest test suite (277 tests)
+# Execute test suite (277 tests)
 npm test
 
-# Type-check the entire codebase (0 errors)
+# Verify TypeScript type contracts (0 errors)
 npm run typecheck
 
-# Execute production bundle build
+# Validate production bundle compilation
 npm run build
 ```
 
-| Test Suite | Coverage |
+| Verification Category | Test Scope |
 | :--- | :--- |
-| **Design System Contracts** | Verified CSS token consistency and dark-mode compliance |
-| **Shell Chrome Contracts** | Safe-area insets, navigation dock visibility, viewport boundaries |
-| **Mobile Ergonomics** | Minimum 44px touch targets and thumb-zone reachability |
-| **Data Layer & Selectors** | Recovery mathematics, streak calculation, offline sync channels |
+| **Design System Contracts** | Token variable validation, theme switching, dark/light contrast |
+| **Ergonomic Shell** | Touch target dimensions (≥48px), viewport safe-area insets |
+| **Biomechanical Logic** | Volume calculations, recovery half-life mathematics, streak tracking |
+| **Data Synchronization** | Offline persistence fallback and optimistic update consistency |
 
 ---
 
-## 🔒 Security Model & Data Isolation
+## 🔒 Data Security & Privacy
 
-- **Per-User Isolation**: Cloud Firestore rules strictly enforce `request.auth.uid == userId` for all subcollections (`sessions`, `routines`, `history`, `meals`).
-- **No Client Secrets**: Cloud AI requests route through the authenticated `generateGeminiContent` callable with App Check attestation and rate limits.
-- **Client Bundle Safety**: No private keys or service accounts exist in client-side code.
+- **User-Level Storage Isolation**: Firestore security rules restrict all record operations (`sessions`, `routines`, `history`, `meals`) strictly to `request.auth.uid == userId`.
+- **Zero Third-Party Trackers**: No invasive tracking scripts, ads, or analytics pixels are bundled into the application.
+- **Client Bundle Integrity**: Production bundles contain zero privileged API credentials or service account tokens.
 
 ---
 
-## 📦 Deployment & Cross-Platform
+## 📦 Cross-Platform Builds
 
 ```bash
-# Web & PWA Deployment
+# Production Web / PWA Build
 npm run build
 firebase deploy --only hosting
 
-# Mobile Native Builds (Capacitor)
+# Native Android Build (Capacitor)
 npm run build:mobile
-npx cap open android    # Opens Android Studio
-npx cap open ios        # Opens Xcode (macOS)
+npx cap open android
+
+# Native iOS Build (Capacitor)
+npm run build:mobile
+npx cap open ios
 ```
 
 ---
 
 ## 📄 License
 
-Distributed under the **MIT License**. See [`LICENSE`](./LICENSE) for more information.
+This project is licensed under the **MIT License**. See the [`LICENSE`](./LICENSE) file for details.
 
-<p align="center">
-  <strong>Built with precision for athletes worldwide.</strong>
-</p>
+<div align="center">
+  <sub>Designed and engineered for athletes who demand uncompromising precision.</sub>
+</div>
