@@ -315,6 +315,7 @@
     font-weight: 800;
     cursor: pointer;
     touch-action: manipulation;
+    -webkit-user-select: none;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
     transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease;
@@ -359,6 +360,7 @@
     text-align: start;
     cursor: pointer;
     touch-action: manipulation;
+    -webkit-user-select: none;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
     transition: border-color 0.18s ease, background 0.18s ease, transform 0.12s ease;
